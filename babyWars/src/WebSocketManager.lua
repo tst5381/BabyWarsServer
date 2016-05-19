@@ -1,4 +1,7 @@
-local server = require "resty.websocket.server"
+
+local server                 = require("resty.websocket.server")
+local ActionTranslator       = require("babyWars.src.app.utilities.ActionTranslator")
+local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
 
 local wb, err = server:new{
     timeout = 5000,
@@ -21,7 +24,13 @@ while true do
     if typ == "close" then
         break
     elseif typ == "text" then
-        local bytes, err = wb:send_text("feedback: " .. data)
+        -- TODO: validate the data before loadstring().
+        local chunk    = loadstring("return " .. data)
+        local feedback = (chunk) and
+            (SerializationFunctions.serialize(ActionTranslator.translate(chunk()))) or
+            ("invalid request: " .. data)
+
+        local bytes, err = wb:send_text(feedback)
         if not bytes then
             ngx.log(ngx.ERR, "failed to send text: ", err)
             return ngx.exit(444)
