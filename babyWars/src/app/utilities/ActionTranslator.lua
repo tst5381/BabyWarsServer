@@ -270,6 +270,23 @@ local function translateGetOngoingWarList(action)
     end
 end
 
+local function translateGetSceneWarData(action)
+    local fileName = "babyWars/res/data/warScene/" .. action.fileName .. ".lua"
+    local file = io.open(fileName, "r")
+    if (not file) then
+        return {
+            actionName = "Error",
+            error      = "Server: translateGetSceneWarData() failed to open the war scene data file with the param action.fileName."
+        }
+    else
+        file:close()
+        return {
+            actionName = "GetSceneWarData",
+            data = dofile(fileName)
+        }
+    end
+end
+
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
@@ -293,6 +310,8 @@ function ActionTranslator.translate(action, modelScene)
         return translateLogin(action)
     elseif (actionName == "GetOngoingWarList") then
         return translateGetOngoingWarList(action)
+    elseif (actionName == "GetSceneWarData") then
+        return translateGetSceneWarData(action)
     else
         return {actionName = "Error", error = "Unrecognized action name: " .. actionName}
     end
