@@ -245,7 +245,29 @@ local function translateLogin(action)
         isSuccessful = dofile(fileName).password == action.password
     end
 
-    return {actionName = "Login", isSuccessful = isSuccessful, account = action.account}
+    return {
+        actionName   = "Login",
+        isSuccessful = isSuccessful,
+        account      = (isSuccessful) and (action.account)  or (nil),
+        password     = (isSuccessful) and (action.password) or (nil)
+    }
+end
+
+local function translateGetOngoingWarList(action)
+    local fileName = "babyWars/res/data/playerProfile/" .. action.playerAccount .. ".lua"
+    local file = io.open(fileName, "r")
+    if (not file) then
+        return {
+            actionName = "Error",
+            error      = "Server: translateGetOngoingWarList() failed to open the player profile with the param action.playerAccount."
+        }
+    else
+        file:close()
+        return {
+            actionName = "GetOngoingWarList",
+            list = dofile(fileName).warLists.ongoing
+        }
+    end
 end
 
 --------------------------------------------------------------------------------
@@ -253,7 +275,7 @@ end
 --------------------------------------------------------------------------------
 function ActionTranslator.translate(action, modelScene)
     if (type(action) ~= "table") then
-        return {actionName = "Error", error = "Unrecognized action."}
+        return {actionName = "Error", error = "Illegal param action. Table expected."}
     end
 
     local actionName = action.actionName
@@ -269,8 +291,10 @@ function ActionTranslator.translate(action, modelScene)
         return translateProduceOnTile(action, modelScene)
     elseif (actionName == "Login") then
         return translateLogin(action)
+    elseif (actionName == "GetOngoingWarList") then
+        return translateGetOngoingWarList(action)
     else
-        return nil, "ActionTranslator.translate() unrecognized action name."
+        return {actionName = "Error", error = "Unrecognized action name: " .. actionName}
     end
 end
 
