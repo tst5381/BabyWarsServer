@@ -1,5 +1,5 @@
 
-local ModelLoginPanel = class("ModelLoginPanel")
+local ModelLoginPanel = require("babyWars.src.global.functions.class")("ModelLoginPanel")
 
 --------------------------------------------------------------------------------
 -- The util functions.

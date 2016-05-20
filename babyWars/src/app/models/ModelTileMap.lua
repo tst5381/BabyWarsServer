@@ -28,12 +28,12 @@
 --     若玩家的操作改变了ModelTileMap上的某些属性（比如占领，攻击meteor，发射导弹），那么相应的数据就记在instantialData中即可。
 --]]--------------------------------------------------------------------------------
 
-local ModelTileMap = class("ModelTileMap")
+local ModelTileMap = require("babyWars.src.global.functions.class")("ModelTileMap")
 
-local Actor              = require("global.actors.Actor")
-local TypeChecker        = require("app.utilities.TypeChecker")
-local GridIndexFunctions = require("app.utilities.GridIndexFunctions")
-local TableFunctions     = require("app.utilities.TableFunctions")
+local Actor              = require("babyWars.src.global.actors.Actor")
+local TypeChecker        = require("babyWars.src.app.utilities.TypeChecker")
+local GridIndexFunctions = require("babyWars.src.app.utilities.GridIndexFunctions")
+local TableFunctions     = require("babyWars.src.app.utilities.TableFunctions")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -41,7 +41,7 @@ local TableFunctions     = require("app.utilities.TableFunctions")
 local function requireMapData(param)
     local t = type(param)
     if (t == "string") then
-        return require("data.templateWarField." .. param)
+        return require("babyWars.res.data.templateWarField." .. param)
     elseif (t == "table") then
         return param
     else

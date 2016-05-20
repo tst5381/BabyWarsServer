@@ -9,7 +9,7 @@
 --  - 本类实际上没太多功能，只是把tile的属性交给ViewTileDetail显示而已。
 --]]--------------------------------------------------------------------------------
 
-local ModelTileDetail = class("ModelTileDetail")
+local ModelTileDetail = require("babyWars.src.global.functions.class")("ModelTileDetail")
 
 --------------------------------------------------------------------------------
 -- The constructor.

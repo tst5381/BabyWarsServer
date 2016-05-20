@@ -10,9 +10,9 @@
 --  - 本类所显示的是光标所指向的tile的信息（通过event获知光标指向的是哪个tile）
 --]]--------------------------------------------------------------------------------
 
-local ModelTileInfo = class("ModelTileInfo")
+local ModelTileInfo = require("babyWars.src.global.functions.class")("ModelTileInfo")
 
-local GridIndexFunctions = require("app.utilities.GridIndexFunctions")
+local GridIndexFunctions = require("babyWars.src.app.utilities.GridIndexFunctions")
 
 --------------------------------------------------------------------------------
 -- The private callback functions on script events.

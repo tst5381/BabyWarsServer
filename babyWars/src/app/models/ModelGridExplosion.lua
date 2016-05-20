@@ -9,7 +9,7 @@
 --   - 本类能够同时显示多处爆炸，因此也可以用于显示导弹爆炸的效果。
 --]]--------------------------------------------------------------------------------
 
-local ModelGridExplosion = class("ModelGridExplosion")
+local ModelGridExplosion = require("babyWars.src.global.functions.class")("ModelGridExplosion")
 
 --------------------------------------------------------------------------------
 -- The constructor and initializers.

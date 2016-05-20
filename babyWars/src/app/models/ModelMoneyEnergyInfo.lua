@@ -9,7 +9,7 @@
 --   点击时弹出战场操作菜单本来与本类没有关系，但为了节省屏幕空间，所以就这么设定了。
 --]]--------------------------------------------------------------------------------
 
-local ModelMoneyEnergyInfo = class("ModelMoneyEnergyInfo")
+local ModelMoneyEnergyInfo = require("babyWars.src.global.functions.class")("ModelMoneyEnergyInfo")
 
 --------------------------------------------------------------------------------
 -- The private callback functions on script events.

@@ -13,12 +13,12 @@
 --     而一旦玩家确定行动，则发送“EvtPlayerRequestDoAction”事件，该事件最终会导致战局数据按玩家操作及游戏规则而改变。
 --]]--------------------------------------------------------------------------------
 
-local ModelActionPlanner = class("ModelActionPlanner")
+local ModelActionPlanner = require("babyWars.src.global.functions.class")("ModelActionPlanner")
 
-local GridIndexFunctions          = require("app.utilities.GridIndexFunctions")
-local ReachableAreaFunctions      = require("app.utilities.ReachableAreaFunctions")
-local MovePathFunctions           = require("app.utilities.MovePathFunctions")
-local AttackableGridListFunctions = require("app.utilities.AttackableGridListFunctions")
+local GridIndexFunctions          = require("babyWars.src.app.utilities.GridIndexFunctions")
+local ReachableAreaFunctions      = require("babyWars.src.app.utilities.ReachableAreaFunctions")
+local MovePathFunctions           = require("babyWars.src.app.utilities.MovePathFunctions")
+local AttackableGridListFunctions = require("babyWars.src.app.utilities.AttackableGridListFunctions")
 
 --------------------------------------------------------------------------------
 -- The util functions.

@@ -1,5 +1,5 @@
 
-local WebSocketManager = class("WebSocketManager")
+local WebSocketManager = require("babyWars.src.global.functions.class")("WebSocketManager")
 
 local SERVER_URL = "localhost:8080/BabyWars"
 

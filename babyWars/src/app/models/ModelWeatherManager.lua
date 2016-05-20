@@ -13,7 +13,7 @@
 --   目前还没有正式开始实现天气功能。
 --]]--------------------------------------------------------------------------------
 
-local ModelWeatherManager = class("ModelWeatherManager")
+local ModelWeatherManager = require("babyWars.src.global.functions.class")("ModelWeatherManager")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -35,7 +35,7 @@ end
 function ModelWeatherManager:toStringList(spaces)
     spaces = spaces or ""
     local subSpaces = spaces .. "    "
-    local appendList = require("app.utilities.TableFunctions").appendList
+    local appendList = require("babyWars.src.app.utilities.TableFunctions").appendList
     local strList = {spaces .. "weather = {\n"}
 
     appendList(strList, serializeCurrentWeatherToStringList(self, subSpaces), ",\n")

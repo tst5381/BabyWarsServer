@@ -24,10 +24,10 @@
 --     实际实现请看代码。
 --]]--------------------------------------------------------------------------------
 
-local ModelMapCursor = class("ModelMapCursor")
+local ModelMapCursor = require("babyWars.src.global.functions.class")("ModelMapCursor")
 
-local GridIndexFunctions = require("app.utilities.GridIndexFunctions")
-local ComponentManager   = require("global.components.ComponentManager")
+local GridIndexFunctions = require("babyWars.src.app.utilities.GridIndexFunctions")
+local ComponentManager   = require("babyWars.src.global.components.ComponentManager")
 
 local DRAG_FIELD_TRIGGER_DISTANCE_SQUARED = 400
 

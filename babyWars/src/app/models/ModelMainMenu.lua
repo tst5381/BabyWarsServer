@@ -1,7 +1,7 @@
 
-local ModelMainMenu = class("ModelMainMenu")
+local ModelMainMenu = require("babyWars.src.global.functions.class")("ModelMainMenu")
 
-local Actor = require("global.actors.Actor")
+local Actor = require("babyWars.src.global.actors.Actor")
 
 --------------------------------------------------------------------------------
 -- The util functions.

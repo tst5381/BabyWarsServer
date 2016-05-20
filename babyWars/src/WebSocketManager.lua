@@ -3,6 +3,9 @@ local server                 = require("resty.websocket.server")
 local ActionTranslator       = require("babyWars.src.app.utilities.ActionTranslator")
 local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
 
+-- TODO: move the code that initializes the server to somewhere else (like main()).
+require("babyWars.src.app.utilities.GameConstantFunctions").init()
+
 local wb, err = server:new{
     timeout = 5000,
     max_payload_len = 65535

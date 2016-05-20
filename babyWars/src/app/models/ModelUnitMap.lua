@@ -16,14 +16,12 @@
 --   - ModelUnitMap中，其他的许多概念都和ModelTileMap很相似，直接参照ModelTileMap即可。
 --]]--------------------------------------------------------------------------------
 
-local ModelUnitMap = class("ModelUnitMap")
+local ModelUnitMap = require("babyWars.src.global.functions.class")("ModelUnitMap")
 
-local TypeChecker        = require("app.utilities.TypeChecker")
-local ViewUnit           = require("app.views.ViewUnit")
-local ModelUnit          = require("app.models.ModelUnit")
-local GridIndexFunctions = require("app.utilities.GridIndexFunctions")
-local TableFunctions     = require("app.utilities.TableFunctions")
-local Actor              = require("global.actors.Actor")
+local TypeChecker        = require("babyWars.src.app.utilities.TypeChecker")
+local GridIndexFunctions = require("babyWars.src.app.utilities.GridIndexFunctions")
+local TableFunctions     = require("babyWars.src.app.utilities.TableFunctions")
+local Actor              = require("babyWars.src.global.actors.Actor")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -31,7 +29,7 @@ local Actor              = require("global.actors.Actor")
 local function requireMapData(param)
     local t = type(param)
     if (t == "string") then
-        return require("data.templateWarField." .. param)
+        return require("babyWars.res.data.templateWarField." .. param)
     elseif (t == "table") then
         return param
     else

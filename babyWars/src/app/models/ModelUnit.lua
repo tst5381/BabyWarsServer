@@ -10,12 +10,12 @@
 --     有点不同的是，ModelUnit只需一个tiledID即可构造，而ModelTile可能需要1-2个。
 --]]--------------------------------------------------------------------------------
 
-local ModelUnit = class("ModelUnit")
+local ModelUnit = require("babyWars.src.global.functions.class")("ModelUnit")
 
-local ComponentManager      = require("global.components.ComponentManager")
-local TypeChecker           = require("app.utilities.TypeChecker")
-local GameConstantFunctions = require("app.utilities.GameConstantFunctions")
-local TableFunctions        = require("app.utilities.TableFunctions")
+local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
+local TypeChecker           = require("babyWars.src.app.utilities.TypeChecker")
+local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
+local TableFunctions        = require("babyWars.src.app.utilities.TableFunctions")
 
 --------------------------------------------------------------------------------
 -- The set state functions.

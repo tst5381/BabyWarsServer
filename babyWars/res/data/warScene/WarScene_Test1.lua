@@ -1,5 +1,7 @@
 
 return {
+    fileName = "WarScene_Test1",
+
     warField = {
         tileMap = {
             template = "FullTest",

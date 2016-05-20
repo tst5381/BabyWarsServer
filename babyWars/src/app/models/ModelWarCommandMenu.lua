@@ -16,10 +16,10 @@
 --     - 结束回合
 --]]--------------------------------------------------------------------------------
 
-local ModelWarCommandMenu = class("ModelWarCommandMenu")
+local ModelWarCommandMenu = require("babyWars.src.global.functions.class")("ModelWarCommandMenu")
 
-local Actor            = require("global.actors.Actor")
-local TypeChecker      = require("app.utilities.TypeChecker")
+local Actor            = require("babyWars.src.global.actors.Actor")
+local TypeChecker      = require("babyWars.src.app.utilities.TypeChecker")
 
 --------------------------------------------------------------------------------
 -- The quit war menu item.

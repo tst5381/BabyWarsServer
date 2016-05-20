@@ -15,11 +15,11 @@
 --   - 维修量受co技能、金钱影响
 --]]--------------------------------------------------------------------------------
 
-local RepairDoer = class("RepairDoer")
+local RepairDoer = require("babyWars.src.global.functions.class")("RepairDoer")
 
-local TypeChecker           = require("app.utilities.TypeChecker")
-local ComponentManager      = require("global.components.ComponentManager")
-local GameConstantFunctions = require("app.utilities.GameConstantFunctions")
+local TypeChecker           = require("babyWars.src.app.utilities.TypeChecker")
+local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
+local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
 
 local EXPORTED_METHODS = {
     "getRepairTargetCatagory",

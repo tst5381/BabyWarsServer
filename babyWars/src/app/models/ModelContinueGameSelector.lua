@@ -9,10 +9,10 @@
 --   目前ModelContinueGameSelector里的列表项是直接从本地获取的（res/data/warScene/WarSceneList.lua）。在联机功能下，该列表应该从服务器获取。
 --]]--------------------------------------------------------------------------------
 
-local ModelContinueGameSelector = class("ModelContinueGameSelector")
+local ModelContinueGameSelector = require("babyWars.src.global.functions.class")("ModelContinueGameSelector")
 
-local Actor        = require("global.actors.Actor")
-local ActorManager = require("global.actors.ActorManager")
+local Actor        = require("babyWars.src.global.actors.Actor")
+local ActorManager = require("babyWars.src.global.actors.ActorManager")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -23,7 +23,7 @@ local function requireListData(param)
         return param
     elseif (t == "string") then
         -- TODO: get the list of the games in progress from the server.
-        local fileName = "res.data.playerProfile." .. param
+        local fileName = "babyWars.res.data.playerProfile." .. param
         package.loaded[fileName] = nil
         return require(fileName).gamesInProgress
     else

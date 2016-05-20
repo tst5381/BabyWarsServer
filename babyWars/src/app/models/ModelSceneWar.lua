@@ -26,36 +26,18 @@
 --    这本不应该是ModelSceneWar的工作，等以后实现了网络模块，就应该把相关代码移除。
 --]]--------------------------------------------------------------------------------
 
-local ModelSceneWar = class("ModelSceneWar")
+local ModelSceneWar = require("babyWars.src.global.functions.class")("ModelSceneWar")
 
 local isServer = true
-local SCENE_DATA_PATH = cc.FileUtils:getInstance():getWritablePath() .. "writablePath/warScene/"
 
-local Actor            = require("global.actors.Actor")
-local TypeChecker      = require("app.utilities.TypeChecker")
-local ActionTranslator = require("app.utilities.ActionTranslator")
+local Actor            = require("babyWars.src.global.actors.Actor")
+local ActionTranslator = require("babyWars.src.app.utilities.ActionTranslator")
 
 --------------------------------------------------------------------------------
--- The util functions.
+-- The private functions for serialization.
 --------------------------------------------------------------------------------
-local function requireSceneData(param)
-    if (type(param) ~= "string") then
-        error("ModelSceneWar-requireSceneData() the param is invalid.")
-    else
-        -- TODO: in release version, the data should be downloaded from server and should not be saved locally.
-        local fullName = SCENE_DATA_PATH .. param .. ".lua"
-        local fileUtils = cc.FileUtils:getInstance()
-
-        if (not fileUtils:isFileExist(fullName)) then
-            fileUtils:createDirectory(SCENE_DATA_PATH)
-
-            local saveFile = io.open(fullName, "w")
-            saveFile:write("return " .. require("app.utilities.SerializationFunctions").serialize(require("res.data.warScene." .. param)))
-            saveFile:close()
-        end
-
-        return dofile(fullName), fullName
-    end
+local function serializeFileNameToStringList(self, spaces)
+    return {string.format("%sfileName = %q", spaces or "", self.m_FileName)}
 end
 
 --------------------------------------------------------------------------------
@@ -103,7 +85,7 @@ local function onEvtSystemRequestDoAction(self, event)
         print("ModelSceneWar-onEvtSystemRequestDoAction() unrecognized action.")
     end
 
----[[ -- These codes are for testing the toStringList() and should be modified to do the real job.
+--[[ -- These codes are for testing the toStringList() and should be modified to do the real job.
     local testFile = io.open(self.m_DataFileFullPath, "w")
     for _, str in ipairs(self:toStringList()) do
         testFile:write(str)
@@ -135,7 +117,7 @@ end
 -- The script event dispatcher.
 --------------------------------------------------------------------------------
 local function createScriptEventDispatcher()
-    return require("global.events.EventDispatcher"):create()
+    return require("babyWars.src.global.events.EventDispatcher"):create()
 end
 
 local function initWithScriptEventDispatcher(self, dispatcher)
@@ -208,11 +190,10 @@ end
 --------------------------------------------------------------------------------
 -- The constructor.
 --------------------------------------------------------------------------------
-function ModelSceneWar:ctor(param)
-    assert(type(param) == "string", "ModelSceneWar:ctor() the param is invalid.")
-    local sceneData
-    sceneData, self.m_DataFileFullPath = requireSceneData(param)
+function ModelSceneWar:ctor(sceneData)
+    assert(type(sceneData) == "table", "ModelSceneWar:ctor() the param sceneData is invalid.")
 
+    self.m_FileName = sceneData.fileName
     initWithScriptEventDispatcher(self, createScriptEventDispatcher())
     initWithActorWarField(        self, createActorWarField(sceneData.warField))
     initWithActorWarHud(          self, createActorSceneWarHUD())
@@ -245,7 +226,8 @@ function ModelSceneWar:toStringList(spaces)
     local subSpaces  = spaces .. "    "
     local strList    = {spaces .. "return {\n"}
 
-    local appendList = require("app.utilities.TableFunctions").appendList
+    local appendList = require("babyWars.src.app.utilities.TableFunctions").appendList
+    appendList(strList, serializeFileNameToStringList(self, subSpaces),        ",\n")
     appendList(strList, self:getModelWarField()      :toStringList(subSpaces), ",\n")
     appendList(strList, self:getModelTurnManager()   :toStringList(subSpaces), ",\n")
     appendList(strList, self:getModelPlayerManager() :toStringList(subSpaces), ",\n")
@@ -288,6 +270,16 @@ end
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
+function ModelSceneWar:doSystemAction(action)
+    onEvtSystemRequestDoAction(self, action)
+
+    return self
+end
+
+function ModelSceneWar:getFileName()
+    return self.m_FileName
+end
+
 function ModelSceneWar:getScriptEventDispatcher()
     return self.m_ScriptEventDispatcher
 end

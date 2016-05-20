@@ -11,10 +11,10 @@
 --   - 本类的文字描述也可以由调用者定制。
 --]]--------------------------------------------------------------------------------
 
-local ModelConfirmBox = class("ModelConfirmBox")
+local ModelConfirmBox = require("babyWars.src.global.functions.class")("ModelConfirmBox")
 
-local Actor           = require("global.actors.Actor")
-local TypeChecker     = require("app.utilities.TypeChecker")
+local Actor           = require("babyWars.src.global.actors.Actor")
+local TypeChecker     = require("babyWars.src.app.utilities.TypeChecker")
 
 local function createDefaultCallbackOnConfirm(self)
     return function()

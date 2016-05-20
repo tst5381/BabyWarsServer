@@ -12,8 +12,8 @@
 
 local MovePathFunctions = {}
 
-local GridIndexFunctions     = require("app.utilities.GridIndexFunctions")
-local ReachableAreaFunctions = require("app.utilities.ReachableAreaFunctions")
+local GridIndexFunctions     = require("babyWars.src.app.utilities.GridIndexFunctions")
+local ReachableAreaFunctions = require("babyWars.src.app.utilities.ReachableAreaFunctions")
 
 function MovePathFunctions.createReversedPath(path)
     local newPath, length = {}, #path

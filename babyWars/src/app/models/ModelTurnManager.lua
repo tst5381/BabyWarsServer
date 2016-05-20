@@ -17,7 +17,7 @@
 --     - 更换weather（EvtTurnPhaseChangeWeather，目前未实现。具体切换与否，由ModelWeatherManager决定）
 --]]--------------------------------------------------------------------------------
 
-local ModelTurnManager = class("ModelTurnManager")
+local ModelTurnManager = require("babyWars.src.global.functions.class")("ModelTurnManager")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -160,7 +160,7 @@ end
 function ModelTurnManager:toStringList(spaces)
     spaces = spaces or ""
     local subSpaces = spaces .. "    "
-    local appendList = require("app.utilities.TableFunctions").appendList
+    local appendList = require("babyWars.src.app.utilities.TableFunctions").appendList
 
     local strList = {spaces .. "turn = {\n"}
     appendList(strList, serializeTurnIndexToStringList(  self, subSpaces), ",\n")

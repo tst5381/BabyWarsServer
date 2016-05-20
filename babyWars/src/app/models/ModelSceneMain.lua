@@ -13,13 +13,13 @@
 --    - 显示玩家形象、id、积分、排名、战绩
 --]]--------------------------------------------------------------------------------
 
-local ModelSceneMain = class("ModelSceneMain")
+local ModelSceneMain = require("babyWars.src.global.functions.class")("ModelSceneMain")
 
-local Actor                  = require("global.actors.Actor")
-local GameConstantFunctions  = require("app.utilities.GameConstantFunctions")
-local ActionTranslator       = require("app.utilities.ActionTranslator")
-local WebSocketManager       = require("app.utilities.WebSocketManager")
-local SerializationFunctions = require("app.utilities.SerializationFunctions")
+local Actor                  = require("babyWars.src.global.actors.Actor")
+local GameConstantFunctions  = require("babyWars.src.app.utilities.GameConstantFunctions")
+local ActionTranslator       = require("babyWars.src.app.utilities.ActionTranslator")
+local WebSocketManager       = require("babyWars.src.app.utilities.WebSocketManager")
+local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
 
 local isServer = true -- This is for testing and should be removed.
 
@@ -93,7 +93,7 @@ end
 -- The composition script event dispatcher.
 --------------------------------------------------------------------------------
 local function createScriptEventDispatcher()
-    return require("global.events.EventDispatcher"):create()
+    return require("babyWars.src.global.events.EventDispatcher"):create()
 end
 
 local function initWithScriptEventDispatcher(self, dispatcher)

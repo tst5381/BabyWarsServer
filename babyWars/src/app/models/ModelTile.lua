@@ -49,12 +49,12 @@
 --     3. 读取instantialData中的数据
 --]]--------------------------------------------------------------------------------
 
-local ModelTile = class("ModelTile")
+local ModelTile = require("babyWars.src.global.functions.class")("ModelTile")
 
-local ComponentManager      = require("global.components.ComponentManager")
-local TypeChecker           = require("app.utilities.TypeChecker")
-local GameConstantFunctions = require("app.utilities.GameConstantFunctions")
-local TableFunctions        = require("app.utilities.TableFunctions")
+local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
+local TypeChecker           = require("babyWars.src.app.utilities.TypeChecker")
+local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
+local TableFunctions        = require("babyWars.src.app.utilities.TableFunctions")
 
 --------------------------------------------------------------------------------
 -- The util functions.

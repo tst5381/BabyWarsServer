@@ -9,7 +9,7 @@
 --   - 本类只负责根据传入的参数构造菜单，不参与生成菜单内容本身（也就是说，本类并不知道生成的菜单到底是什么）。
 --]]--------------------------------------------------------------------------------
 
-local ModelActionMenu = class("ModelActionMenu")
+local ModelActionMenu = require("babyWars.src.global.functions.class")("ModelActionMenu")
 
 --------------------------------------------------------------------------------
 -- The private callback functions on script events.

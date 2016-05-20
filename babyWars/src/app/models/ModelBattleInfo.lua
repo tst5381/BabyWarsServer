@@ -12,7 +12,7 @@
 --   - ModelBattleInfo是ModelWarHUD的子model，与ModelActionPlanner没有直接联系，因此需要通过event来传递参数。
 --]]--------------------------------------------------------------------------------
 
-local ModelBattleInfo = class("ModelBattleInfo")
+local ModelBattleInfo = require("babyWars.src.global.functions.class")("ModelBattleInfo")
 
 --------------------------------------------------------------------------------
 -- The private callback functions on script events.

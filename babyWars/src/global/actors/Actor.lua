@@ -53,14 +53,14 @@ end
 function Actor.createWithModelAndViewInstance(modelInstance, viewInstance)
     local actor = Actor.new()
     if (modelInstance) then actor:setModel(modelInstance) end
-    if (viewInstance)  then actor:setView( viewInstance)  end
+    -- if (viewInstance)  then actor:setView( viewInstance)  end
 
     return actor
 end
 
 function Actor.createWithModelAndViewName(modelName, modelParam, viewName, viewParam)
     local model = Actor.createModel(modelName, modelParam)
-    local view  = Actor.createView( viewName,  viewParam)
+    -- local view  = Actor.createView( viewName,  viewParam)
 
     return Actor.createWithModelAndViewInstance(model, view)
 end

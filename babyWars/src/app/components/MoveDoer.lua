@@ -11,13 +11,13 @@
 --   单位移动范围同时受到燃料残量、天气、co技能等的影响
 --]]--------------------------------------------------------------------------------
 
-local MoveDoer = class("MoveDoer")
+local MoveDoer = require("babyWars.src.global.functions.class")("MoveDoer")
 
-local TypeChecker        = require("app.utilities.TypeChecker")
-local ComponentManager   = require("global.components.ComponentManager")
-local GridIndexFunctions = require("app.utilities.GridIndexFunctions")
+local TypeChecker        = require("babyWars.src.app.utilities.TypeChecker")
+local ComponentManager   = require("babyWars.src.global.components.ComponentManager")
+local GridIndexFunctions = require("babyWars.src.app.utilities.GridIndexFunctions")
 
-local MOVE_TYPES       = require("res.data.GameConstant").moveTypes
+local MOVE_TYPES       = require("babyWars.res.data.GameConstant").moveTypes
 local EXPORTED_METHODS = {
     "getMoveRange",
     "getMoveType",

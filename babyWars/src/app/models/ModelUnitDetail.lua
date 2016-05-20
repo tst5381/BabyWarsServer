@@ -9,7 +9,7 @@
 --  - 本类实际上没太多功能，只是把unit的属性交给ViewUnitDetail显示而已。
 --]]--------------------------------------------------------------------------------
 
-local ModelUnitDetail = class("ModelUnitDetail")
+local ModelUnitDetail = require("babyWars.src.global.functions.class")("ModelUnitDetail")
 
 --------------------------------------------------------------------------------
 -- The constructor.

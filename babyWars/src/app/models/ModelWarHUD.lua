@@ -18,9 +18,9 @@
 --    - BattleInfo
 --]]--------------------------------------------------------------------------------
 
-local ModelWarHUD = class("ModelWarHUD")
+local ModelWarHUD = require("babyWars.src.global.functions.class")("ModelWarHUD")
 
-local Actor = require("global.actors.Actor")
+local Actor = require("babyWars.src.global.actors.Actor")
 
 --------------------------------------------------------------------------------
 -- The callback function on EvtTurnPhaseBeginning.
@@ -29,7 +29,7 @@ local function onEvtTurnPhaseBeginning(self, event)
     if (self.m_View) then
         self.m_View:showBeginTurnEffect(event.turnIndex, event.modelPlayer:getNickname(), event.callbackOnBeginTurnEffectDisappear)
     else
-        event.callbackOnBeginTurnEffect()
+        event.callbackOnBeginTurnEffectDisappear()
     end
 
     return self

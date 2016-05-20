@@ -14,12 +14,11 @@
 --     - GridExplosion
 --]]--------------------------------------------------------------------------------
 
-local ModelWarField = class("ModelWarField")
+local ModelWarField = require("babyWars.src.global.functions.class")("ModelWarField")
 
-local Actor              = require("global.actors.Actor")
-local TypeChecker        = require("app.utilities.TypeChecker")
-local GameConstant       = require("res.data.GameConstant")
-local GridIndexFunctions = require("app.utilities.GridIndexFunctions")
+local Actor              = require("babyWars.src.global.actors.Actor")
+local TypeChecker        = require("babyWars.src.app.utilities.TypeChecker")
+local GridIndexFunctions = require("babyWars.src.app.utilities.GridIndexFunctions")
 
 local function requireFieldData(param)
     local t = type(param)
@@ -202,7 +201,7 @@ function ModelWarField:toStringList(spaces)
     local subSpaces = spaces .. "    "
     local strList = {spaces .. "warField = {\n"}
 
-    local appendList = require("app.utilities.TableFunctions").appendList
+    local appendList = require("babyWars.src.app.utilities.TableFunctions").appendList
     appendList(strList, self:getModelTileMap():toStringList(subSpaces), ",\n")
     appendList(strList, self:getModelUnitMap():toStringList(subSpaces), "\n" .. spaces .. "}")
 

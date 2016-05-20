@@ -15,7 +15,10 @@ local function createActorSceneWar(fileName)
     local file = io.open(fullFileName, "r")
     if (file) then
         file:close()
-        return Actor.createWithModelAndViewName("ModelSceneWar", dofile(fullFileName)), fullFileName
+
+        local modelSceneWar = Actor.createModel("ModelSceneWar", dofile(fullFileName))
+        modelSceneWar:onStartRunning()
+        return Actor.createWithModelAndViewInstance(modelSceneWar), fullFileName
     else
         return nil
     end
@@ -25,26 +28,30 @@ end
 -- The public functions.
 --------------------------------------------------------------------------------
 function SceneWarManager.getModelSceneWar(fileName)
-    if (s_ActorSceneWarList.fileName == nil) then
-        local actorSceneWar, fullFileName = createActorSceneWar(fileName)
-        if (not actorSceneWar) then
-            return nil
-        else
-            s_ActorSceneWarList.fileName = {
-                actorSceneWar = actorSceneWar,
-                fullFileName  = fullFileName
-            }
+    if (not fileName) then
+        return nil
+    else
+        if (s_ActorSceneWarList.fileName == nil) then
+            local actorSceneWar, fullFileName = createActorSceneWar(fileName)
+            if (not actorSceneWar) then
+                return nil
+            else
+                s_ActorSceneWarList.fileName = {
+                    actorSceneWar = actorSceneWar,
+                    fullFileName  = fullFileName
+                }
+            end
         end
-    end
 
-    return s_ActorSceneWarList.fileName.actorSceneWar:getModel()
+        return s_ActorSceneWarList.fileName.actorSceneWar:getModel()
+    end
 end
 
 function SceneWarManager.updateModelSceneWarWithAction(fileName, action)
     assert(s_ActorSceneWarList.fileName ~= nil, "SceneWarManager.updateModelSceneWarWithAction() the param fileName is invalid.")
 
-    local file = io.open(s_ActorSceneWarList.fileName.fullFileName, "r")
-    for _, str in ipairs(s_ActorSceneWarList.fileName.actorSceneWar:getModel():doAction():toStringList()) do
+    local file = io.open(s_ActorSceneWarList.fileName.fullFileName, "w")
+    for _, str in ipairs(s_ActorSceneWarList.fileName.actorSceneWar:getModel():doSystemAction(action):toStringList()) do
         file:write(str)
     end
     file:close()

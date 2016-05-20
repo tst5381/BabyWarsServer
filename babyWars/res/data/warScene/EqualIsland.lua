@@ -1,5 +1,7 @@
 
 return {
+    fileName = "EqualIsland",
+
     warField = {
         tileMap = {
             template = "EqualIsland",

@@ -10,9 +10,9 @@
 --  - 本类所显示的是光标所指向的unit的信息（通过event获知光标指向的是哪个unit）
 --]]--------------------------------------------------------------------------------
 
-local ModelUnitInfo = class("ModelUnitInfo")
+local ModelUnitInfo = require("babyWars.src.global.functions.class")("ModelUnitInfo")
 
-local GridIndexFunctions = require("app.utilities.GridIndexFunctions")
+local GridIndexFunctions = require("babyWars.src.app.utilities.GridIndexFunctions")
 
 --------------------------------------------------------------------------------
 -- The util functions.

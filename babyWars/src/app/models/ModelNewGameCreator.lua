@@ -1,12 +1,12 @@
 
-local ModelNewGameCreator = class("ModelNewGameCreator")
+local ModelNewGameCreator = require("babyWars.src.global.functions.class")("ModelNewGameCreator")
 
 --------------------------------------------------------------------------------
 -- The new game item.
 --------------------------------------------------------------------------------
 local function createItemListWarField(self)
     local list = {}
-    for _, warField in ipairs(require("res.data.templateWarField.WarFieldList")) do
+    for _, warField in ipairs(require("babyWars.res.data.templateWarField.WarFieldList")) do
         list[#list + 1] = {
             name     = warField.name,
             callback = function()

@@ -97,14 +97,26 @@ local function translateEndTurn(action, modelScene)
     local modelTurnManager   = modelScene:getModelTurnManager()
 
     if (getCurrentPlayerAccount(modelPlayerManager, modelTurnManager) ~= action.playerAccount) then
-        return nil, "ActionTranslator-translateEndTurn() the account of the actioning player is not the same as the one of the in-turn player."
+        return {
+            actionName = "Error",
+            error      = "Server: ActionTranslator-translateEndTurn() the account of the actioning player is not the same as the one of the in-turn player."
+        }
     end
 
     if (modelTurnManager:getTurnPhase() ~= "main") then
-        return nil, "ActionTranslator-translateEndTurn() the current turn phase is expected to be 'main'."
+        return {
+            actionName = "Error",
+            error      = "Server: ActionTranslator-translateEndTurn() the current turn phase is expected to be 'main'."
+        }
     end
 
-    return {actionName = "EndTurn", nextWeather = modelScene:getModelWeatherManager():getNextWeather()}
+    local translatedAction = {
+        actionName = "EndTurn",
+        nextWeather = modelScene:getModelWeatherManager():getNextWeather()
+    }
+    SceneWarManager.updateModelSceneWarWithAction(modelScene:getFileName(), translatedAction)
+
+    return translatedAction
 end
 
 local function translateWait(action, modelScene)
@@ -291,22 +303,23 @@ end
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
-function ActionTranslator.translate(action, modelScene)
+function ActionTranslator.translate(action)
     if (type(action) ~= "table") then
         return {actionName = "Error", error = "Illegal param action. Table expected."}
     end
 
     local actionName = action.actionName
+    local modelSceneWar = SceneWarManager.getModelSceneWar(action.sceneWarFileName)
     if (actionName == "EndTurn") then
-        return translateEndTurn(      action, modelScene)
+        return translateEndTurn(      action, modelSceneWar)
     elseif (actionName == "Wait") then
-        return translateWait(         action, modelScene)
+        return translateWait(         action, modelSceneWar)
     elseif (actionName == "Attack") then
-        return translateAttack(       action, modelScene)
+        return translateAttack(       action, modelSceneWar)
     elseif (actionName == "Capture") then
-        return translateCapture(      action, modelScene)
+        return translateCapture(      action, modelSceneWar)
     elseif (actionName == "ProduceOnTile") then
-        return translateProduceOnTile(action, modelScene)
+        return translateProduceOnTile(action, modelSceneWar)
     elseif (actionName == "Login") then
         return translateLogin(action)
     elseif (actionName == "GetOngoingWarList") then
