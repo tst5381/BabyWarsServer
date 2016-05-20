@@ -174,6 +174,14 @@ function ModelPlayerManager:getPlayersCount()
     return #self.m_Players
 end
 
+function ModelPlayerManager:forEachModelPlayer(func)
+    for _, modelPlayer in ipairs(self.m_Players) do
+        func(modelPlayer)
+    end
+
+    return self
+end
+
 --------------------------------------------------------------------------------
 -- The public functions for doing actions.
 --------------------------------------------------------------------------------

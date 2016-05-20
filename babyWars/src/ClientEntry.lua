@@ -37,15 +37,15 @@ while true do
         break
     elseif typ == "text" then
         -- TODO: validate the data before loadstring().
-        local chunk    = loadstring("return " .. data)
-        local feedback = (chunk) and
-            (SerializationFunctions.serialize(ActionTranslator.translate(chunk(), wb))) or
-            ("invalid request: " .. data)
-
-        local bytes, err = wb:send_text(feedback)
-        if not bytes then
-            ngx.log(ngx.ERR, "failed to send text: ", err)
-            return ngx.exit(444)
+        local chunk = loadstring("return " .. data)
+        if (chunk) then
+            ActionTranslator.translate(chunk(), wb)
+        else
+            local bytes, err = wb:send_text("Server: Failed to parse the data came from the client.")
+            if not bytes then
+                ngx.log(ngx.ERR, "failed to send text: ", err)
+                return ngx.exit(444)
+            end
         end
     end
 end

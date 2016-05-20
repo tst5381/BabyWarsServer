@@ -35,6 +35,7 @@ function WebSocketManager.updateSocketWithPlayerAccountAndPassword(account, pass
     local existingSocket = s_AccountAndSocketList[account]
     if ((existingSocket) and (existingSocket ~= socket)) then
         -- TODO: should we ask the client to reboot when its socket is closed by the server?
+        -- TODO: the send_close() fails and I don't know why.
         existingSocket:send_close()
     end
 

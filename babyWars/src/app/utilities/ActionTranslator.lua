@@ -19,9 +19,10 @@
 
 local ActionTranslator = {}
 
-local GridIndexFunctions = require("babyWars.src.app.utilities.GridIndexFunctions")
-local SceneWarManager    = require("babyWars.src.app.utilities.SceneWarManager")
-local WebSocketManager   = require("babyWars.src.app.utilities.WebSocketManager")
+local GridIndexFunctions     = require("babyWars.src.app.utilities.GridIndexFunctions")
+local SceneWarManager        = require("babyWars.src.app.utilities.SceneWarManager")
+local WebSocketManager       = require("babyWars.src.app.utilities.WebSocketManager")
+local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -49,6 +50,26 @@ local function isAccountAndPasswordValid(account, password)
     else
         return false
     end
+end
+
+local function sendRawActionToSingleSocket(action, webSocket)
+    webSocket:send_text(SerializationFunctions.serialize(action))
+end
+
+local function sendRawActionToPlayers(action, modelPlayerManager)
+    local serializedAction = SerializationFunctions.serialize(action)
+
+    modelPlayerManager:forEachModelPlayer(function(modelPlayer)
+        if (modelPlayer:isAlive()) then
+            local socket = WebSocketManager.getSocketWithPlayerAccount(modelPlayer:getAccount())
+            if (socket) then
+                local bytes, err = socket:send_text(serializedAction)
+                if (not bytes) then
+                    ngx.log(ngx.ERR, "failed to send a text frame: ", err)
+                end
+            end
+        end
+    end)
 end
 
 --------------------------------------------------------------------------------
@@ -105,31 +126,28 @@ local function translatePath(path, modelUnitMap, modelTileMap, modelWeatherManag
     end
 end
 
-local function translateEndTurn(action, modelScene)
+local function translateEndTurn(action, webSocket, modelScene)
     local modelPlayerManager = modelScene:getModelPlayerManager()
     local modelTurnManager   = modelScene:getModelTurnManager()
 
     if (getCurrentPlayerAccount(modelPlayerManager, modelTurnManager) ~= action.playerAccount) then
-        return {
+        sendRawActionToSingleSocket({
             actionName = "Error",
             error      = "Server: ActionTranslator-translateEndTurn() the account of the actioning player is not the same as the one of the in-turn player."
-        }
-    end
-
-    if (modelTurnManager:getTurnPhase() ~= "main") then
-        return {
+        }, webSocket)
+    elseif (modelTurnManager:getTurnPhase() ~= "main") then
+        sendRawActionToSingleSocket({
             actionName = "Error",
             error      = "Server: ActionTranslator-translateEndTurn() the current turn phase is expected to be 'main'."
+        }, webSocket)
+    else
+        local translatedAction = {
+            actionName = "EndTurn",
+            nextWeather = modelScene:getModelWeatherManager():getNextWeather()
         }
+        SceneWarManager.updateModelSceneWarWithAction(modelScene:getFileName(), translatedAction)
+        sendRawActionToPlayers(translatedAction, modelPlayerManager)
     end
-
-    local translatedAction = {
-        actionName = "EndTurn",
-        nextWeather = modelScene:getModelWeatherManager():getNextWeather()
-    }
-    SceneWarManager.updateModelSceneWarWithAction(modelScene:getFileName(), translatedAction)
-
-    return translatedAction
 end
 
 local function translateWait(action, modelScene)
@@ -268,45 +286,45 @@ local function translateLogin(action, webSocket)
         WebSocketManager.updateSocketWithPlayerAccountAndPassword(account, password, webSocket)
     end
 
-    return {
+    sendRawActionToSingleSocket({
         actionName   = "Login",
         isSuccessful = isSuccessful,
         account      = (isSuccessful) and (account)  or (nil),
         password     = (isSuccessful) and (password) or (nil)
-    }
+    }, webSocket)
 end
 
-local function translateGetOngoingWarList(action)
+local function translateGetOngoingWarList(action, webSocket)
     local fileName = "babyWars/res/data/playerProfile/" .. action.playerAccount .. ".lua"
     local file = io.open(fileName, "r")
     if (not file) then
-        return {
+        sendRawActionToSingleSocket({
             actionName = "Error",
             error      = "Server: translateGetOngoingWarList() failed to open the player profile with the param action.playerAccount."
-        }
+        }, webSocket)
     else
         file:close()
-        return {
+        sendRawActionToSingleSocket({
             actionName = "GetOngoingWarList",
             list = dofile(fileName).warLists.ongoing
-        }
+        }, webSocket)
     end
 end
 
-local function translateGetSceneWarData(action)
+local function translateGetSceneWarData(action, webSocket)
     local fileName = "babyWars/res/data/warScene/" .. action.fileName .. ".lua"
     local file = io.open(fileName, "r")
     if (not file) then
-        return {
+        sendRawActionToSingleSocket({
             actionName = "Error",
             error      = "Server: translateGetSceneWarData() failed to open the war scene data file with the param action.fileName."
-        }
+        }, webSocket)
     else
         file:close()
-        return {
+        sendRawActionToSingleSocket({
             actionName = "GetSceneWarData",
             data = dofile(fileName)
-        }
+        }, webSocket)
     end
 end
 
@@ -315,18 +333,22 @@ end
 --------------------------------------------------------------------------------
 function ActionTranslator.translate(action, webSocket)
     if (type(action) ~= "table") then
-        return {actionName = "Error", error = "Server: Illegal param action from the client. Table expected."}
+        sendRawActionToSingleSocket({actionName = "Error", error = "Server: Illegal param action from the client. Table expected."}, webSocket)
     end
 
     local actionName = action.actionName
     local modelSceneWar = SceneWarManager.getModelSceneWar(action.sceneWarFileName)
     if (actionName == "Login") then
-        return translateLogin(action, webSocket)
+        translateLogin(action, webSocket)
     else
         if (not isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
-            return {actionName = "Error", error = "Server: invalid account/password from the client."}
-        elseif (actionName == "EndTurn") then
-            return translateEndTurn(      action, modelSceneWar)
+            sendRawActionToSingleSocket({actionName = "Error", error = "Server: invalid account/password from the client."}, webSocket)
+        else
+            WebSocketManager.updateSocketWithPlayerAccountAndPassword(action.playerAccount, action.playerPassword, webSocket)
+        end
+
+        if (actionName == "EndTurn") then
+            return translateEndTurn(      action, webSocket, modelSceneWar)
         elseif (actionName == "Wait") then
             return translateWait(         action, modelSceneWar)
         elseif (actionName == "Attack") then
@@ -336,9 +358,9 @@ function ActionTranslator.translate(action, webSocket)
         elseif (actionName == "ProduceOnTile") then
             return translateProduceOnTile(action, modelSceneWar)
         elseif (actionName == "GetOngoingWarList") then
-            return translateGetOngoingWarList(action)
+            return translateGetOngoingWarList(action, webSocket)
         elseif (actionName == "GetSceneWarData") then
-            return translateGetSceneWarData(action)
+            return translateGetSceneWarData(action, webSocket)
         else
             return {actionName = "Error", error = "Server: unrecognized action name from the client: " .. actionName}
         end
