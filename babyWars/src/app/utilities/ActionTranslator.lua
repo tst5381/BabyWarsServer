@@ -21,6 +21,7 @@ local ActionTranslator = {}
 
 local GridIndexFunctions = require("babyWars.src.app.utilities.GridIndexFunctions")
 local SceneWarManager    = require("babyWars.src.app.utilities.SceneWarManager")
+local WebSocketManager   = require("babyWars.src.app.utilities.WebSocketManager")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -36,6 +37,18 @@ end
 local function isModelUnitVisible(modelUnit, modelWeatherManager)
     -- TODO: add code to do the real job.
     return true
+end
+
+local function isAccountAndPasswordValid(account, password)
+    local fileName = "babyWars/res/data/playerProfile/" .. account .. ".lua"
+    local file = io.open(fileName, "r")
+
+    if (file) then
+        file:close()
+        return dofile(fileName).password == password
+    else
+        return false
+    end
 end
 
 --------------------------------------------------------------------------------
@@ -248,21 +261,18 @@ local function translateProduceOnTile(action, modelScene)
     return {actionName = "ProduceOnTile", gridIndex = GridIndexFunctions.clone(gridIndex), tiledID = tiledID, cost = cost}
 end
 
-local function translateLogin(action)
-    local fileName = "babyWars/res/data/playerProfile/" .. action.account .. ".lua"
-    local file = io.open(fileName, "r")
-    local isSuccessful = false
-
-    if (file) then
-        file:close()
-        isSuccessful = dofile(fileName).password == action.password
+local function translateLogin(action, webSocket)
+    local account, password = action.account, action.password
+    local isSuccessful = isAccountAndPasswordValid(account, password)
+    if (isSuccessful) then
+        WebSocketManager.updateSocketWithPlayerAccountAndPassword(account, password, webSocket)
     end
 
     return {
         actionName   = "Login",
         isSuccessful = isSuccessful,
-        account      = (isSuccessful) and (action.account)  or (nil),
-        password     = (isSuccessful) and (action.password) or (nil)
+        account      = (isSuccessful) and (account)  or (nil),
+        password     = (isSuccessful) and (password) or (nil)
     }
 end
 
@@ -303,31 +313,35 @@ end
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
-function ActionTranslator.translate(action)
+function ActionTranslator.translate(action, webSocket)
     if (type(action) ~= "table") then
-        return {actionName = "Error", error = "Illegal param action. Table expected."}
+        return {actionName = "Error", error = "Server: Illegal param action from the client. Table expected."}
     end
 
     local actionName = action.actionName
     local modelSceneWar = SceneWarManager.getModelSceneWar(action.sceneWarFileName)
-    if (actionName == "EndTurn") then
-        return translateEndTurn(      action, modelSceneWar)
-    elseif (actionName == "Wait") then
-        return translateWait(         action, modelSceneWar)
-    elseif (actionName == "Attack") then
-        return translateAttack(       action, modelSceneWar)
-    elseif (actionName == "Capture") then
-        return translateCapture(      action, modelSceneWar)
-    elseif (actionName == "ProduceOnTile") then
-        return translateProduceOnTile(action, modelSceneWar)
-    elseif (actionName == "Login") then
-        return translateLogin(action)
-    elseif (actionName == "GetOngoingWarList") then
-        return translateGetOngoingWarList(action)
-    elseif (actionName == "GetSceneWarData") then
-        return translateGetSceneWarData(action)
+    if (actionName == "Login") then
+        return translateLogin(action, webSocket)
     else
-        return {actionName = "Error", error = "Unrecognized action name: " .. actionName}
+        if (not isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+            return {actionName = "Error", error = "Server: invalid account/password from the client."}
+        elseif (actionName == "EndTurn") then
+            return translateEndTurn(      action, modelSceneWar)
+        elseif (actionName == "Wait") then
+            return translateWait(         action, modelSceneWar)
+        elseif (actionName == "Attack") then
+            return translateAttack(       action, modelSceneWar)
+        elseif (actionName == "Capture") then
+            return translateCapture(      action, modelSceneWar)
+        elseif (actionName == "ProduceOnTile") then
+            return translateProduceOnTile(action, modelSceneWar)
+        elseif (actionName == "GetOngoingWarList") then
+            return translateGetOngoingWarList(action)
+        elseif (actionName == "GetSceneWarData") then
+            return translateGetSceneWarData(action)
+        else
+            return {actionName = "Error", error = "Server: unrecognized action name from the client: " .. actionName}
+        end
     end
 end
 

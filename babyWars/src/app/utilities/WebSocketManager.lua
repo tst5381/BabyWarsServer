@@ -1,67 +1,45 @@
 
-local WebSocketManager = require("babyWars.src.global.functions.class")("WebSocketManager")
+local WebSocketManager = {}
 
-local SERVER_URL = "localhost:8080/BabyWars"
+local s_AccountAndSocketList = {}
 
-local s_Socket ,s_Owner
-local s_Account, s_Password
+function WebSocketManager.addSocketWithPlayerAccount(account, socket)
+    assert(type(account) == "string", "WebSocketManager.addSocketWithPlayerAccount() the param account is invalid.")
+    assert(s_AccountAndSocketList[account] == nil, "WebSocketManager.addSocketWithPlayerAccount() the account is already in the list.")
 
-function WebSocketManager.isInitialized()
-    return s_Socket ~= nil
-end
-
-function WebSocketManager.init()
-    assert(not WebSocketManager.isInitialized(), "WebSocketManager.init() the socket has been initialized.")
-    s_Socket = cc.WebSocket:create(SERVER_URL)
+    s_AccountAndSocketList[account] = socket
 
     return WebSocketManager
 end
 
-function WebSocketManager.setOwner(owner)
-    assert(WebSocketManager.isInitialized(), "WebSocketManager.setOwner() the socket hasn't been initialized.")
-    assert(type(owner.onWebSocketEvent) == "function", "WebSocketManager.setOwner() the param owner.onWebSocketEvent is not a function.")
+function WebSocketManager.getSocketWithPlayerAccount(account)
+    assert(type(account) == "string", "WebSocketManager.getSocketWithPlayerAccount() the param account is invalid.")
+    return s_AccountAndSocketList[account]
+end
 
-    s_Socket:registerScriptHandler(function()
-        owner:onWebSocketEvent("open")
-    end, cc.WEBSOCKET_OPEN)
-
-    s_Socket:registerScriptHandler(function(msg)
-        owner:onWebSocketEvent("message", {message = msg})
-    end, cc.WEBSOCKET_MESSAGE)
-
-    s_Socket:registerScriptHandler(function()
-        owner:onWebSocketEvent("close")
-    end, cc.WEBSOCKET_CLOSE)
-
-    s_Socket:registerScriptHandler(function(err)
-        owner:onWebSocketEvent("error", {error = err})
-    end, cc.WEBSOCKET_ERROR)
-
-    s_Owner = owner
+function WebSocketManager.removeSocketWithPlayerAccount(account)
+    assert(type(account) == "string", "WebSocketManager.getSocketWithPlayerAccount() the param account is invalid.")
+    s_AccountAndSocketList[account] = nil
 
     return WebSocketManager
 end
 
-function WebSocketManager.setLoggedInAccountAndPassword(account, password)
-    s_Account, s_Password = account, password
+function WebSocketManager.updateSocketWithPlayerAccountAndPassword(account, password, socket)
+    assert(type(account) == "string", "WebSocketManager.updateSocketWithPlayerAccountAndPassword() the param account is invalid.")
 
-    return WebSocketManager
-end
+    local previousAccount = socket:getPlayerAccountAndPassword()
+    if (previousAccount) then
+        s_AccountAndSocketList[previousAccount] = nil
+    end
 
-function WebSocketManager.getLoggedInAccountAndPassword()
-    return s_Account, s_Password
-end
+    local existingSocket = s_AccountAndSocketList[account]
+    if ((existingSocket) and (existingSocket ~= socket)) then
+        -- TODO: should we ask the client to reboot when its socket is closed by the server?
+        existingSocket:send_close()
+    end
 
-function WebSocketManager.sendString(str)
-    assert(WebSocketManager.isInitialized(), "WebSocketManager.sendString() the socket hasn't been initialized.")
-    s_Socket:sendString(str)
-
-    return WebSocketManager
-end
-
-function WebSocketManager.close()
-    assert(WebSocketManager.isInitialized(), "WebSocketManager.close() the socket hasn't been initialized.")
-    s_Socket:close()
+    s_AccountAndSocketList[account] = socket
+    socket:setPlayerAccountAndPassword(account, password)
 
     return WebSocketManager
 end

@@ -2,6 +2,7 @@
 local server                 = require("resty.websocket.server")
 local ActionTranslator       = require("babyWars.src.app.utilities.ActionTranslator")
 local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
+local WebSocketManager       = require("babyWars.src.app.utilities.WebSocketManager")
 
 -- TODO: move the code that initializes the server to somewhere else (like main()).
 require("babyWars.src.app.utilities.GameConstantFunctions").init()
@@ -14,6 +15,14 @@ local wb, err = server:new{
 if not wb then
     ngx.log(ngx.ERR, "failed to new websocket: ", err)
     return ngx.exit(444)
+end
+
+wb.setPlayerAccountAndPassword = function(self, account, password)
+    self.m_PlayerAccount, self.m_PlayerPassword = account, password
+end
+
+wb.getPlayerAccountAndPassword = function(self)
+    return self.m_PlayerAccount, self.m_PlayerPassword
 end
 
 while true do
@@ -30,7 +39,7 @@ while true do
         -- TODO: validate the data before loadstring().
         local chunk    = loadstring("return " .. data)
         local feedback = (chunk) and
-            (SerializationFunctions.serialize(ActionTranslator.translate(chunk()))) or
+            (SerializationFunctions.serialize(ActionTranslator.translate(chunk(), wb))) or
             ("invalid request: " .. data)
 
         local bytes, err = wb:send_text(feedback)
@@ -41,4 +50,7 @@ while true do
     end
 end
 
+if (wb.m_PlayerAccount) then
+    WebSocketManager.removeSocketWithPlayerAccount(wb.m_PlayerAccount)
+end
 wb:send_close()
