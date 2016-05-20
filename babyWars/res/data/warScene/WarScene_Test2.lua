@@ -1,5 +1,5 @@
 
-local WarScene_Test2 = {
+return {
     warField = {
         tileMap = {
             template = "FullTest",

@@ -1,5 +1,5 @@
 
-local WarScene_Test1 = {
+return {
     warField = {
         tileMap = {
             template = "FullTest",
@@ -124,5 +124,3 @@ local WarScene_Test1 = {
         current = "clear"
     },
 }
-
-return WarScene_Test1

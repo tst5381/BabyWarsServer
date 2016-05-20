@@ -20,6 +20,7 @@
 local ActionTranslator = {}
 
 local GridIndexFunctions = require("babyWars.src.app.utilities.GridIndexFunctions")
+local SceneWarManager    = require("babyWars.src.app.utilities.SceneWarManager")
 
 --------------------------------------------------------------------------------
 -- The util functions.

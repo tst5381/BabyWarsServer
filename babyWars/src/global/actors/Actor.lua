@@ -29,15 +29,16 @@
 --     理想状态下，如果需要更换引擎，那么我们只需要改写view就可以，其他都可以不用更改。
 --]]--------------------------------------------------------------------------------
 
-local Actor = class("Actor")
+local Actor = require("babyWars.src.global.functions.class")("Actor")
 
-local ComponentManager = require("global.components.ComponentManager")
+local MODEL_PATH = "babyWars.src.app.models."
+local VIEW_PATH  = "babyWars.src.app.views"
 
 function Actor.createModel(name, param)
     if (not name) then
         return nil
     else
-        return require("app.models." .. name):create(param)
+        return require(MODEL_PATH .. name):create(param)
     end
 end
 
@@ -45,7 +46,7 @@ function Actor.createView(name, param)
     if (not name) then
         return nil
     else
-        return require("app.views." .. name):create(param)
+        return require(VIEW_PATH .. name):create(param)
     end
 end
 
@@ -65,7 +66,6 @@ function Actor.createWithModelAndViewName(modelName, modelParam, viewName, viewP
 end
 
 function Actor:setView(view)
-    assert(iskindof(view, "cc.Node"), "Actor:setView() the param view is not a kind of cc.Node.")
     assert(view.m_Actor == nil, "Actor:setView() the param view already has an owner actor.")
     assert(self.m_View == nil, "Actor:setView() the actor already has a view.")
 
