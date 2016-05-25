@@ -47,7 +47,7 @@ local function destroyWebSocket(self)
     end
 end
 
-local function initRedisForSubscribe(self)
+local function initRedisForSubscribe(self, account)
     assert(self.m_RedisForSubscribe == nil, "Session-initRedisForSubscribe() the redis is initialized already.")
 
     local red = Redis:new()
@@ -58,9 +58,7 @@ local function initRedisForSubscribe(self)
         ngx.log(ngx.ERR, "Session-initRedisForSubscribe() failed to connect to redis for subscribe: ", err)
         return
     end
-
-    red:set("kkey", "vvalue")
-    ngx.log(ngx.CRIT, "get kkey from redis: ", red:get("kkey"))
+    red:subscribe("Session." .. account)
 
     self.m_RedisForSubscribe = red
     return red
@@ -88,13 +86,14 @@ local function initThreadForSubscribe(self)
 
             if ((res) and (res[1] == "message")) then
                 local bytes, err = self.m_WebSocket:send_text(res[3])
+                ngx.log(ngx.CRIT, "Session-threadForSubscribe() receive published message: ", res[3])
                 if (not bytes) then
-                    ngx.log(ngx.ERR, "Session-threadForSubscribe main loop: failed to send the reply to the webSocket: ", err)
+                    ngx.log(ngx.ERR, "Session-threadForSubscribe main loop: failed to send the published message to the webSocket: ", err)
                     return self:stop()
                 end
 
-                if (string.find(res[3], "Logout")) then
-                    ngx.log(ngx.ERR, "Session-threadForSubscribe main loop: logout.")
+                if (string.find(res[3], '"Logout"')) then
+                    ngx.log(ngx.CRIT, "Session-threadForSubscribe main loop: receive a Logout action.")
                     return self:stop()
                 end
             end
@@ -113,16 +112,28 @@ local function destroyThreadForSubscribe(self)
 end
 
 local function publishTranslatedActions(self, actions)
-    local red = self.m_RedisForSubscribe
+    if (actions == nil) then
+        return
+    end
+
+    -- It seems that if we use self.m_RedisForSubscribe to publish the actions, it may fail mysteriously.
+    -- So it's safer to use a temporary redis for publishing.
+    local red = Redis:new()
+    red:set_timeout(10000000) -- 10000s
+    red:connect("127.0.0.1", 6379)
+
     local serialize = SerializationFunctions.serialize
-    for account, action in pairs(actions or {}) do
+    for account, action in pairs(actions) do
         red:publish("Session." .. account, serialize(action))
     end
+
+    red:close()
 end
 
 local function doAction(self, actionForSelf, actionsForPublish)
+    publishTranslatedActions(self, actionsForPublish)
+
     if (actionForSelf.actionName == "Login") then
-        publishTranslatedActions(self, actionsForPublish)
         ngx.log(ngx.CRIT, "Session-doAction() before subscribe")
         self:subscribeToPlayerChannel(actionForSelf.account, actionForSelf.password)
         ngx.log(ngx.CRIT, "Session-doAction() after subscribe")
@@ -171,8 +182,7 @@ function Session:subscribeToPlayerChannel(account, password)
     self:unsubscribeFromPlayerChannel()
     ngx.log(ngx.CRIT, "Session:subscribeToPlayerChannel() after unsubscribe.")
 
-    initRedisForSubscribe(self)
-    self.m_RedisForSubscribe:subscribe("Session." .. account)
+    initRedisForSubscribe(self, account)
     initThreadForSubscribe(self)
     self.m_PlayerAccount, self.m_PlayerPassword = account, password
     SessionManager.setSessionIdWithPlayerAccount(account, self.m_ID)
@@ -208,39 +218,6 @@ function Session:start()
         return self:stop()
     end
 
-    if (not initRedisForSubscribe(self)) then
-        return self:stop()
-    end
-
-    --[[
-    local red = redis:new()
-    red:set_timeout(1000)
-    local ok, err = red:connect("127.0.0.1", 6379)
-    if not ok then
-        ngx.log(ngx.ERR, "failed to connect to redis: ", err)
-        return
-    else
-        ngx.log(ngx.ERR, "succeed connecting to redis")
-    end
-
-    ok, err = red:set("dog", "an animal")
-    if not ok then
-        ngx.log(ngx.ERR, "failed to set key and value to redis: ", err)
-        return
-    end
-
-    local res, err = red:get("dog")
-    if not res then
-        ngx.log(ngx.ERR, "failed to get dog: ", err)
-        return
-    end
-    if res == ngx.null then
-        ngx.log(ngx.ERR, "dog not found.")
-        return
-    end
-    ngx.log(ngx.ERR, "get dog: ", res)
-    ]]
-
     while (true) do
         local data, typ, err = webSocket:recv_frame()
 
@@ -266,64 +243,12 @@ function Session:start()
         end
     end
 
-    --[[
-    local wb, err = server:new{
-        timeout = 5000,
-        max_payload_len = 65535
-    }
-
-    if not wb then
-        ngx.log(ngx.ERR, "failed to new websocket: ", err)
-        return ngx.exit(444)
-    end
-
-    wb.setPlayerAccountAndPassword = function(self, account, password)
-        self.m_PlayerAccount, self.m_PlayerPassword = account, password
-    end
-
-    wb.getPlayerAccountAndPassword = function(self)
-        return self.m_PlayerAccount, self.m_PlayerPassword
-    end
-
-    while true do
-        local data, typ, err = wb:recv_frame()
-
-        if wb.fatal then
-            ngx.log(ngx.ERR, "failed to receive frame: ", err)
-            return ngx.exit(444)
-        end
-
-        if typ == "close" then
-            break
-        elseif typ == "text" then
-            -- TODO: validate the data before loadstring().
-            local chunk = loadstring("return " .. data)
-            if (chunk) then
-                ActionTranslator.translate(chunk(), wb)
-            else
-                local bytes, err = wb:send_text("Server: Failed to parse the data came from the client.")
-                if not bytes then
-                    ngx.log(ngx.ERR, "failed to send text: ", err)
-                    return ngx.exit(444)
-                end
-            end
-        end
-    end
-
-    if (wb.m_PlayerAccount) then
-        WebSocketManager.removeSocketWithPlayerAccount(wb.m_PlayerAccount)
-    end
-    wb:send_close()
-    --]]
-
     return self:stop()
 end
 
 -- WARNING: You can't call this method outside the context of the request.
 function Session:stop()
     self:unsubscribeFromPlayerChannel()
-    -- destroyThreadForSubscribe(self)
-    -- destroyRedisForSubscribe(self)
     destroyWebSocket(self)
 
     return ngx.exit(ngx.HTTP_CLOSE)

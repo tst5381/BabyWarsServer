@@ -24,7 +24,6 @@ local SceneWarManager        = require("babyWars.src.app.utilities.SceneWarManag
 local WebSocketManager       = require("babyWars.src.app.utilities.WebSocketManager")
 local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
 local SessionManager         = require("babyWars.src.app.utilities.SessionManager")
-local Redis                  = require("resty.redis")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -284,85 +283,34 @@ local function translateProduceOnTile(action, modelScene)
 end
 
 local function translateLogin(action, session)
-    --[[
-        登陆操作细节分析：
-        注：目前没有办法直接获取redis的频道有多少连接在订阅，所以只能另外记录。
-        1. 如果账号密码不正确，则只要发回登陆失败的消息即可：
-            -. 发回登陆失败的提示给尝试登陆的session；不用做其他任何事情
-        2. 如果账号密码正确：
-            1. 如果当前没有任何会话登陆了该账号密码（redis:hget(account, "Session") == ngx.null）：
-                1. 如果尝试登陆的session处于未登录状态：直接正常绑定到新账户。
-                    -. 更新redis的“用户名-会话ID”记录（redis:hset(account, "Session", sessionID)）
-                    -. 使得该session开始侦听account频道
-                    -. 发回登陆成功的提示给该session
-                2. 如果尝试登陆的session已处于登陆状态（能来到这里，只可能是是登陆了其他的账户）：先取消该session对原有账户的绑定，再绑定到新账户
-                    -. 删除redis的“用户名-会话ID”记录（redis:hdel(prevAccount, "Session")
-                    -. 使得该session离开它当前的account频道
-                    -. 更新redis的“用户名-会话ID”记录（redis:hset(account, "Session", sessionID)）
-                    -. 使得该session开始侦听account频道
-                    -. 发回登陆成功的提示给该session
-
-            2. 如果已有existingSession登陆了该账号密码（redis:hget(account, "Session") ~= ngx.null）：
-                1. 如果尝试登陆的session处于未登录状态（换言之，一个未登陆的session尝试登陆正处于登陆状态的账号）：强制登出已登录的设备，使新设备正常登陆
-                    -. 发送强制登出的消息给existingSession（只能通过publish，因为已经跨越了session的边界。session收到强制登出的消息时，要自动与登陆的账号解绑）
-                    -. 更新redis的“用户名-会话ID”记录（redis:hset(account, "Session", sessionID)）
-                    -. 使得该session开始侦听account频道
-                    -. 发回登陆成功的提示给该session
-                2. 如果尝试登陆的session已处于登陆状态：
-                    1. 如果existingSession和尝试登陆的session是同一个（换言之，同一个session在重登录已经登陆了的账号）：
-                        -. 发回已经登陆过的提示给该session；不做其他事
-                    2. 如果existingSession和尝试登陆的session不同：
-                        -. 发送强制登出的消息给existingSession（只能通过publish，因为已经跨越了session的边界。session收到强制登出的消息时，要自动与登陆的账号解绑）
-                        -. 删除redis的“用户名-会话ID”记录（redis:hdel(prevAccount, "Session")
-                        -. 使得该session离开它当前的account频道
-                        -. 更新redis的“用户名-会话ID”记录（redis:hset(account, "Session", sessionID)）
-                        -. 使得该session开始侦听account频道
-                        -. 发回登陆成功的提示给该session
-    ]]
     local account, password = action.account, action.password
-    local isSuccessful = isAccountAndPasswordValid(account, password)
-    local translatedAction = {
-        actionName   = "Login",
-        account      = (isSuccessful) and (account)  or nil,
-        password     = (isSuccessful) and (password) or nil,
-    }
-
     if (not isAccountAndPasswordValid(account, password)) then
-        ngx.log(ngx.ERR, "ActionTranslator-translateLogin() invalid account/password.")
         return {
             actionName = "Message",
             message    = "Invalid account/password.",
         }
     else
-        local loggedSessionID = SessionManager.getSessionIdWithPlayerAccount(account)
-        if (loggedSessionID == nil) then
-            ngx.log(ngx.ERR, "ActionTranslator-translateLogin() logging with a un-logged account (loggedSessionID == nil).")
-            return translatedAction
+        -- By returning the actionLogin, the session will then automatically call subscribeToPlayerChannel().
+        local actionLogin = {
+            actionName = "Login",
+            account    = account,
+            password   = password,
+        }
+
+        if (SessionManager.getSessionIdWithPlayerAccount(account) == nil) then
+            return actionLogin
+        elseif (session:isSubscribingToPlayerChannel(account)) then
+            return {
+                actionName = "Message",
+                message    = "You have already logged in as " .. account,
+            }
         else
-            if (not session:isSubscribingToPlayerChannel()) then
-                ngx.log(ngx.ERR, "ActionTranslator-translateLogin() logging with a logged account while self is not logged in: loggedSessionID == ", loggedSessionID)
-                return translatedAction, {
-                    [account] = {
-                        actionName = "Logout",
-                        message    = "Another device is logging in with your account!",
-                    },
+            return actionLogin, {
+                [account] = {
+                    actionName = "Logout",
+                    message    = "Another device is logging in with your account!",
                 }
-            else
-                if (loggedSessionID == session:getID()) then
-                    return {
-                        actionName = "Message",
-                        message    = "You have already logged in as " .. account,
-                    }
-                else
-                    ngx.log(ngx.ERR, "ActionTranslator-translateLogin() logging with a logged account while self is also logged in: loggedSessionID == ", loggedSessionID)
-                    return translatedAction, {
-                        [account] = {
-                            actionName = "Logout",
-                            message    = "Another device is logging in with your account!",
-                        },
-                    }
-                end
-            end
+            }
         end
     end
 end
@@ -416,7 +364,9 @@ function ActionTranslator.translate(action, session)
     if (actionName == "Login") then
         return translateLogin(action, session)
     else
-        if (not isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+        if (isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+            session:subscribeToPlayerChannel(action.playerAccount, action.playerPassword)
+        else
             return {
                 actionName = "Logout",
                 message    = "Invalid account/password. Please login again.",
