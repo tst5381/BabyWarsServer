@@ -52,6 +52,21 @@ local function isAccountAndPasswordValid(account, password)
     end
 end
 
+local function generateActionsForPublish(action, modelPlayerManager, currentPlayerAccount)
+    local actionsForPublish
+    modelPlayerManager:forEachModelPlayer(function(modelPlayer)
+        local otherPlayerAccount = modelPlayer:getAccount()
+        if ((otherPlayerAccount ~= currentPlayerAccount) and
+            (modelPlayer:isAlive()) and
+            (SessionManager.getSessionIdWithPlayerAccount(otherPlayerAccount))) then
+            actionsForPublish = actionsForPublish or {}
+            actionsForPublish[otherPlayerAccount] = action
+        end
+    end)
+
+    return actionsForPublish
+end
+
 --------------------------------------------------------------------------------
 -- The translate functions.
 --------------------------------------------------------------------------------
@@ -129,19 +144,7 @@ local function translateEndTurn(action, modelScene)
             nextWeather = modelScene:getModelWeatherManager():getNextWeather(),
         }
         SceneWarManager.updateModelSceneWarWithAction(modelScene:getFileName(), actionEndTurn)
-
-        local actionsForPublish
-        modelPlayerManager:forEachModelPlayer(function(modelPlayer)
-            local otherPlayerAccount = modelPlayer:getAccount()
-            if ((otherPlayerAccount ~= action.playerAccount) and
-                (modelPlayer:isAlive()) and
-                (SessionManager.getSessionIdWithPlayerAccount(otherPlayerAccount))) then
-                actionsForPublish = actionsForPublish or {}
-                actionsForPublish[otherPlayerAccount] = actionEndTurn
-            end
-        end)
-
-        return actionEndTurn, actionsForPublish
+        return actionEndTurn, generateActionsForPublish(actionEndTurn, modelPlayerManager, action.playerAccount)
     end
 end
 
@@ -156,20 +159,36 @@ local function translateWait(action, modelScene)
     local currentPlayerAccount = modelPlayer:getAccount()
 
     if (currentPlayerAccount ~= action.playerAccount) then
-        return nil, "ActionTranslator-translateWait() the account of the actioning player is not the same as the one of the in-turn player."
+        return {
+            actionName = "Message",
+            message    = "Server: translateWait() you are not the in-turn player. Please reenter the war."
+        }
     end
 
     local translatedPath, translateMsg = translatePath(action.path, modelUnitMap, modelTileMap, modelWeatherManager, modelPlayerManager, currentPlayerAccount, modelPlayer)
     if (not translatedPath) then
-        return nil, "ActionTranslator-translateWait() failed to translate the move path:\n" .. (translateMsg or "")
+        return {
+            actionName = "Message",
+            message    = "Server: translateWait() failed to translate the move path. Please reenter the war. " .. (translateMsg or ""),
+        }
     end
 
     local existingModelUnit = modelUnitMap:getModelUnit(translatedPath[translatedPath.length])
     if (existingModelUnit) and (modelUnitMap:getModelUnit(translatedPath[1]) ~= existingModelUnit) then
-        return nil, "ActionTranslator-translateWait() failed because there is another unit on the destination grid."
-    else
-        return {actionName = "Wait", path = translatedPath}
+        return {
+            actionName = "Message",
+            message    = "Server: translateWait() failed because there is another unit on the destination grid. Please reenter the war.",
+        }
     end
+
+    local fileName = modelScene:getFileName()
+    local actionWait = {
+        actionName = "Wait",
+        fileName   = fileName,
+        path       = translatedPath,
+    }
+    SceneWarManager.updateModelSceneWarWithAction(fileName, actionWait)
+    return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
 end
 
 local function translateAttack(action, modelScene)
@@ -182,34 +201,62 @@ local function translateAttack(action, modelScene)
     local currentPlayerAccount = modelPlayer:getAccount()
 
     if (currentPlayerAccount ~= action.playerAccount) then
-        return nil, "ActionTranslator-translateAttack() the account of the actioning player is not the same as the one of the in-turn player."
+        return {
+            actionName = "Message",
+            message    = "Server: translateAttack() you are not the in-turn player. Please reenter the war."
+        }
     end
 
     local translatedPath, translateMsg = translatePath(action.path, modelUnitMap, modelTileMap, modelWeatherManager, modelPlayerManager, currentPlayerAccount, modelPlayer)
     if (not translatedPath) then
-        return nil, "ActionTranslator-translateAttack() failed to translate the move path:\n" .. (translateMsg or "")
+        return {
+            actionName = "Message",
+            message    = "Server: translateAttack() failed to translate the move path. Please reenter the war. " .. (translateMsg or ""),
+        }
     end
 
+    local fileName = modelScene:getFileName()
     if (translatedPath.isBlocked) then
-        return {actionName = "Wait", path = translatedPath}
+        local actionWait = {
+            actionName = "Wait",
+            fileName   = fileName,
+            path       = translatedPath,
+        }
+        SceneWarManager.updateModelSceneWarWithAction(fileName, actionWait)
+        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
     local attackerGridIndex = translatedPath[#translatedPath]
     local targetGridIndex   = action.targetGridIndex
     local attacker          = modelUnitMap:getModelUnit(translatedPath[1])
     local target            = modelUnitMap:getModelUnit(action.targetGridIndex) or modelTileMap:getModelTile(action.targetGridIndex)
-
     local existingModelUnit = modelUnitMap:getModelUnit(attackerGridIndex)
     if (existingModelUnit) and (attacker ~= existingModelUnit) then
-        return nil, "ActionTranslator-translateAttack() failed because there is another unit on the destination grid."
+        return {
+            actionName = "Message",
+            message    = "Server: translateAttack() failed because there is another unit on the destination grid. Please reenter the war."
+        }
     end
+
     if ((not attacker.canAttackTarget) or
         (not attacker:canAttackTarget(attackerGridIndex, target, targetGridIndex))) then
-        return nil, "ActionTranslator-translateAttack() failed because the attacker can't attack the target."
+        return {
+            actionName = "Message",
+            message    = "Server: translateAttack() failed because the attacker can't attack the target.",
+        }
     end
 
     local attackDamage, counterDamage = attacker:getUltimateBattleDamage(modelTileMap:getModelTile(attackerGridIndex), target, modelTileMap:getModelTile(targetGridIndex), modelPlayerManager, modelWeatherManager:getCurrentWeather())
-    return {actionName = "Attack", path = translatedPath, targetGridIndex = GridIndexFunctions.clone(targetGridIndex), attackDamage = attackDamage, counterDamage = counterDamage}
+    local actionAttack = {
+        actionName      = "Attack",
+        fileName        = fileName,
+        path            = translatedPath,
+        targetGridIndex = GridIndexFunctions.clone(targetGridIndex),
+        attackDamage    = attackDamage,
+        counterDamage   = counterDamage
+    }
+    SceneWarManager.updateModelSceneWarWithAction(fileName, actionAttack)
+    return actionAttack, generateActionsForPublish(actionAttack, modelPlayerManager, action.playerAccount)
 end
 
 local function translateCapture(action, modelScene)

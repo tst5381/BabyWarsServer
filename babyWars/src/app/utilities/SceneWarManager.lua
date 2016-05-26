@@ -50,8 +50,13 @@ end
 function SceneWarManager.updateModelSceneWarWithAction(fileName, action)
     assert(s_ActorSceneWarList[fileName] ~= nil, "SceneWarManager.updateModelSceneWarWithAction() the param fileName is invalid.")
 
+    local cloneAction = {}
+    for k, v in pairs(action) do
+        cloneAction[k] = v
+    end
+
     local file = io.open(s_ActorSceneWarList[fileName].fullFileName, "w")
-    for _, str in ipairs(s_ActorSceneWarList[fileName].actorSceneWar:getModel():doSystemAction(action):toStringList()) do
+    for _, str in ipairs(s_ActorSceneWarList[fileName].actorSceneWar:getModel():doSystemAction(cloneAction):toStringList()) do
         file:write(str)
     end
     file:close()
