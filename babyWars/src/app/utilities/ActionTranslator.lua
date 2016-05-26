@@ -21,7 +21,6 @@ local ActionTranslator = {}
 
 local GridIndexFunctions     = require("babyWars.src.app.utilities.GridIndexFunctions")
 local SceneWarManager        = require("babyWars.src.app.utilities.SceneWarManager")
-local WebSocketManager       = require("babyWars.src.app.utilities.WebSocketManager")
 local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
 local SessionManager         = require("babyWars.src.app.utilities.SessionManager")
 
@@ -52,28 +51,6 @@ local function isAccountAndPasswordValid(account, password)
         return false
     end
 end
-
---[[
-local function sendRawActionToSingleSocket(action, webSocket)
-    webSocket:send_text(SerializationFunctions.serialize(action))
-end
-
-local function sendRawActionToPlayers(action, modelPlayerManager)
-    local serializedAction = SerializationFunctions.serialize(action)
-
-    modelPlayerManager:forEachModelPlayer(function(modelPlayer)
-        if (modelPlayer:isAlive()) then
-            local socket = WebSocketManager.getSocketWithPlayerAccount(modelPlayer:getAccount())
-            if (socket) then
-                local bytes, err = socket:send_text(serializedAction)
-                if (not bytes) then
-                    ngx.log(ngx.ERR, "failed to send a text frame: ", err)
-                end
-            end
-        end
-    end)
-end
---]]
 
 --------------------------------------------------------------------------------
 -- The translate functions.
@@ -129,27 +106,42 @@ local function translatePath(path, modelUnitMap, modelTileMap, modelWeatherManag
     end
 end
 
-local function translateEndTurn(action, webSocket, modelScene)
+local function translateEndTurn(action, modelScene)
     local modelPlayerManager = modelScene:getModelPlayerManager()
     local modelTurnManager   = modelScene:getModelTurnManager()
 
     if (getCurrentPlayerAccount(modelPlayerManager, modelTurnManager) ~= action.playerAccount) then
-        sendRawActionToSingleSocket({
-            actionName = "Error",
-            error      = "Server: ActionTranslator-translateEndTurn() the account of the actioning player is not the same as the one of the in-turn player."
-        }, webSocket)
-    elseif (modelTurnManager:getTurnPhase() ~= "main") then
-        sendRawActionToSingleSocket({
-            actionName = "Error",
-            error      = "Server: ActionTranslator-translateEndTurn() the current turn phase is expected to be 'main'."
-        }, webSocket)
-    else
-        local translatedAction = {
-            actionName = "EndTurn",
-            nextWeather = modelScene:getModelWeatherManager():getNextWeather()
+        return {
+            actionName = "Message",
+            message    = "Server: translateEndTurn() you are not the in-turn player. Please reenter the war."
         }
-        SceneWarManager.updateModelSceneWarWithAction(modelScene:getFileName(), translatedAction)
-        sendRawActionToPlayers(translatedAction, modelPlayerManager)
+    elseif (modelTurnManager:getTurnPhase() ~= "main") then
+        ngx.log(ngx.ERR, "ActionTranslator-translateEndTurn() the current turn phase is expected to be 'main'.")
+        return {
+            actionName = "Error",
+            error      = "Server: translateEndTurn() the current turn phase is expected to be 'main'. Something is wrong with the server."
+        }
+    else
+        -- TODO: enable the fog of war.
+        local actionEndTurn = {
+            actionName  = "EndTurn",
+            fileName    = modelScene:getFileName(),
+            nextWeather = modelScene:getModelWeatherManager():getNextWeather(),
+        }
+        SceneWarManager.updateModelSceneWarWithAction(modelScene:getFileName(), actionEndTurn)
+
+        local actionsForPublish
+        modelPlayerManager:forEachModelPlayer(function(modelPlayer)
+            local otherPlayerAccount = modelPlayer:getAccount()
+            if ((otherPlayerAccount ~= action.playerAccount) and
+                (modelPlayer:isAlive()) and
+                (SessionManager.getSessionIdWithPlayerAccount(otherPlayerAccount))) then
+                actionsForPublish = actionsForPublish or {}
+                actionsForPublish[otherPlayerAccount] = actionEndTurn
+            end
+        end)
+
+        return actionEndTurn, actionsForPublish
     end
 end
 
@@ -315,37 +307,39 @@ local function translateLogin(action, session)
     end
 end
 
-local function translateGetOngoingWarList(action, webSocket)
+local function translateGetOngoingWarList(action)
     local fileName = "babyWars/res/data/playerProfile/" .. action.playerAccount .. ".lua"
     local file = io.open(fileName, "r")
     if (not file) then
-        sendRawActionToSingleSocket({
-            actionName = "Error",
-            error      = "Server: translateGetOngoingWarList() failed to open the player profile with the param action.playerAccount."
-        }, webSocket)
+        ngx.log(ngx.ERR, "ActionTranslator-translateGetOngoingWarList() failed to open the player profile with the param action.playerAccount: ", action.playerAccount)
+        return {
+            actionName = "Message",
+            message    = "Server: translateGetOngoingWarList() failed to open the player profile with the param action.playerAccount."
+        }
     else
         file:close()
-        sendRawActionToSingleSocket({
+        return {
             actionName = "GetOngoingWarList",
             list = dofile(fileName).warLists.ongoing
-        }, webSocket)
+        }
     end
 end
 
-local function translateGetSceneWarData(action, webSocket)
+local function translateGetSceneWarData(action)
     local fileName = "babyWars/res/data/warScene/" .. action.fileName .. ".lua"
     local file = io.open(fileName, "r")
     if (not file) then
-        sendRawActionToSingleSocket({
-            actionName = "Error",
+        ngx.log(ngx.ERR, "ActionTranslator-translateGetSceneWarData() failed to open the war scene data file with the param action.fileName: ", action.fileName)
+        return {
+            actionName = "Message",
             error      = "Server: translateGetSceneWarData() failed to open the war scene data file with the param action.fileName."
-        }, webSocket)
+        }
     else
         file:close()
-        sendRawActionToSingleSocket({
+        return {
             actionName = "GetSceneWarData",
             data = dofile(fileName)
-        }, webSocket)
+        }
     end
 end
 
@@ -356,7 +350,7 @@ function ActionTranslator.translate(action, session)
     if (type(action) ~= "table") then
         return {
             actionName = "Error",
-            error = "Server: Illegal param action from the client. Table expected."
+            error = "Server: Illegal param action from the client: table expected. Please try again."
         }
     end
 
@@ -375,7 +369,7 @@ function ActionTranslator.translate(action, session)
 
         local modelSceneWar = SceneWarManager.getModelSceneWar(action.sceneWarFileName)
         if (actionName == "EndTurn") then
-            return translateEndTurn(      action, webSocket, modelSceneWar)
+            return translateEndTurn(      action, modelSceneWar)
         elseif (actionName == "Wait") then
             return translateWait(         action, modelSceneWar)
         elseif (actionName == "Attack") then
@@ -385,9 +379,9 @@ function ActionTranslator.translate(action, session)
         elseif (actionName == "ProduceOnTile") then
             return translateProduceOnTile(action, modelSceneWar)
         elseif (actionName == "GetOngoingWarList") then
-            return translateGetOngoingWarList(action, webSocket)
+            return translateGetOngoingWarList(action)
         elseif (actionName == "GetSceneWarData") then
-            return translateGetSceneWarData(action, webSocket)
+            return translateGetSceneWarData(action)
         else
             return {actionName = "Error", error = "Server: unrecognized action name from the client: " .. actionName}
         end
