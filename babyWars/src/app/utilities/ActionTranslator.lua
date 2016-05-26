@@ -269,56 +269,105 @@ local function translateCapture(action, modelScene)
     local currentPlayerAccount = modelPlayer:getAccount()
 
     if (currentPlayerAccount ~= action.playerAccount) then
-        return nil, "ActionTranslator-translateCapture() the account of the actioning player is not the same as the one of the in-turn player."
+        return {
+            actionName = "Message",
+            message = "Server: translateCapture() you are not the in-turn player. Please reenter the war.",
+        }
     end
 
     local translatedPath, translateMsg = translatePath(action.path, modelUnitMap, modelTileMap, modelWeatherManager, modelPlayerManager, currentPlayerAccount, modelPlayer)
     if (not translatedPath) then
-        return nil, "ActionTranslator-translateAttack() failed to translate the move path:\n" .. (translateMsg or "")
-    end
-    if (translatedPath.isBlocked) then
-        return {actionName = "Wait", path = translatedPath}
+        return {
+            actionName = "Message",
+            message    = "Server: translateAttack() failed to translate the move path: " .. (translateMsg or ""),
+        }
     end
 
-    local destination = translatedPath[#translatedPath]
+    local fileName = modelScene:getFileName()
+    if (translatedPath.isBlocked) then
+        local actionWait = {
+            actionName = "Wait",
+            fileName   = fileName,
+            path       = translatedPath,
+        }
+        SceneWarManager.updateModelSceneWarWithAction(fileName, actionWait)
+        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+    end
+
+    local destination       = translatedPath[#translatedPath]
     local capturer          = modelUnitMap:getModelUnit(translatedPath[1])
     local existingModelUnit = modelUnitMap:getModelUnit(destination)
     if ((existingModelUnit) and (existingModelUnit ~= capturer)) then
-        return nil, "ActionTranslator-translateCapture() failed because there's another unit on the destination grid."
-    end
-    if ((not capturer.canCapture) or (not capturer:canCapture(modelTileMap:getModelTile(destination)))) then
-        return nil, "ActionTranslator-translateCapture() failed because the focus unit can't capture the target tile."
+        return {
+            actionName = "Message",
+            message    = "Server: translateCapture() failed because there's another unit on the destination grid. Please reenter the war.",
+        }
     end
 
-    return {actionName = "Capture", path = translatedPath}
+    if ((not capturer.canCapture) or (not capturer:canCapture(modelTileMap:getModelTile(destination)))) then
+        return {
+            actionName = "Message",
+            message    = "Server: translateCapture() failed because the focus unit can't capture the target tile. Please reenter the war."
+        }
+    end
+
+    local actionCapture = {
+        actionName = "Capture",
+        fileName   = fileName,
+        path       = translatedPath,
+    }
+    SceneWarManager.updateModelSceneWarWithAction(fileName, actionCapture)
+    return actionCapture, generateActionsForPublish(actionCapture, modelPlayerManager, action.playerAccount)
 end
 
 local function translateProduceOnTile(action, modelScene)
-    local playerIndex   = modelScene:getModelTurnManager():getPlayerIndex()
-    local modelPlayer   = modelScene:getModelPlayerManager():getModelPlayer(playerIndex)
-    local modelWarField = modelScene:getModelWarField()
-    local gridIndex     = action.gridIndex
-    local tiledID       = action.tiledID
+    local playerIndex        = modelScene:getModelTurnManager():getPlayerIndex()
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    local modelPlayer        = modelPlayerManager:getModelPlayer(playerIndex)
+    local modelWarField      = modelScene:getModelWarField()
+    local gridIndex          = action.gridIndex
+    local tiledID            = action.tiledID
 
     if (modelPlayer:getAccount() ~= action.playerAccount) then
-        return nil, "ActionTranslator-translateProduceOnTile() the account of the actioning player is not the same as the one of the in-turn player."
+        return {
+            actionName = "Message",
+            message    = "Server: translateProduceOnTile() you are not the in-turn player. Please reenter the war."
+        }
     end
 
     if (modelWarField:getModelUnitMap():getModelUnit(gridIndex)) then
-        return nil, "ActionTranslator-translateProduceOnTile() failed because there's a unit on the tile."
+        return {
+            actionName = "Message",
+            message    = "Server: translateProduceOnTile() failed because there's a unit on the tile. Please reenter the war.",
+        }
     end
 
     local modelTile = modelWarField:getModelTileMap():getModelTile(action.gridIndex)
     if (not modelTile.getProductionCostWithTiledId) then
-        return nil, "ActionTranslator-translateProduceOnTile() failed because the tile can't produce units."
+        return {
+            actionName = "Message",
+            message    = "Server: translateProduceOnTile() failed because the tile can't produce units. Please reenter the war.",
+        }
     end
 
     local cost = modelTile:getProductionCostWithTiledId(tiledID, modelPlayer)
     if ((not cost) or (cost > modelPlayer:getFund())) then
-        return nil, "ActionTranslator-translateProduceOnTile() failed because the player has not enough fund."
+        return {
+            actionName = "Message",
+            message    = "Server: translateProduceOnTile() failed because the player has not enough fund. Please reenter the war.",
+        }
     end
 
-    return {actionName = "ProduceOnTile", gridIndex = GridIndexFunctions.clone(gridIndex), tiledID = tiledID, cost = cost}
+    local fileName = modelScene:getFileName()
+    local actionProduceOnTile = {
+        actionName = "ProduceOnTile",
+        fileName   = fileName,
+        gridIndex  = GridIndexFunctions.clone(gridIndex),
+        tiledID    = tiledID,
+        cost       = cost, -- the cost can be calculated by the clients, but that calculations can be saved by sending the cost to clients.
+    }
+    SceneWarManager.updateModelSceneWarWithAction(fileName, actionProduceOnTile)
+    return actionProduceOnTile, generateActionsForPublish(actionProduceOnTile, modelPlayerManager, action.playerAccount)
 end
 
 local function translateLogin(action, session)
