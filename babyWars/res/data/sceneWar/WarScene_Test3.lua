@@ -1,6 +1,6 @@
 
 return {
-    fileName = "WarScene_Test2",
+    fileName = "WarScene_Test3",
 
     warField = {
         tileMap = {
@@ -51,7 +51,7 @@ return {
                 },
                 {
                     GridIndexable = {
-                        gridIndex = {x = 17, y = 2},
+                        gridIndex = {x = 19, y = 2},
                     },
                     objectID = 107,
                 },
@@ -77,10 +77,30 @@ return {
         },
 
         unitMap = {
-            template = "FullTest",
+            -- There's no template map, so that the grids data is used.
+            mapSize = {width = 25, height = 16},
 
             grids = {
-                -- There's a template map, so that the grids data is ignored even if it's not empty.
+                {
+                    tiledID = 163,
+                    unitID  = 1,
+                    GridIndexable = {gridIndex = {x = 6, y = 7}},
+                },
+                {
+                    tiledID = 164,
+                    unitID  = 2,
+                    GridIndexable = {gridIndex = {x = 7, y = 7}},
+                },
+                {
+                    tiledID = 165,
+                    unitID  = 3,
+                    GridIndexable = {gridIndex = {x = 8, y = 7}},
+                },
+                {
+                    tiledID = 166,
+                    unitID  = 4,
+                    GridIndexable = {gridIndex = {x = 9, y = 7}},
+                },
             },
         },
     },
@@ -162,5 +182,3 @@ return {
         current = "clear"
     },
 }
-
-return WarScene_Test2

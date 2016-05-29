@@ -422,19 +422,17 @@ local function translateGetOngoingWarList(action)
 end
 
 local function translateGetSceneWarData(action)
-    local fileName = "babyWars/res/data/warScene/" .. action.fileName .. ".lua"
-    local file = io.open(fileName, "r")
-    if (not file) then
+    local data = SceneWarManager.getSceneWarData(action.fileName)
+    if (not data) then
         ngx.log(ngx.ERR, "ActionTranslator-translateGetSceneWarData() failed to open the war scene data file with the param action.fileName: ", action.fileName)
         return {
             actionName = "Message",
             error      = "Server: translateGetSceneWarData() failed to open the war scene data file with the param action.fileName."
         }
     else
-        file:close()
         return {
             actionName = "GetSceneWarData",
-            data = dofile(fileName)
+            data       = data,
         }
     end
 end

@@ -9,6 +9,7 @@ local SessionManager         = require("babyWars.src.app.utilities.SessionManage
 
 -- TODO: move the code that initializes the server to somewhere else (like main()).
 require("babyWars.src.app.utilities.GameConstantFunctions").init()
+require("babyWars.src.app.utilities.SceneWarManager").init()
 
 --------------------------------------------------------------------------------
 -- The util functions.
