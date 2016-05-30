@@ -108,7 +108,7 @@ local function generatePlayersData(warFieldFileName, playerIndex, account, skill
     return data
 end
 
-local function generateNewGameData(fileName, param)
+local function generateNewWarData(fileName, param)
     return {
         fileName = fileName,
         warField = generateWarFieldData(param.warFieldFileName),
@@ -162,13 +162,13 @@ function SceneWarManager.getSceneWarData(fileName)
     end
 end
 
-function SceneWarManager.createNewGame(param)
+function SceneWarManager.createNewWar(param)
     local shortName = s_SceneWarNextName
     tickSceneWarNextName()
 
-    local data = generateNewGameData(shortName, param)
+    local data = generateNewWarData(shortName, param)
     if (not data) then
-        return nil, "SceneWarManager.createNewGame() failed because some param is invalid."
+        return nil, "SceneWarManager.createNewWar() failed because some param is invalid."
     end
 
     local file = io.open(DATA_SCENE_WAR_PATH .. shortName .. ".lua", "w")

@@ -426,16 +426,16 @@ local function translateGetSceneWarData(action)
     end
 end
 
-local function translateNewGame(action)
-    local gameData, err = SceneWarManager.createNewGame(action)
+local function translateNewWar(action)
+    local gameData, err = SceneWarManager.createNewWar(action)
     if (not gameData) then
         return {
             actionName = "Message",
-            message    = "Server: translateNewGame() failed: " .. err
+            message    = "Server: translateNewWar() failed: " .. err
         }
     else
         return {
-            actionName = "NewGame",
+            actionName = "NewWar",
             message    = "The game is created successfully. Please wait for other players to join."
         }
     end
@@ -480,8 +480,8 @@ function ActionTranslator.translate(action, session)
             return translateGetOngoingWarList(action)
         elseif (actionName == "GetSceneWarData") then
             return translateGetSceneWarData(action)
-        elseif (actionName == "NewGame") then
-            return translateNewGame(action)
+        elseif (actionName == "NewWar") then
+            return translateNewWar(action)
         else
             return {actionName = "Error", error = "Server: unrecognized action name from the client: " .. actionName}
         end
