@@ -179,7 +179,7 @@ function SceneWarManager.createNewGame(param)
 end
 
 function SceneWarManager.updateModelSceneWarWithAction(fileName, action)
-    assert(s_ActorSceneWarList[fileName] ~= nil, "SceneWarManager.updateModelSceneWarWithAction() the param fileName is invalid.")
+    assert(SceneWarManager.getModelSceneWar(fileName) ~= nil, "SceneWarManager.updateModelSceneWarWithAction() the param fileName is invalid.")
 
     local cloneAction = {}
     for k, v in pairs(action) do

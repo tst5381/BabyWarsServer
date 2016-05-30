@@ -20,9 +20,10 @@
 local ActionTranslator = {}
 
 local GridIndexFunctions     = require("babyWars.src.app.utilities.GridIndexFunctions")
-local SceneWarManager        = require("babyWars.src.app.utilities.SceneWarManager")
 local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
+local SceneWarManager        = require("babyWars.src.app.utilities.SceneWarManager")
 local SessionManager         = require("babyWars.src.app.utilities.SessionManager")
+local PlayerProfileManager   = require("babyWars.src.app.utilities.PlayerProfileManager")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -38,18 +39,6 @@ end
 local function isModelUnitVisible(modelUnit, modelWeatherManager)
     -- TODO: add code to do the real job.
     return true
-end
-
-local function isAccountAndPasswordValid(account, password)
-    local fileName = "babyWars/res/data/playerProfile/" .. account .. ".lua"
-    local file = io.open(fileName, "r")
-
-    if (file) then
-        file:close()
-        return dofile(fileName).password == password
-    else
-        return false
-    end
 end
 
 local function generateActionsForPublish(action, modelPlayerManager, currentPlayerAccount)
@@ -372,7 +361,7 @@ end
 
 local function translateLogin(action, session)
     local account, password = action.account, action.password
-    if (not isAccountAndPasswordValid(account, password)) then
+    if (not PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
         return {
             actionName = "Message",
             message    = "Invalid account/password.",
@@ -427,12 +416,27 @@ local function translateGetSceneWarData(action)
         ngx.log(ngx.ERR, "ActionTranslator-translateGetSceneWarData() failed to open the war scene data file with the param action.fileName: ", action.fileName)
         return {
             actionName = "Message",
-            error      = "Server: translateGetSceneWarData() failed to open the war scene data file with the param action.fileName."
+            message    = "Server: translateGetSceneWarData() failed to open the war scene data file with the param action.fileName."
         }
     else
         return {
             actionName = "GetSceneWarData",
             data       = data,
+        }
+    end
+end
+
+local function translateNewGame(action)
+    local gameData, err = SceneWarManager.createNewGame(action)
+    if (not gameData) then
+        return {
+            actionName = "Message",
+            message    = "Server: translateNewGame() failed: " .. err
+        }
+    else
+        return {
+            actionName = "Message",
+            message    = "The game is created successfully."
         }
     end
 end
@@ -452,7 +456,7 @@ function ActionTranslator.translate(action, session)
     if (actionName == "Login") then
         return translateLogin(action, session)
     else
-        if (isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+        if (PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
             session:subscribeToPlayerChannel(action.playerAccount, action.playerPassword)
         else
             return {
@@ -476,6 +480,8 @@ function ActionTranslator.translate(action, session)
             return translateGetOngoingWarList(action)
         elseif (actionName == "GetSceneWarData") then
             return translateGetSceneWarData(action)
+        elseif (actionName == "NewGame") then
+            return translateNewGame(action)
         else
             return {actionName = "Error", error = "Server: unrecognized action name from the client: " .. actionName}
         end
