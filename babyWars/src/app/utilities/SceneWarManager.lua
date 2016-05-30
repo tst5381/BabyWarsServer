@@ -3,6 +3,7 @@ local SceneWarManager = {}
 
 local Actor                  = require("babyWars.src.global.actors.Actor")
 local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
+local PlayerProfileManager   = require("babyWars.src.app.utilities.PlayerProfileManager")
 
 local DATA_SCENE_WAR_PATH           = "babyWars/res/data/sceneWar/"
 local DATA_SCENE_WAR_NEXT_NAME_PATH = DATA_SCENE_WAR_PATH .. "NextName.lua"
@@ -80,10 +81,10 @@ local function generateWeatherData(defaultWeather, isRandom)
 end
 
 local function generatePlayersData(warFieldFileName, playerIndex, account, skillIndex)
-    local playerProfile = dofile("babyWars/res/data/playerProfile/" .. account .. ".lua")
+    local playerProfile = PlayerProfileManager.getPlayerProfile(account)
     local data = {
         [playerIndex] = {
-            account       = "tester1",
+            account       = account,
             nickname      = playerProfile.nickname,
             fund          = 0,
             isAlive       = true,

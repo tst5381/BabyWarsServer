@@ -435,8 +435,8 @@ local function translateNewGame(action)
         }
     else
         return {
-            actionName = "Message",
-            message    = "The game is created successfully."
+            actionName = "NewGame",
+            message    = "The game is created successfully. Please wait for other players to join."
         }
     end
 end
