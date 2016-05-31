@@ -392,6 +392,24 @@ local function translateLogin(action, session)
     end
 end
 
+local function translateRegister(action, session)
+    local account, password = action.account, action.password
+    if (PlayerProfileManager.getPlayerProfile(account)) then
+        return {
+            actionName = "Message",
+            message    = "The account is registered already. Please use another account.",
+        }
+    else
+        PlayerProfileManager.createPlayerProfile(account, password)
+        -- By returning the actionRegister, the session will then automatically call subscribeToPlayerChannel().
+        return {
+            actionName = "Register",
+            account    = account,
+            password   = password,
+        }
+    end
+end
+
 local function translateGetOngoingWarList(action)
     local fileName = "babyWars/res/data/playerProfile/" .. action.playerAccount .. ".lua"
     local file = io.open(fileName, "r")
@@ -455,6 +473,8 @@ function ActionTranslator.translate(action, session)
     local actionName = action.actionName
     if (actionName == "Login") then
         return translateLogin(action, session)
+    elseif (actionName == "Register") then
+        return translateRegister(action)
     else
         if (PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
             session:subscribeToPlayerChannel(action.playerAccount, action.playerPassword)

@@ -134,7 +134,7 @@ end
 local function doAction(self, actionForSelf, actionsForPublish)
     publishTranslatedActions(self, actionsForPublish)
 
-    if (actionForSelf.actionName == "Login") then
+    if ((actionForSelf.actionName == "Login") or (actionForSelf.actionName == "Register")) then
         ngx.log(ngx.CRIT, "Session-doAction() before subscribe")
         self:subscribeToPlayerChannel(actionForSelf.account, actionForSelf.password)
         ngx.log(ngx.CRIT, "Session-doAction() after subscribe")
