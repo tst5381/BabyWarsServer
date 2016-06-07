@@ -152,14 +152,8 @@ end
 function SceneWarManager.getSceneWarData(fileName)
     assert(type(fileName) == "string", "SceneWarManager.getSceneWarData() the param fileName is invalid.")
 
-    local fullFileName = DATA_SCENE_WAR_PATH .. fileName .. ".lua"
-    local file = io.open(fullFileName, "r")
-    if (not file) then
-        return nil
-    else
-        file:close()
-        return dofile(fullFileName)
-    end
+    local modelSceneWar = SceneWarManager.getModelSceneWar(fileName)
+    return (modelSceneWar) and (modelSceneWar:toSerializableTable()) or nil
 end
 
 function SceneWarManager.createNewWar(param)
@@ -190,9 +184,6 @@ function SceneWarManager.updateModelSceneWarWithAction(fileName, action)
     local file = io.open(s_ActorSceneWarList[fileName].fullFileName, "w")
     file:write("return ")
     SerializationFunctions.appendToFile(s_ActorSceneWarList[fileName].actorSceneWar:getModel():doSystemAction(cloneAction):toSerializableTable(), "", file)
-    --for _, str in ipairs(s_ActorSceneWarList[fileName].actorSceneWar:getModel():doSystemAction(cloneAction):toStringList()) do
-    --    file:write(str)
-    --end
     file:close()
 
     return SceneWarManager

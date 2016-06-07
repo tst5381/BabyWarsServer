@@ -175,7 +175,10 @@ function ModelWarField:toStringList(spaces)
 end
 
 function ModelWarField:toSerializableTable()
-    return {}
+    return {
+        tileMap = self:getModelTileMap():toSerializableTable(),
+        unitMap = self:getModelUnitMap():toSerializableTable(),
+    }
 end
 
 --------------------------------------------------------------------------------

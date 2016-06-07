@@ -179,6 +179,24 @@ function ModelUnit:toStringList(spaces)
     return strList
 end
 
+function ModelUnit:toSerializableTable()
+    local t = {}
+    for name, component in pairs(ComponentManager.getAllComponents(self)) do
+        if (component.toSerializableTable) then
+            t[name] = component:toSerializableTable()
+        end
+    end
+
+    t.tiledID = self:getTiledID()
+    t.unitID  = self:getUnitId()
+    local state = self:getState()
+    if (state ~= "idle") then
+        t.state = state
+    end
+
+    return t
+end
+
 --------------------------------------------------------------------------------
 -- The callback functions on script events.
 --------------------------------------------------------------------------------

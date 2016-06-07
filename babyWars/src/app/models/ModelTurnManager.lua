@@ -172,7 +172,11 @@ function ModelTurnManager:toStringList(spaces)
 end
 
 function ModelTurnManager:toSerializableTable()
-    return {}
+    return {
+        turnIndex   = self:getTurnIndex(),
+        playerIndex = self:getPlayerIndex(),
+        phase       = self:getTurnPhase(),
+    }
 end
 
 --------------------------------------------------------------------------------

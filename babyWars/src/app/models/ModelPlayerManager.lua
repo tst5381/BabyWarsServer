@@ -150,7 +150,12 @@ function ModelPlayerManager:toStringList(spaces)
 end
 
 function ModelPlayerManager:toSerializableTable()
-    return {}
+    local t = {}
+    self:forEachModelPlayer(function(modelPlayer, playerIndex)
+        t[playerIndex] = modelPlayer:toSerializableTable()
+    end)
+
+    return t
 end
 
 --------------------------------------------------------------------------------
@@ -192,8 +197,8 @@ function ModelPlayerManager:getPlayersCount()
 end
 
 function ModelPlayerManager:forEachModelPlayer(func)
-    for _, modelPlayer in ipairs(self.m_Players) do
-        func(modelPlayer)
+    for playerIndex, modelPlayer in ipairs(self.m_Players) do
+        func(modelPlayer, playerIndex)
     end
 
     return self

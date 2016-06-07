@@ -113,6 +113,17 @@ function FuelOwner:toStringList(spaces)
     end
 end
 
+function FuelOwner:toSerializableTable()
+    local currentFuel = self:getCurrentFuel()
+    if (currentFuel == self:getMaxFuel()) then
+        return nil
+    else
+        return {
+            current = currentFuel,
+        }
+    end
+end
+
 --------------------------------------------------------------------------------
 -- The callback functions on ComponentManager.bindComponent()/unbindComponent().
 --------------------------------------------------------------------------------

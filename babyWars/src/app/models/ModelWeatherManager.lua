@@ -48,7 +48,9 @@ function ModelWeatherManager:toStringList(spaces)
 end
 
 function ModelWeatherManager:toSerializableTable()
-    return {}
+    return {
+        current = self:getCurrentWeather(),
+    }
 end
 
 --------------------------------------------------------------------------------

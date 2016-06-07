@@ -119,6 +119,24 @@ function ModelPlayer:toStringList(spaces)
     return strList
 end
 
+function ModelPlayer:toSerializableTable()
+    return {
+        account       = self:getAccount(),
+        nickname      = self:getNickname(),
+        fund          = self:getFund(),
+        isAlive       = self:isAlive(),
+        currentEnergy = self:getEnergy(),
+        -- TODO: serialize the skills.
+        passiveSkill  = {},
+        activeSkill1  = {
+            energyRequirement = 3,
+        },
+        activeSkill2  = {
+            energyRequirement = 6,
+        },
+    }
+end
+
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------

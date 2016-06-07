@@ -282,6 +282,25 @@ function ModelUnitMap:toStringList(spaces)
     return strList
 end
 
+function ModelUnitMap:toSerializableTable()
+    local grids = {}
+    self:forEachModelUnit(function(modelUnit)
+        grids[#grids + 1] = modelUnit:toSerializableTable()
+    end)
+
+    -- TODO: serialize the loaded units.
+    local loaded = {}
+
+    return {
+        mapSize = {
+            width  = self.m_MapSize.width,
+            height = self.m_MapSize.height,
+        },
+        grids   = grids,
+        loaded  = loaded,
+    }
+end
+
 --------------------------------------------------------------------------------
 -- The callback functions on script events.
 --------------------------------------------------------------------------------
@@ -294,40 +313,6 @@ function ModelUnitMap:onEvent(event)
         onEvtDestroyModelUnit(self, event)
     elseif (name == "EvtDestroyViewUnit") then
         onEvtDestroyViewUnit(self, event)
-    end
-
-    return self
-end
-
---------------------------------------------------------------------------------
--- The public functions.
---------------------------------------------------------------------------------
-function ModelUnitMap:getMapSize()
-    return self.m_MapSize
-end
-
-function ModelUnitMap:getActorUnit(gridIndex)
-    if (not GridIndexFunctions.isWithinMap(gridIndex, self:getMapSize())) then
-        return nil
-    else
-        return self.m_UnitActorsMap[gridIndex.x][gridIndex.y]
-    end
-end
-
-function ModelUnitMap:getModelUnit(gridIndex)
-    local unitActor = self:getActorUnit(gridIndex)
-    return unitActor and unitActor:getModel() or nil
-end
-
-function ModelUnitMap:forEachModelUnit(func)
-    local mapSize = self:getMapSize()
-    for x = 1, mapSize.width do
-        for y = 1, mapSize.height do
-            local actorUnit = self.m_UnitActorsMap[x][y]
-            if (actorUnit) then
-                func(actorUnit:getModel())
-            end
-        end
     end
 
     return self
@@ -390,6 +375,40 @@ function ModelUnitMap:doActionProduceOnTile(action)
     end
 
     self.m_RootScriptEventDispatcher:dispatchEvent({name = "EvtModelUnitProduced", modelUnit = actorUnit:getModel()})
+
+    return self
+end
+
+--------------------------------------------------------------------------------
+-- The public functions.
+--------------------------------------------------------------------------------
+function ModelUnitMap:getMapSize()
+    return self.m_MapSize
+end
+
+function ModelUnitMap:getActorUnit(gridIndex)
+    if (not GridIndexFunctions.isWithinMap(gridIndex, self:getMapSize())) then
+        return nil
+    else
+        return self.m_UnitActorsMap[gridIndex.x][gridIndex.y]
+    end
+end
+
+function ModelUnitMap:getModelUnit(gridIndex)
+    local unitActor = self:getActorUnit(gridIndex)
+    return unitActor and unitActor:getModel() or nil
+end
+
+function ModelUnitMap:forEachModelUnit(func)
+    local mapSize = self:getMapSize()
+    for x = 1, mapSize.width do
+        for y = 1, mapSize.height do
+            local actorUnit = self.m_UnitActorsMap[x][y]
+            if (actorUnit) then
+                func(actorUnit:getModel())
+            end
+        end
+    end
 
     return self
 end
