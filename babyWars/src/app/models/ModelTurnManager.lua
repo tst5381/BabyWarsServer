@@ -18,6 +18,7 @@
 --]]--------------------------------------------------------------------------------
 
 local ModelTurnManager = require("babyWars.src.global.functions.class")("ModelTurnManager")
+local TableFunctions   = require("babyWars.src.app.utilities.TableFunctions")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -155,12 +156,12 @@ function ModelTurnManager:unsetRootScriptEventDispatcher()
 end
 
 --------------------------------------------------------------------------------
--- The function for serialization.
+-- The functions for serialization.
 --------------------------------------------------------------------------------
 function ModelTurnManager:toStringList(spaces)
     spaces = spaces or ""
     local subSpaces = spaces .. "    "
-    local appendList = require("babyWars.src.app.utilities.TableFunctions").appendList
+    local appendList = TableFunctions.appendList
 
     local strList = {spaces .. "turn = {\n"}
     appendList(strList, serializeTurnIndexToStringList(  self, subSpaces), ",\n")
@@ -168,6 +169,10 @@ function ModelTurnManager:toStringList(spaces)
     appendList(strList, serializeTurnPhaseToStringList(  self, subSpaces), "\n" .. spaces .. "}")
 
     return strList
+end
+
+function ModelTurnManager:toSerializableTable()
+    return {}
 end
 
 --------------------------------------------------------------------------------

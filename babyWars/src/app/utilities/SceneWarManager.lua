@@ -173,7 +173,7 @@ function SceneWarManager.createNewWar(param)
 
     local file = io.open(DATA_SCENE_WAR_PATH .. shortName .. ".lua", "w")
     file:write("return ")
-    file:write(SerializationFunctions.serialize(data))
+    file:write(SerializationFunctions.toString(data))
     file:close()
 
     return data
@@ -188,9 +188,11 @@ function SceneWarManager.updateModelSceneWarWithAction(fileName, action)
     end
 
     local file = io.open(s_ActorSceneWarList[fileName].fullFileName, "w")
-    for _, str in ipairs(s_ActorSceneWarList[fileName].actorSceneWar:getModel():doSystemAction(cloneAction):toStringList()) do
-        file:write(str)
-    end
+    file:write("return ")
+    SerializationFunctions.appendToFile(s_ActorSceneWarList[fileName].actorSceneWar:getModel():doSystemAction(cloneAction):toSerializableTable(), "", file)
+    --for _, str in ipairs(s_ActorSceneWarList[fileName].actorSceneWar:getModel():doSystemAction(cloneAction):toStringList()) do
+    --    file:write(str)
+    --end
     file:close()
 
     return SceneWarManager

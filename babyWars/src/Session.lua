@@ -123,9 +123,9 @@ local function publishTranslatedActions(self, actions)
     red:set_timeout(10000000) -- 10000s
     red:connect("127.0.0.1", 6379)
 
-    local serialize = SerializationFunctions.serialize
+    local toString = SerializationFunctions.toString
     for account, action in pairs(actions) do
-        red:publish("Session." .. account, serialize(action))
+        red:publish("Session." .. account, toString(action))
     end
 
     red:close()
@@ -140,7 +140,7 @@ local function doAction(self, actionForSelf, actionsForPublish)
         ngx.log(ngx.CRIT, "Session-doAction() after subscribe")
     end
 
-    local bytes, err = self.m_WebSocket:send_text(SerializationFunctions.serialize(actionForSelf))
+    local bytes, err = self.m_WebSocket:send_text(SerializationFunctions.toString(actionForSelf))
     if (not bytes) then
         ngx.log(ngx.ERR, "Session-doAction() failed to send text: ", err)
         return self:stop()

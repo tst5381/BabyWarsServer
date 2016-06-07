@@ -51,7 +51,7 @@ end
 local function serializePlayerProfile(fullFileName, profile)
     local file = io.open(fullFileName, "w")
     file:write("return ")
-    file:write(SerializationFunctions.serialize(profile))
+    file:write(SerializationFunctions.toString(profile))
     file:close()
 end
 

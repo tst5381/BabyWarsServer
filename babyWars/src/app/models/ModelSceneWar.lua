@@ -28,8 +28,6 @@
 
 local ModelSceneWar = require("babyWars.src.global.functions.class")("ModelSceneWar")
 
-local isServer = true
-
 local Actor            = require("babyWars.src.global.actors.Actor")
 local ActionTranslator = require("babyWars.src.app.utilities.ActionTranslator")
 
@@ -84,122 +82,68 @@ local function onEvtSystemRequestDoAction(self, event)
     else
         print("ModelSceneWar-onEvtSystemRequestDoAction() unrecognized action.")
     end
-
---[[ -- These codes are for testing the toStringList() and should be modified to do the real job.
-    local testFile = io.open(self.m_DataFileFullPath, "w")
-    for _, str in ipairs(self:toStringList()) do
-        testFile:write(str)
-    end
-    testFile:close()
---]]
-
-end
-
-local function onEvtPlayerRequestDoAction(self, event)
-    local requestedAction = event
-    -- TODO: requestedAction.playerAccount should be assigned with the account of the logged in player.
-    requestedAction.playerAccount = self:getModelPlayerManager():getModelPlayer(self:getModelTurnManager():getPlayerIndex()):getAccount()
-
-    if (isServer) then
-        local translatedAction, translateMsg = ActionTranslator.translate(requestedAction, self)
-        if (not translatedAction) then
-            print("ModelSceneWar-onEvtPlayerRequestDoAction() action translation failed: " .. (translateMsg or ""))
-        else
-            onEvtSystemRequestDoAction(self, translatedAction)
-            -- TODO: send the translatedAction to clients.
-        end
-    else
-        -- TODO: send the requestedAction to the server.
-    end
 end
 
 --------------------------------------------------------------------------------
--- The script event dispatcher.
+-- The composition elements.
 --------------------------------------------------------------------------------
-local function createScriptEventDispatcher()
-    return require("babyWars.src.global.events.EventDispatcher"):create()
-end
+local function initScriptEventDispatcher(self)
+    local dispatcher = require("babyWars.src.global.events.EventDispatcher"):create()
 
-local function initWithScriptEventDispatcher(self, dispatcher)
     dispatcher:addEventListener("EvtPlayerRequestDoAction", self)
         :addEventListener("EvtSystemRequestDoAction", self)
     self.m_ScriptEventDispatcher = dispatcher
 end
 
---------------------------------------------------------------------------------
--- The composition war field actor.
---------------------------------------------------------------------------------
-local function createActorWarField(warFieldData)
-    return Actor.createWithModelAndViewName("ModelWarField", warFieldData, "ViewWarField", warFieldData)
-end
+local function initActorPlayerManager(self, playersData)
+    local actor = Actor.createWithModelAndViewName("ModelPlayerManager", playersData)
 
-local function initWithActorWarField(self, actor)
-    actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
-    self.m_ActorWarField = actor
-end
-
---------------------------------------------------------------------------------
--- The composition HUD actor.
---------------------------------------------------------------------------------
-local function createActorSceneWarHUD()
-    return Actor.createWithModelAndViewName("ModelWarHUD", nil, "ViewWarHUD")
-end
-
-local function initWithActorWarHud(self, actor)
-    actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
-    self.m_ActorWarHud = actor
-end
-
---------------------------------------------------------------------------------
--- The player manager.
---------------------------------------------------------------------------------
-local function createActorPlayerManager(playersData)
-    return Actor.createWithModelAndViewName("ModelPlayerManager", playersData)
-end
-
-local function initWithActorPlayerManager(self, actor)
     actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
     self.m_ActorPlayerManager = actor
 end
 
---------------------------------------------------------------------------------
--- The turn manager.
---------------------------------------------------------------------------------
-local function createActorTurnManager(turnData)
-    return Actor.createWithModelAndViewName("ModelTurnManager", turnData)
+local function initActorWarField(self, warFieldData)
+    local actor = Actor.createWithModelAndViewName("ModelWarField", warFieldData, "ViewWarField", warFieldData)
+
+    actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
+    self.m_ActorWarField = actor
 end
 
-local function initWithActorTurnManager(self, actor)
+local function initActorWarHud(self)
+    local actor = Actor.createWithModelAndViewName("ModelWarHUD", nil, "ViewWarHUD")
+
+    actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
+    self.m_ActorWarHud = actor
+end
+
+local function initActorTurnManager(self, turnData)
+    local actor = Actor.createWithModelAndViewName("ModelTurnManager", turnData)
+
     actor:getModel():setModelPlayerManager(self:getModelPlayerManager())
         :setModelWarField(self.m_ActorWarField:getModel())
         :setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
     self.m_ActorTurnManager = actor
 end
 
---------------------------------------------------------------------------------
--- The composition weather manager actor.
---------------------------------------------------------------------------------
-local function createActorWeatherManager(weatherData)
-    return Actor.createWithModelAndViewName("ModelWeatherManager", weatherData)
-end
+local function initActorWeatherManager(self, weatherData)
+    local actor = Actor.createWithModelAndViewName("ModelWeatherManager", weatherData)
 
-local function initWithActorWeatherManager(self, actor)
     self.m_ActorWeatherManager = actor
 end
 
 --------------------------------------------------------------------------------
--- The constructor.
+-- The constructor and initializers.
 --------------------------------------------------------------------------------
 function ModelSceneWar:ctor(sceneData)
     assert(type(sceneData) == "table", "ModelSceneWar:ctor() the param sceneData is invalid.")
 
     self.m_FileName = sceneData.fileName
-    initWithScriptEventDispatcher(self, createScriptEventDispatcher())
-    initWithActorWarField(        self, createActorWarField(sceneData.warField))
-    initWithActorWarHud(          self, createActorSceneWarHUD())
-    initWithActorPlayerManager(   self, createActorPlayerManager(sceneData.players))
-    initWithActorTurnManager(     self, createActorTurnManager(sceneData.turn))
-    initWithActorWeatherManager(  self, createActorWeatherManager(sceneData.weather))
+    initScriptEventDispatcher(self)
+    initActorPlayerManager(   self, sceneData.players)
+    initActorWarField(        self, sceneData.warField)
+    initActorWarHud(          self)
+    initActorTurnManager(     self, sceneData.turn)
+    initActorWeatherManager(  self, sceneData.weather)
 
     if (self.m_View) then
         self:initView()
@@ -219,7 +163,7 @@ function ModelSceneWar:initView()
 end
 
 --------------------------------------------------------------------------------
--- The function for serialization.
+-- The functions for serialization.
 --------------------------------------------------------------------------------
 function ModelSceneWar:toStringList(spaces)
     spaces = spaces or ""
@@ -234,6 +178,16 @@ function ModelSceneWar:toStringList(spaces)
     appendList(strList, self:getModelWeatherManager():toStringList(subSpaces), "\n" .. spaces .. "}")
 
     return strList
+end
+
+function ModelSceneWar:toSerializableTable()
+    return {
+        fileName = self.m_FileName,
+        warField = self.m_ActorWarField:getModel():toSerializableTable(),
+        turn     = self.m_ActorTurnManager:getModel():toSerializableTable(),
+        players  = self.m_ActorPlayerManager:getModel():toSerializableTable(),
+        weather  = self.m_ActorWeatherManager:getModel():toSerializableTable(),
+    }
 end
 
 --------------------------------------------------------------------------------
@@ -258,9 +212,7 @@ end
 
 function ModelSceneWar:onEvent(event)
     local eventName = event.name
-    if (eventName == "EvtPlayerRequestDoAction") then
-        onEvtPlayerRequestDoAction(self, event)
-    elseif (eventName == "EvtSystemRequestDoAction") then
+    if (eventName == "EvtSystemRequestDoAction") then
         onEvtSystemRequestDoAction(self, event)
     end
 
