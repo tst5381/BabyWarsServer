@@ -454,12 +454,12 @@ local function translateGetOngoingWarList(action)
 end
 
 local function translateGetSceneWarData(action)
-    local data = SceneWarManager.getSceneWarData(action.fileName)
+    local data = SceneWarManager.getOngoingSceneWarData(action.fileName)
     if (not data) then
-        ngx.log(ngx.ERR, "ActionTranslator-translateGetSceneWarData() failed to open the war scene data file with the param action.fileName: ", action.fileName)
+        ngx.log(ngx.ERR, "ActionTranslator-translateGetSceneWarData() failed to get the data with the param action.fileName: ", action.fileName)
         return {
             actionName = "Message",
-            message    = "Server: translateGetSceneWarData() failed to open the war scene data file with the param action.fileName."
+            message    = "Server: translateGetSceneWarData() failed to get the data with the param action.fileName."
         }
     else
         return {

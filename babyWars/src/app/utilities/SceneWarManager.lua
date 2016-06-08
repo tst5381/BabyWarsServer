@@ -5,17 +5,28 @@ local Actor                  = require("babyWars.src.global.actors.Actor")
 local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
 local PlayerProfileManager   = require("babyWars.src.app.utilities.PlayerProfileManager")
 
-local DATA_SCENE_WAR_PATH           = "babyWars/res/data/sceneWar/"
-local DATA_SCENE_WAR_NEXT_NAME_PATH = DATA_SCENE_WAR_PATH .. "NextName.lua"
+local SCENE_WAR_PATH               = "babyWars/res/data/sceneWar/"
+local SCENE_WAR_NEXT_NAME_PATH     = SCENE_WAR_PATH .. "NextName.lua"
+local SCENE_WAR_JOINABLE_LIST_PATH = SCENE_WAR_PATH .. "JoinableList.lua"
 
+local s_IsInitialized            = false
 local s_SceneWarNextName
-local s_ActorSceneWarList = {}
+local s_JoinableSceneWarNameList
+local s_JoinableSceneWarDataList = {}
+local s_ActorSceneWarList        = {}
 
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
+local function serialize(fullFileName, data)
+    local file = io.open(fullFileName, "w")
+    file:write("return ")
+    SerializationFunctions.appendToFile(data, "", file)
+    file:close()
+end
+
 local function createActorSceneWar(fileName)
-    local fullFileName = DATA_SCENE_WAR_PATH .. fileName .. ".lua"
+    local fullFileName = SCENE_WAR_PATH .. fileName .. ".lua"
     local file = io.open(fullFileName, "r")
     if (file) then
         file:close()
@@ -46,9 +57,7 @@ local function tickSceneWarNextName()
     end
 
     s_SceneWarNextName = string.char(unpack(byteList))
-    local file = io.open(DATA_SCENE_WAR_NEXT_NAME_PATH, "w")
-    file:write(string.format("return %q\n", s_SceneWarNextName))
-    file:close()
+    serialize(SCENE_WAR_NEXT_NAME_PATH, s_SceneWarNextName)
 end
 
 --------------------------------------------------------------------------------
@@ -115,18 +124,37 @@ local function generateNewWarData(fileName, param)
         turn     = generateTurnData(),
         players  = generatePlayersData(param.warFieldFileName, param.playerIndex, param.playerAccount, param.skillIndex),
         weather  = generateWeatherData(),
-    }
+    }, SCENE_WAR_PATH .. fileName .. ".lua"
 end
 
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
 function SceneWarManager.init()
-    if (not s_SceneWarNextName) then
-        s_SceneWarNextName = dofile(DATA_SCENE_WAR_NEXT_NAME_PATH)
+    if (s_IsInitialized) then
+        return
     end
+    s_IsInitialized = true
+
+    s_SceneWarNextName         = dofile(SCENE_WAR_NEXT_NAME_PATH)
+    s_JoinableSceneWarNameList = dofile(SCENE_WAR_JOINABLE_LIST_PATH)
 
     return SceneWarManager
+end
+
+function SceneWarManager.createNewWar(param)
+    local data, fullFileName = generateNewWarData(s_SceneWarNextName, param)
+    if (not data) then
+        return nil, "SceneWarManager.createNewWar() failed because some param is invalid."
+    end
+
+    s_JoinableSceneWarNameList[s_SceneWarNextName] = 1
+    s_JoinableSceneWarDataList[s_SceneWarNextName] = data
+    serialize(SCENE_WAR_JOINABLE_LIST_PATH, s_JoinableSceneWarNameList)
+    serialize(fullFileName, data)
+    tickSceneWarNextName()
+
+    return data
 end
 
 function SceneWarManager.getModelSceneWar(fileName)
@@ -149,28 +177,14 @@ function SceneWarManager.getModelSceneWar(fileName)
     end
 end
 
-function SceneWarManager.getSceneWarData(fileName)
-    assert(type(fileName) == "string", "SceneWarManager.getSceneWarData() the param fileName is invalid.")
+function SceneWarManager.getOngoingSceneWarData(fileName)
+    assert(type(fileName) == "string", "SceneWarManager.getOngoingSceneWarData() the param fileName is invalid.")
 
     local modelSceneWar = SceneWarManager.getModelSceneWar(fileName)
     return (modelSceneWar) and (modelSceneWar:toSerializableTable()) or nil
 end
 
-function SceneWarManager.createNewWar(param)
-    local shortName = s_SceneWarNextName
-    tickSceneWarNextName()
-
-    local data = generateNewWarData(shortName, param)
-    if (not data) then
-        return nil, "SceneWarManager.createNewWar() failed because some param is invalid."
-    end
-
-    local file = io.open(DATA_SCENE_WAR_PATH .. shortName .. ".lua", "w")
-    file:write("return ")
-    file:write(SerializationFunctions.toString(data))
-    file:close()
-
-    return data
+function SceneWarManager.getJoinableSceneWarData(fileName)
 end
 
 function SceneWarManager.updateModelSceneWarWithAction(fileName, action)
@@ -181,10 +195,9 @@ function SceneWarManager.updateModelSceneWarWithAction(fileName, action)
         cloneAction[k] = v
     end
 
-    local file = io.open(s_ActorSceneWarList[fileName].fullFileName, "w")
-    file:write("return ")
-    SerializationFunctions.appendToFile(s_ActorSceneWarList[fileName].actorSceneWar:getModel():doSystemAction(cloneAction):toSerializableTable(), "", file)
-    file:close()
+    serialize(s_ActorSceneWarList[fileName].fullFileName,
+        s_ActorSceneWarList[fileName].actorSceneWar:getModel():doSystemAction(cloneAction):toSerializableTable()
+    )
 
     return SceneWarManager
 end
