@@ -110,6 +110,31 @@ local function translatePath(path, modelUnitMap, modelTileMap, modelWeatherManag
     end
 end
 
+local function translateBeginTurn(action, modelScene)
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    local modelTurnManager   = modelScene:getModelTurnManager()
+
+    if (getCurrentPlayerAccount(modelPlayerManager, modelTurnManager) ~= action.playerAccount) then
+        return {
+            actionName = "Message",
+            message    = "Server: translateBeginTurn() you are not the in-turn player. Please reenter the war."
+        }
+    elseif (modelTurnManager:getTurnPhase() ~= "beginning") then
+        ngx.log(ngx.ERR, "ActionTranslator-translateBeginTurn() the current turn phase is expected to be 'beginning'.")
+        return {
+            actionName = "Message",
+            message    = "Server: translateBeginTurn() the current turn phase is expected to be 'beginning'. Please reenter the war.",
+        }
+    else
+        local actionBeginTurn = {
+            actionName = "BeginTurn",
+            fileName   = modelScene:getFileName(),
+        }
+        SceneWarManager.updateModelSceneWarWithAction(modelScene:getFileName(), actionBeginTurn)
+        return actionBeginTurn, generateActionsForPublish(actionBeginTurn, modelPlayerManager, action.playerAccount)
+    end
+end
+
 local function translateEndTurn(action, modelScene)
     local modelPlayerManager = modelScene:getModelPlayerManager()
     local modelTurnManager   = modelScene:getModelTurnManager()
@@ -486,7 +511,9 @@ function ActionTranslator.translate(action, session)
         end
 
         local modelSceneWar = SceneWarManager.getModelSceneWar(action.sceneWarFileName)
-        if (actionName == "EndTurn") then
+        if (actionName == "BeginTurn") then
+            return translateBeginTurn(    action, modelSceneWar)
+        elseif (actionName == "EndTurn") then
             return translateEndTurn(      action, modelSceneWar)
         elseif (actionName == "Wait") then
             return translateWait(         action, modelSceneWar)

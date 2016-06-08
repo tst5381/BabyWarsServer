@@ -41,8 +41,12 @@ end
 --------------------------------------------------------------------------------
 -- The functions that do the actions the system requested.
 --------------------------------------------------------------------------------
+local function doActionBeginTurn(self, action)
+    self:getModelTurnManager():doActionBeginTurn()
+end
+
 local function doActionEndTurn(self, action)
-    self:getModelTurnManager():endTurn()
+    self:getModelTurnManager():doActionEndTurn()
 end
 
 local function doActionWait(self, action)
@@ -69,7 +73,9 @@ end
 --------------------------------------------------------------------------------
 local function onEvtSystemRequestDoAction(self, event)
     local actionName = event.actionName
-    if (actionName == "EndTurn") then
+    if (actionName == "BeginTurn") then
+        doActionBeginTurn(self, event)
+    elseif (actionName == "EndTurn") then
         doActionEndTurn(self, event)
     elseif (actionName == "Wait") then
         doActionWait(self, event)
