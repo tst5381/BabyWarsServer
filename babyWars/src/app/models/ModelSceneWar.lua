@@ -115,13 +115,6 @@ local function initActorWarField(self, warFieldData)
     self.m_ActorWarField = actor
 end
 
-local function initActorWarHud(self)
-    local actor = Actor.createWithModelAndViewName("ModelWarHUD", nil, "ViewWarHUD")
-
-    actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
-    self.m_ActorWarHud = actor
-end
-
 local function initActorTurnManager(self, turnData)
     local actor = Actor.createWithModelAndViewName("ModelTurnManager", turnData)
 
@@ -147,23 +140,8 @@ function ModelSceneWar:ctor(sceneData)
     initScriptEventDispatcher(self)
     initActorPlayerManager(   self, sceneData.players)
     initActorWarField(        self, sceneData.warField)
-    initActorWarHud(          self)
     initActorTurnManager(     self, sceneData.turn)
     initActorWeatherManager(  self, sceneData.weather)
-
-    if (self.m_View) then
-        self:initView()
-    end
-
-    return self
-end
-
-function ModelSceneWar:initView()
-    local view = self.m_View
-    assert(view, "ModelSceneWar:initView() no view is attached.")
-
-    view:setViewWarField(self.m_ActorWarField:getView())
-        :setViewWarHud(self.m_ActorWarHud:getView())
 
     return self
 end
