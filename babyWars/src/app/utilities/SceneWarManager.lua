@@ -13,7 +13,7 @@ local s_IsInitialized            = false
 local s_SceneWarNextName
 local s_JoinableSceneWarNameList
 local s_JoinableSceneWarDataList = {}
-local s_ActorSceneWarList        = {}
+local s_OngoingSceneWarList      = {}
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -25,8 +25,12 @@ local function serialize(fullFileName, data)
     file:close()
 end
 
+local function toFullFileName(shortName)
+    return SCENE_WAR_PATH .. shortName .. ".lua"
+end
+
 local function createActorSceneWar(fileName)
-    local fullFileName = SCENE_WAR_PATH .. fileName .. ".lua"
+    local fullFileName = toFullFileName(fileName)
     local file = io.open(fullFileName, "r")
     if (file) then
         file:close()
@@ -124,7 +128,7 @@ local function generateNewWarData(fileName, param)
         turn     = generateTurnData(),
         players  = generatePlayersData(param.warFieldFileName, param.playerIndex, param.playerAccount, param.skillIndex),
         weather  = generateWeatherData(),
-    }, SCENE_WAR_PATH .. fileName .. ".lua"
+    }, toFullFileName(fileName)
 end
 
 --------------------------------------------------------------------------------
@@ -148,7 +152,7 @@ function SceneWarManager.createNewWar(param)
         return nil, "SceneWarManager.createNewWar() failed because some param is invalid."
     end
 
-    s_JoinableSceneWarNameList[s_SceneWarNextName] = 1
+    s_JoinableSceneWarNameList[s_SceneWarNextName] = param.warFieldFileName
     s_JoinableSceneWarDataList[s_SceneWarNextName] = data
     serialize(SCENE_WAR_JOINABLE_LIST_PATH, s_JoinableSceneWarNameList)
     serialize(fullFileName, data)
@@ -157,46 +161,60 @@ function SceneWarManager.createNewWar(param)
     return data
 end
 
-function SceneWarManager.getModelSceneWar(fileName)
+function SceneWarManager.getOngoingModelSceneWar(fileName)
     if (not fileName) then
         return nil
     else
-        if (s_ActorSceneWarList[fileName] == nil) then
+        if (s_OngoingSceneWarList[fileName] == nil) then
             local actorSceneWar, fullFileName = createActorSceneWar(fileName)
             if (not actorSceneWar) then
                 return nil
             else
-                s_ActorSceneWarList[fileName] = {
+                s_OngoingSceneWarList[fileName] = {
                     actorSceneWar = actorSceneWar,
                     fullFileName  = fullFileName
                 }
             end
         end
 
-        return s_ActorSceneWarList[fileName].actorSceneWar:getModel()
+        return s_OngoingSceneWarList[fileName].actorSceneWar:getModel()
     end
 end
 
 function SceneWarManager.getOngoingSceneWarData(fileName)
     assert(type(fileName) == "string", "SceneWarManager.getOngoingSceneWarData() the param fileName is invalid.")
 
-    local modelSceneWar = SceneWarManager.getModelSceneWar(fileName)
+    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(fileName)
     return (modelSceneWar) and (modelSceneWar:toSerializableTable()) or nil
 end
 
+function SceneWarManager.getJoinableSceneWarList(playerAccount)
+    -- TODO: Filter out the wars that the player has already joined and limit the length of the list.
+    return s_JoinableSceneWarNameList
+end
+
 function SceneWarManager.getJoinableSceneWarData(fileName)
+    if (s_JoinableSceneWarNameList[fileName] == nil) then
+        ngx.log(ngx.ERR, "SceneWarManager.getJoinableSceneWarData() the war scene that the param fileName indicates is not joinable.")
+        return nil
+    end
+    if (s_JoinableSceneWarDataList[fileName] == nil) then
+        s_JoinableSceneWarDataList[fileName] = dofile(toFullFileName(fileName))
+    end
+
+    return s_JoinableSceneWarDataList[fileName]
 end
 
 function SceneWarManager.updateModelSceneWarWithAction(fileName, action)
-    assert(SceneWarManager.getModelSceneWar(fileName) ~= nil, "SceneWarManager.updateModelSceneWarWithAction() the param fileName is invalid.")
+    assert(SceneWarManager.getOngoingModelSceneWar(fileName) ~= nil, "SceneWarManager.updateModelSceneWarWithAction() the param fileName is invalid.")
 
     local cloneAction = {}
     for k, v in pairs(action) do
         cloneAction[k] = v
     end
 
-    serialize(s_ActorSceneWarList[fileName].fullFileName,
-        s_ActorSceneWarList[fileName].actorSceneWar:getModel():doSystemAction(cloneAction):toSerializableTable()
+    serialize(s_OngoingSceneWarList[fileName].fullFileName,
+        s_OngoingSceneWarList[fileName].actorSceneWar:getModel():doSystemAction(cloneAction):toSerializableTable()
     )
 
     return SceneWarManager

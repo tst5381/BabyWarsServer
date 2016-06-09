@@ -435,6 +435,21 @@ local function translateRegister(action, session)
     end
 end
 
+local function translateNewWar(action)
+    local gameData, err = SceneWarManager.createNewWar(action)
+    if (not gameData) then
+        return {
+            actionName = "Message",
+            message    = "Server: translateNewWar() failed: " .. err
+        }
+    else
+        return {
+            actionName = "NewWar",
+            message    = "The game is created successfully. Please wait for other players to join."
+        }
+    end
+end
+
 local function translateGetOngoingWarList(action)
     local fileName = "babyWars/res/data/playerProfile/" .. action.playerAccount .. ".lua"
     local file = io.open(fileName, "r")
@@ -469,17 +484,17 @@ local function translateGetSceneWarData(action)
     end
 end
 
-local function translateNewWar(action)
-    local gameData, err = SceneWarManager.createNewWar(action)
-    if (not gameData) then
+local function translateGetJoinableWarList(action)
+    local list, err = SceneWarManager.getJoinableSceneWarList(action.playerAccount)
+    if (not list) then
         return {
             actionName = "Message",
-            message    = "Server: translateNewWar() failed: " .. err
+            message    = "Server: failed to get the joinable war list: " .. (err or "")
         }
     else
         return {
-            actionName = "NewWar",
-            message    = "The game is created successfully. Please wait for other players to join."
+            actionName = "GetJoinableWarList",
+            list       = list,
         }
     end
 end
@@ -491,7 +506,7 @@ function ActionTranslator.translate(action, session)
     if (type(action) ~= "table") then
         return {
             actionName = "Error",
-            error = "Server: Illegal param action from the client: table expected. Please try again."
+            error      = "Server: Illegal param action from the client: table expected. Please try again."
         }
     end
 
@@ -500,39 +515,46 @@ function ActionTranslator.translate(action, session)
         return translateLogin(action, session)
     elseif (actionName == "Register") then
         return translateRegister(action)
-    else
-        if (PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
-            session:subscribeToPlayerChannel(action.playerAccount, action.playerPassword)
-        else
-            return {
-                actionName = "Logout",
-                message    = "Invalid account/password. Please login again.",
-            }
-        end
-
-        local modelSceneWar = SceneWarManager.getModelSceneWar(action.sceneWarFileName)
-        if (actionName == "BeginTurn") then
-            return translateBeginTurn(    action, modelSceneWar)
-        elseif (actionName == "EndTurn") then
-            return translateEndTurn(      action, modelSceneWar)
-        elseif (actionName == "Wait") then
-            return translateWait(         action, modelSceneWar)
-        elseif (actionName == "Attack") then
-            return translateAttack(       action, modelSceneWar)
-        elseif (actionName == "Capture") then
-            return translateCapture(      action, modelSceneWar)
-        elseif (actionName == "ProduceOnTile") then
-            return translateProduceOnTile(action, modelSceneWar)
-        elseif (actionName == "GetOngoingWarList") then
-            return translateGetOngoingWarList(action)
-        elseif (actionName == "GetSceneWarData") then
-            return translateGetSceneWarData(action)
-        elseif (actionName == "NewWar") then
-            return translateNewWar(action)
-        else
-            return {actionName = "Error", error = "Server: unrecognized action name from the client: " .. actionName}
-        end
     end
+
+    if (PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+        session:subscribeToPlayerChannel(action.playerAccount, action.playerPassword)
+    else
+        return {
+            actionName = "Logout",
+            message    = "Invalid account/password. Please login again.",
+        }
+    end
+
+    if (actionName == "NewWar") then
+        return translateNewWar(action)
+    elseif (actionName == "GetOngoingWarList") then
+        return translateGetOngoingWarList(action)
+    elseif (actionName == "GetSceneWarData") then
+        return translateGetSceneWarData(action)
+    elseif (actionName == "GetJoinableWarList") then
+        return translateGetJoinableWarList(action)
+    end
+
+    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(action.sceneWarFileName)
+    if (actionName == "BeginTurn") then
+        return translateBeginTurn(    action, modelSceneWar)
+    elseif (actionName == "EndTurn") then
+        return translateEndTurn(      action, modelSceneWar)
+    elseif (actionName == "Wait") then
+        return translateWait(         action, modelSceneWar)
+    elseif (actionName == "Attack") then
+        return translateAttack(       action, modelSceneWar)
+    elseif (actionName == "Capture") then
+        return translateCapture(      action, modelSceneWar)
+    elseif (actionName == "ProduceOnTile") then
+        return translateProduceOnTile(action, modelSceneWar)
+    end
+
+    return {
+        actionName = "Error",
+        error      = "Server: unrecognized action name from the client: " .. actionName,
+    }
 end
 
 return ActionTranslator
