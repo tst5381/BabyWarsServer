@@ -50,17 +50,14 @@ return {
     warLists = {
         created = {},
         ongoing = {
-            {
-                name = "WarSceneTest1",
-                fileName = "WarScene_Test1",
+            ["WarScene_Test1"] = {
+                warFieldFileName = "FullTest",
             },
-            {
-                name = "WarSceneTest2",
-                fileName = "WarScene_Test2",
+            ["WarScene_Test2"] = {
+                warFieldFileName = "FullTest",
             },
-            {
-                name = "WarSceneTest3",
-                fileName = "WarScene_Test3",
+            ["WarScene_Test3"] = {
+                warFieldFileName = "FullTest",
             },
         }
     }
