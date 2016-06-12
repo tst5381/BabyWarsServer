@@ -1,6 +1,6 @@
 
 return {
-    fileName = "WarScene_Test3",
+    fileName = "0000000000000004",
 
     warField = {
         tileMap = {

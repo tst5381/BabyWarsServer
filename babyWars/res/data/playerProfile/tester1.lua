@@ -50,21 +50,21 @@ return {
     warLists = {
         created = {},
         ongoing = {
-            ["Chessboard"] = {
+            ["0000000000000000"] = {
                 warFieldFileName = "Chessboard",
             },
-            ["EqualIsland"] = {
+            ["0000000000000001"] = {
                 warFieldFileName = "EqualIsland",
             },
-            ["WarScene_Test1"] = {
+            ["0000000000000002"] = {
                 warFieldFileName = "FullTest",
             },
-            ["WarScene_Test2"] = {
+            ["0000000000000003"] = {
                 warFieldFileName = "FullTest",
             },
-            ["WarScene_Test3"] = {
+            ["0000000000000004"] = {
                 warFieldFileName = "FullTest",
             },
-        }
+        },
     }
 }

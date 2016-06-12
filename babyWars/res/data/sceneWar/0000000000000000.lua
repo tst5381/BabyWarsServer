@@ -1,14 +1,14 @@
 
 return {
-    fileName = "EqualIsland",
+    fileName = "0000000000000000",
 
     warField = {
         tileMap = {
-            template = "EqualIsland",
+            template = "Chessboard",
         },
 
         unitMap = {
-            template = "EqualIsland",
+            template = "Chessboard",
         },
     },
 

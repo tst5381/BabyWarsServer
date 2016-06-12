@@ -1,6 +1,6 @@
 
 return {
-    fileName = "WarScene_Test2",
+    fileName = "0000000000000002",
 
     warField = {
         tileMap = {
@@ -9,37 +9,13 @@ return {
             grids = {
                 {
                     GridIndexable = {
-                        gridIndex = {x = 17, y = 5},
+                        gridIndex = {x = 19, y = 1},
                     },
                     objectID = 107,
                 },
                 {
                     GridIndexable = {
-                        gridIndex = {x = 18, y = 5},
-                    },
-                    objectID = 107,
-                },
-                {
-                    GridIndexable = {
-                        gridIndex = {x = 19, y = 5},
-                    },
-                    objectID = 107,
-                },
-                {
-                    GridIndexable = {
-                        gridIndex = {x = 19, y = 4},
-                    },
-                    objectID = 107,
-                },
-                {
-                    GridIndexable = {
-                        gridIndex = {x = 17, y = 3},
-                    },
-                    objectID = 107,
-                },
-                {
-                    GridIndexable = {
-                        gridIndex = {x = 18, y = 3},
+                        gridIndex = {x = 19, y = 2},
                     },
                     objectID = 107,
                 },
@@ -51,25 +27,13 @@ return {
                 },
                 {
                     GridIndexable = {
-                        gridIndex = {x = 17, y = 2},
+                        gridIndex = {x = 19, y = 4},
                     },
                     objectID = 107,
                 },
                 {
                     GridIndexable = {
-                        gridIndex = {x = 17, y = 1},
-                    },
-                    objectID = 107,
-                },
-                {
-                    GridIndexable = {
-                        gridIndex = {x = 18, y = 1},
-                    },
-                    objectID = 107,
-                },
-                {
-                    GridIndexable = {
-                        gridIndex = {x = 19, y = 1},
+                        gridIndex = {x = 19, y = 5},
                     },
                     objectID = 107,
                 },
