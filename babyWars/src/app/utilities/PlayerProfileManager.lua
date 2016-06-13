@@ -104,12 +104,10 @@ function PlayerProfileManager.createPlayerProfile(account, password)
     return s_PlayerProfileList[account].profile
 end
 
-function PlayerProfileManager.updatePlayerProfileWithOngoingSceneWar(account, sceneWar)
+function PlayerProfileManager.updatePlayerProfileWithOngoingWarConfiguration(account, sceneWarFileName, configuration)
     local profile = PlayerProfileManager.getPlayerProfile(account)
 
-    profile.warLists.ongoing[sceneWar.fileName] = {
-        warFieldFileName = sceneWar.warField.tileMap.template
-    }
+    profile.warLists.ongoing[sceneWarFileName] = configuration
     serialize(toFullFileName(account), profile)
 
     return PlayerProfileManager

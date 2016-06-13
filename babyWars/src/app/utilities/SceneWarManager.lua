@@ -271,7 +271,7 @@ function SceneWarManager.joinWar(param)
         msg = "Join war successfully. Please wait for more players to join."
     else
         for _, player in pairs(configuration.players) do
-            PlayerProfileManager.updatePlayerProfileWithOngoingSceneWar(player.account, joiningSceneWar)
+            PlayerProfileManager.updatePlayerProfileWithOngoingWarConfiguration(player.account, sceneWarFileName, configuration)
         end
         s_JoinableSceneWarConfigurationList[sceneWarFileName] = nil
         s_JoinableSceneWarList[sceneWarFileName] = nil
