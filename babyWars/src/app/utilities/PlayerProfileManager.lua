@@ -48,10 +48,14 @@ local function generatePlayerProfile(account, password)
     }
 end
 
-local function serializePlayerProfile(fullFileName, profile)
+local function toFullFileName(account)
+    return PLAYER_PROFILE_PATH .. account .. ".lua"
+end
+
+local function serialize(fullFileName, data)
     local file = io.open(fullFileName, "w")
     file:write("return ")
-    file:write(SerializationFunctions.toString(profile))
+    SerializationFunctions.appendToFile(data, "", file)
     file:close()
 end
 
@@ -60,7 +64,7 @@ end
 --------------------------------------------------------------------------------
 function PlayerProfileManager.getPlayerProfile(account)
     if (not s_PlayerProfileList[account]) then
-        local fullFileName = PLAYER_PROFILE_PATH .. account .. ".lua"
+        local fullFileName = toFullFileName(account)
         local file = io.open(fullFileName, "r")
         if (not file) then
             return nil
@@ -87,9 +91,9 @@ function PlayerProfileManager.createPlayerProfile(account, password)
         return
     end
 
-    local fullFileName = PLAYER_PROFILE_PATH .. account .. ".lua"
+    local fullFileName = toFullFileName(account)
     local profile = generatePlayerProfile(account, password)
-    serializePlayerProfile(fullFileName, profile)
+    serialize(fullFileName, profile)
 
     s_PlayerProfileList[account] = {
         fullFileName = fullFileName,
@@ -98,6 +102,17 @@ function PlayerProfileManager.createPlayerProfile(account, password)
     }
 
     return s_PlayerProfileList[account].profile
+end
+
+function PlayerProfileManager.updatePlayerProfileWithOngoingSceneWar(account, sceneWar)
+    local profile = PlayerProfileManager.getPlayerProfile(account)
+
+    profile.warLists.ongoing[sceneWar.fileName] = {
+        warFieldFileName = sceneWar.warField.tileMap.template
+    }
+    serialize(toFullFileName(account), profile)
+
+    return PlayerProfileManager
 end
 
 return PlayerProfileManager

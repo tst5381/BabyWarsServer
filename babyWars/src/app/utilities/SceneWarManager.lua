@@ -75,6 +75,17 @@ local function hasPlayerJoinedWar(playerAccount, configuration)
     return false
 end
 
+local function isWarReadyForStart(configuration)
+    local players = configuration.players
+    for i = 1, require("babyWars.res.data.templateWarField." .. configuration.warFieldFileName).playersCount do
+        if (not players[i]) then
+            return false
+        end
+    end
+
+    return true
+end
+
 --------------------------------------------------------------------------------
 -- The functions for generating the new game data.
 --------------------------------------------------------------------------------
@@ -229,6 +240,47 @@ function SceneWarManager.getJoinableSceneWarList(playerAccount)
     -- TODO: Rendomize the items and limit the length of the list.
 
     return list
+end
+
+function SceneWarManager.joinWar(param)
+    local sceneWarFileName = param.sceneWarFileName
+    local playerIndex      = param.playerIndex
+    local playerAccount    = param.playerAccount
+    local configuration    = s_JoinableSceneWarConfigurationList[sceneWarFileName]
+    if (not configuration) then
+        return nil, "SceneWarManager.joinWar() the war that the param specifies doesn't exist or is not joinable."
+    end
+    if (hasPlayerJoinedWar(playerAccount, configuration)) then
+        return nil, "SceneWarManager.joinWar() the player has already joined the war."
+    end
+    if (configuration.players[playerIndex]) then
+        return nil, "SceneWarManager.joinWar() the specified player index is already used by another player."
+    end
+    -- TODO: validate other params, such as the war password, max skill points, and so on.
+
+    configuration.players[playerIndex] = {
+        account  = playerAccount,
+        nickname = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
+    }
+    local joiningSceneWar = s_JoinableSceneWarList[sceneWarFileName]
+    joiningSceneWar.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillIndex)
+    serialize(toFullFileName(sceneWarFileName), joiningSceneWar)
+
+    local msg
+    if (not isWarReadyForStart(configuration)) then
+        msg = "Join war successfully. Please wait for more players to join."
+    else
+        for _, player in pairs(configuration.players) do
+            PlayerProfileManager.updatePlayerProfileWithOngoingSceneWar(player.account, joiningSceneWar)
+        end
+        s_JoinableSceneWarConfigurationList[sceneWarFileName] = nil
+        s_JoinableSceneWarList[sceneWarFileName] = nil
+        msg = "Join war successfully. The war has started."
+    end
+
+    serialize(SCENE_WAR_JOINABLE_LIST_PATH, s_JoinableSceneWarConfigurationList)
+
+    return msg
 end
 
 function SceneWarManager.getJoinableSceneWarData(fileName)

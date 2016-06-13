@@ -451,21 +451,10 @@ local function translateNewWar(action)
 end
 
 local function translateGetOngoingWarList(action)
-    local fileName = "babyWars/res/data/playerProfile/" .. action.playerAccount .. ".lua"
-    local file = io.open(fileName, "r")
-    if (not file) then
-        ngx.log(ngx.ERR, "ActionTranslator-translateGetOngoingWarList() failed to open the player profile with the param action.playerAccount: ", action.playerAccount)
-        return {
-            actionName = "Message",
-            message    = "Server: translateGetOngoingWarList() failed to open the player profile with the param action.playerAccount."
-        }
-    else
-        file:close()
-        return {
-            actionName = "GetOngoingWarList",
-            list = dofile(fileName).warLists.ongoing
-        }
-    end
+    return {
+        actionName = "GetOngoingWarList",
+        list       = PlayerProfileManager.getPlayerProfile(action.playerAccount).warLists.ongoing
+    }
 end
 
 local function translateGetSceneWarData(action)
@@ -495,6 +484,21 @@ local function translateGetJoinableWarList(action)
         return {
             actionName = "GetJoinableWarList",
             list       = list,
+        }
+    end
+end
+
+local function translateJoinWar(action)
+    local msg, err = SceneWarManager.joinWar(action)
+    if (not msg) then
+        return {
+            actionName = "Message",
+            message    = "Server: failed to join the war: " .. err,
+        }
+    else
+        return {
+            actionName = "JoinWar",
+            message    = msg,
         }
     end
 end
@@ -534,6 +538,8 @@ function ActionTranslator.translate(action, session)
         return translateGetSceneWarData(action)
     elseif (actionName == "GetJoinableWarList") then
         return translateGetJoinableWarList(action)
+    elseif (actionName == "JoinWar") then
+        return translateJoinWar(action)
     end
 
     local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(action.sceneWarFileName)
