@@ -107,7 +107,9 @@ end
 function PlayerProfileManager.updatePlayerProfileWithOngoingWarConfiguration(account, sceneWarFileName, configuration)
     local profile = PlayerProfileManager.getPlayerProfile(account)
 
-    profile.warLists.ongoing[sceneWarFileName] = configuration
+    profile.warLists.ongoing[sceneWarFileName] = {
+        isInTurn = (configuration.players[1].account == account),
+    }
     serialize(toFullFileName(account), profile)
 
     return PlayerProfileManager

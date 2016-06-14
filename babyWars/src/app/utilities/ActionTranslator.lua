@@ -451,9 +451,17 @@ local function translateNewWar(action)
 end
 
 local function translateGetOngoingWarList(action)
+    local list = {}
+    for sceneWarFileName, item in pairs(PlayerProfileManager.getPlayerProfile(action.playerAccount).warLists.ongoing) do
+        list[sceneWarFileName] = {
+            isInTurn      = item.isInTurn,
+            configuration = SceneWarManager.getOngoingSceneWarConfiguration(sceneWarFileName),
+        }
+    end
+
     return {
         actionName = "GetOngoingWarList",
-        list       = PlayerProfileManager.getPlayerProfile(action.playerAccount).warLists.ongoing
+        list       = list,
     }
 end
 

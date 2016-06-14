@@ -52,76 +52,13 @@ return {
   },
   ["ongoing"] = {
    ["0000000000000002"] = {
-    ["warFieldFileName"] = "FullTest",
-    ["fog"] = "off",
-    ["weather"] = "clear",
-    ["maxSkillPoints"] = "Unavailable",
-    ["players"] = {
-     [2] = {
-      ["nickname"] = "tester1",
-      ["account"] = "tester1",
-     },
-     [3] = {
-      ["nickname"] = "tester2",
-      ["account"] = "tester2",
-     },
-     [4] = {
-      ["nickname"] = "tester3",
-      ["account"] = "tester3",
-     },
-     [1] = {
-      ["nickname"] = "babygogogo",
-      ["account"] = "babygogogo",
-     },
-    },
+    isInTurn = false,
    },
    ["0000000000000003"] = {
-    ["warFieldFileName"] = "FullTest",
-    ["fog"] = "off",
-    ["weather"] = "clear",
-    ["maxSkillPoints"] = "Unavailable",
-    ["players"] = {
-     [2] = {
-      ["nickname"] = "tester1",
-      ["account"] = "tester1",
-     },
-     [3] = {
-      ["nickname"] = "tester2",
-      ["account"] = "tester2",
-     },
-     [4] = {
-      ["nickname"] = "tester3",
-      ["account"] = "tester3",
-     },
-     [1] = {
-      ["nickname"] = "babygogogo",
-      ["account"] = "babygogogo",
-     },
-    },
+    isInTurn = false,
    },
    ["0000000000000004"] = {
-    ["warFieldFileName"] = "FullTest",
-    ["fog"] = "off",
-    ["weather"] = "clear",
-    ["maxSkillPoints"] = "Unavailable",
-    ["players"] = {
-     [2] = {
-      ["nickname"] = "tester1",
-      ["account"] = "tester1",
-     },
-     [3] = {
-      ["nickname"] = "tester2",
-      ["account"] = "tester2",
-     },
-     [4] = {
-      ["nickname"] = "tester3",
-      ["account"] = "tester3",
-     },
-     [1] = {
-      ["nickname"] = "babygogogo",
-      ["account"] = "babygogogo",
-     },
-    },
+    isInTurn = false,
    },
   },
  },
