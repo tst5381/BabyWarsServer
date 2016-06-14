@@ -52,13 +52,10 @@ return {
   },
   ["ongoing"] = {
    ["0000000000000002"] = {
-    isInTurn = false,
    },
    ["0000000000000003"] = {
-    isInTurn = false,
    },
    ["0000000000000004"] = {
-    isInTurn = false,
    },
   },
  },
