@@ -1,6 +1,7 @@
 
 return {
     fileName = "0000000000000001",
+    warPassword = "",
 
     warField = {
         tileMap = {

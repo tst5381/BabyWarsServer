@@ -51,6 +51,7 @@ local function generateWarConfiguration(warData)
 
     return {
         warFieldFileName = warData.warField.tileMap.template,
+        warPassword      = warData.warPassword,
         players          = players,
         -- TODO: add code to generate the real configuration of the weather/fog/max skill points.
         fog              = "off",
@@ -177,12 +178,14 @@ local function generatePlayersData(playerIndex, account, skillIndex)
 end
 
 local function generateSceneWarData(fileName, param)
+    -- TODO:validate the params.
     return {
-        fileName = fileName,
-        warField = generateWarFieldData(param.warFieldFileName),
-        turn     = generateTurnData(),
-        players  = generatePlayersData(param.playerIndex, param.playerAccount, param.skillIndex),
-        weather  = generateWeatherData(),
+        fileName    = fileName,
+        warPassword = param.warPassword,
+        warField    = generateWarFieldData(param.warFieldFileName),
+        turn        = generateTurnData(),
+        players     = generatePlayersData(param.playerIndex, param.playerAccount, param.skillIndex),
+        weather     = generateWeatherData(),
     }, toFullFileName(fileName)
 end
 
@@ -202,13 +205,14 @@ function SceneWarManager.init()
 end
 
 function SceneWarManager.createNewWar(param)
-    local warData, fullFileName = generateSceneWarData(s_SceneWarNextName, param)
+    local sceneWarFileName = s_SceneWarNextName
+    local warData, fullFileName = generateSceneWarData(sceneWarFileName, param)
     if (not warData) then
         return nil, "SceneWarManager.createNewWar() failed because some param is invalid."
     end
 
-    s_JoinableWarNameList[s_SceneWarNextName] = 1
-    s_JoinableWarList[s_SceneWarNextName] = {
+    s_JoinableWarNameList[sceneWarFileName] = 1
+    s_JoinableWarList[sceneWarFileName] = {
         configuration = generateWarConfiguration(warData),
         warData       = warData,
     }
@@ -216,7 +220,7 @@ function SceneWarManager.createNewWar(param)
     serialize(fullFileName, warData)
     tickSceneWarNextName()
 
-    return warData
+    return sceneWarFileName
 end
 
 function SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
@@ -285,6 +289,9 @@ function SceneWarManager.joinWar(param)
     end
     if (configuration.players[playerIndex]) then
         return nil, "SceneWarManager.joinWar() the specified player index is already used by another player."
+    end
+    if (configuration.warPassword ~= param.warPassword) then
+        return nil, "The password is incorrect."
     end
     -- TODO: validate other params, such as the war password, max skill points, and so on.
 

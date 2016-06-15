@@ -136,7 +136,9 @@ end
 function ModelSceneWar:ctor(sceneData)
     assert(type(sceneData) == "table", "ModelSceneWar:ctor() the param sceneData is invalid.")
 
-    self.m_FileName = sceneData.fileName
+    self.m_FileName    = sceneData.fileName
+    self.m_WarPassword = sceneData.warPassword
+
     initScriptEventDispatcher(self)
     initActorPlayerManager(   self, sceneData.players)
     initActorWarField(        self, sceneData.warField)
@@ -166,11 +168,12 @@ end
 
 function ModelSceneWar:toSerializableTable()
     return {
-        fileName = self.m_FileName,
-        warField = self.m_ActorWarField:getModel():toSerializableTable(),
-        turn     = self.m_ActorTurnManager:getModel():toSerializableTable(),
-        players  = self.m_ActorPlayerManager:getModel():toSerializableTable(),
-        weather  = self.m_ActorWeatherManager:getModel():toSerializableTable(),
+        fileName    = self.m_FileName,
+        warPassword = self.m_WarPassword,
+        warField    = self.m_ActorWarField:getModel():toSerializableTable(),
+        turn        = self.m_ActorTurnManager:getModel():toSerializableTable(),
+        players     = self.m_ActorPlayerManager:getModel():toSerializableTable(),
+        weather     = self.m_ActorWeatherManager:getModel():toSerializableTable(),
     }
 end
 

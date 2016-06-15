@@ -436,8 +436,8 @@ local function translateRegister(action, session)
 end
 
 local function translateNewWar(action)
-    local gameData, err = SceneWarManager.createNewWar(action)
-    if (not gameData) then
+    local sceneWarFileName, err = SceneWarManager.createNewWar(action)
+    if (not sceneWarFileName) then
         return {
             actionName = "Message",
             message    = "Server: translateNewWar() failed: " .. err
@@ -445,7 +445,7 @@ local function translateNewWar(action)
     else
         return {
             actionName = "NewWar",
-            message    = "The game is created successfully. Please wait for other players to join."
+            message    = "The war [" .. sceneWarFileName:sub(13) .. "] is created successfully. Please wait for other players to join."
         }
     end
 end
@@ -505,7 +505,7 @@ local function translateJoinWar(action)
     if (not msg) then
         return {
             actionName = "Message",
-            message    = "Server: failed to join the war: " .. err,
+            message    = "Failed to join the war. " .. err,
         }
     else
         return {
