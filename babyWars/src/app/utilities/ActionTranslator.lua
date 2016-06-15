@@ -486,7 +486,7 @@ local function translateGetSceneWarData(action)
 end
 
 local function translateGetJoinableWarList(action)
-    local list, err = SceneWarManager.getJoinableSceneWarList(action.playerAccount)
+    local list, err = SceneWarManager.getJoinableSceneWarList(action.playerAccount, action.sceneWarShortName)
     if (not list) then
         return {
             actionName = "Message",

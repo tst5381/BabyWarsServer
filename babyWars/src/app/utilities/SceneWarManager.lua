@@ -79,14 +79,14 @@ local function loadJoinableWar(sceneWarFileName)
     }
 end
 
-local function tickSceneWarNextName()
+local function getNextName(name)
     local byteList = {}
     local byteNext9, byteNextz = string.byte("9") + 1, string.byte("z") + 1
     local byte0, bytea         = string.byte("0"),     string.byte("a")
     local inc = 1
 
-    for i = #s_SceneWarNextName, 1, -1 do
-        byteList[i] = s_SceneWarNextName:byte(i) + inc
+    for i = #name, 1, -1 do
+        byteList[i] = name:byte(i) + inc
         inc = 0
         if (byteList[i] == byteNext9) then
             byteList[i] = bytea
@@ -96,8 +96,7 @@ local function tickSceneWarNextName()
         end
     end
 
-    s_SceneWarNextName = string.char(unpack(byteList))
-    serialize(SCENE_WAR_NEXT_NAME_PATH, s_SceneWarNextName)
+    return string.char(unpack(byteList))
 end
 
 local function hasPlayerJoinedWar(playerAccount, configuration)
@@ -216,9 +215,10 @@ function SceneWarManager.createNewWar(param)
         configuration = generateWarConfiguration(warData),
         warData       = warData,
     }
+    s_SceneWarNextName = getNextName(s_SceneWarNextName)
     serialize(SCENE_WAR_JOINABLE_LIST_PATH, s_JoinableWarNameList)
     serialize(fullFileName, warData)
-    tickSceneWarNextName()
+    serialize(SCENE_WAR_NEXT_NAME_PATH, s_SceneWarNextName)
 
     return sceneWarFileName
 end
@@ -254,9 +254,26 @@ function SceneWarManager.getOngoingSceneWarConfiguration(sceneWarFileName)
     end
 end
 
-function SceneWarManager.getJoinableSceneWarList(playerAccount)
+function SceneWarManager.getJoinableSceneWarList(playerAccount, sceneWarShortName)
+    local candidateWarNameList
+    if (not sceneWarShortName) then
+        candidateWarNameList = s_JoinableWarNameList
+    else
+        candidateWarNameList = {}
+        local prefix = "000000000000"
+        while (true) do
+            local sceneWarFileName = prefix .. sceneWarShortName
+            if (s_JoinableWarNameList[sceneWarFileName]) then
+                candidateWarNameList[sceneWarFileName] = 1
+                prefix = getNextName(prefix)
+            else
+                break
+            end
+        end
+    end
+
     local list = {}
-    for sceneWarFileName, _ in pairs(s_JoinableWarNameList) do
+    for sceneWarFileName, _ in pairs(candidateWarNameList) do
         if (not s_JoinableWarList[sceneWarFileName]) then
             s_JoinableWarList[sceneWarFileName] = loadJoinableWar(sceneWarFileName)
         end
