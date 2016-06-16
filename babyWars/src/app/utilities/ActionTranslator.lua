@@ -119,11 +119,11 @@ local function translateBeginTurn(action, modelScene)
             actionName = "Message",
             message    = "Server: translateBeginTurn() you are not the in-turn player. Please reenter the war."
         }
-    elseif (modelTurnManager:getTurnPhase() ~= "beginning") then
-        ngx.log(ngx.ERR, "ActionTranslator-translateBeginTurn() the current turn phase is expected to be 'beginning'.")
+    elseif (modelTurnManager:getTurnPhase() ~= "requestToBegin") then
+        ngx.log(ngx.ERR, "ActionTranslator-translateBeginTurn() the current turn phase is expected to be 'requestToBegin'.")
         return {
             actionName = "Message",
-            message    = "Server: translateBeginTurn() the current turn phase is expected to be 'beginning'. Please reenter the war.",
+            message    = "Server: translateBeginTurn() the current turn phase is expected to be 'requestToBegin'. Please reenter the war.",
         }
     else
         local actionBeginTurn = {

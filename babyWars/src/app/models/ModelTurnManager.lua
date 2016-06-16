@@ -58,17 +58,11 @@ end
 --------------------------------------------------------------------------------
 local function runTurnPhaseBeginning(self)
     local modelPlayer = self.m_ModelPlayerManager:getModelPlayer(self.m_PlayerIndex)
-    self.m_RootScriptEventDispatcher:dispatchEvent({
-        name        = "EvtTurnPhaseBeginning",
-        modelPlayer = modelPlayer,
-        playerIndex = self.m_PlayerIndex,
-        turnIndex   = self.m_TurnIndex,
-    })
-
     local callbackOnBeginTurnEffectDisappear = function()
         self.m_TurnPhase = "getFund"
         self:runTurn()
     end
+
     if (self.m_View) then
         self.m_View:showBeginTurnEffect(self.m_TurnIndex, modelPlayer:getNickname(), callbackOnBeginTurnEffectDisappear)
     else
@@ -130,7 +124,10 @@ local function runTurnPhaseTickTurnAndPlayerIndex(self)
     })
 
     -- TODO: Change the vision, weather and so on.
-    self.m_TurnPhase = "beginning"
+    self.m_TurnPhase = "requestToBegin"
+end
+
+local function runTurnPhaseRequestToBegin(self)
 end
 
 --------------------------------------------------------------------------------
@@ -200,9 +197,10 @@ end
 -- The public functions for doing actions.
 --------------------------------------------------------------------------------
 function ModelTurnManager:doActionBeginTurn(action)
-    assert(self.m_TurnPhase == "beginning", "ModelTurnManager:doActionBeginTurn() the turn phase is expected to be 'beginning'.")
+    assert(self.m_TurnPhase == "requestToBegin", "ModelTurnManager:doActionBeginTurn() the turn phase is expected to be 'beginning'.")
 
-    runTurnPhaseBeginning(self)
+    self.m_TurnPhase = "beginning"
+    self:runTurn()
 
     return self
 end
@@ -233,11 +231,7 @@ end
 
 function ModelTurnManager:runTurn()
     if (self.m_TurnPhase == "beginning") then
-        self.m_RootScriptEventDispatcher:dispatchEvent({
-            name       = "EvtPlayerRequestDoAction",
-            actionName = "BeginTurn",
-        })
-        return self
+        runTurnPhaseBeginning(self)
     end
 
     if (self.m_TurnPhase == "getFund") then
@@ -262,6 +256,10 @@ function ModelTurnManager:runTurn()
 
     if (self.m_TurnPhase == "tickTurnAndPlayerIndex") then
         runTurnPhaseTickTurnAndPlayerIndex(self)
+    end
+
+    if (self.m_TurnPhase == "requestToBegin") then
+        runTurnPhaseRequestToBegin(self)
     end
 
     return self

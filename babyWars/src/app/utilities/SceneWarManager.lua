@@ -138,7 +138,7 @@ local function generateTurnData()
     return {
         turnIndex   = 1,
         playerIndex = 1,
-        phase       = "beginning",
+        phase       = "requestToBegin",
     }
 end
 

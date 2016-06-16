@@ -53,7 +53,7 @@ return {
     turn = {
         turnIndex   = 1,
         playerIndex = 1,
-        phase       = "beginning",
+        phase       = "requestToBegin",
     },
 
     players = {
