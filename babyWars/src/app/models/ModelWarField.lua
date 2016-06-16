@@ -9,9 +9,6 @@
 --   - ModelWarField目前包括以下子actor：
 --     - TileMap
 --     - UnitMap
---     - MapCursor
---     - ActionPlanner
---     - GridExplosion
 --]]--------------------------------------------------------------------------------
 
 local ModelWarField = require("babyWars.src.global.functions.class")("ModelWarField")
@@ -68,26 +65,6 @@ local function initActorUnitMap(self, unitMapData)
     self.m_ActorUnitMap = actor
 end
 
-local function initActorActionPlanner(self)
-    local actor = Actor.createWithModelAndViewName("ModelActionPlanner", nil, "ViewActionPlanner")
-
-    actor:getModel():setModelTileMap(self:getModelTileMap())
-        :setModelUnitMap(self:getModelUnitMap())
-    self.m_ActorActionPlanner = actor
-end
-
-local function initActorMapCursor(self, param)
-    local actor = Actor.createWithModelAndViewName("ModelMapCursor", param, "ViewMapCursor")
-
-    self.m_ActorMapCursor = actor
-end
-
-local function initActorGridExplosion(self)
-    local actor = Actor.createWithModelAndViewName("ModelGridExplosion", nil, "ViewGridExplosion")
-
-    self.m_ActorGridExplosion = actor
-end
-
 --------------------------------------------------------------------------------
 -- The constructor and initializers.
 --------------------------------------------------------------------------------
@@ -97,9 +74,6 @@ function ModelWarField:ctor(param)
 
     initActorTileMap(      self, warFieldData.tileMap)
     initActorUnitMap(      self, warFieldData.unitMap)
-    initActorActionPlanner(self)
-    initActorMapCursor(    self, {mapSize = self:getModelTileMap():getMapSize()})
-    initActorGridExplosion(self)
 
     assert(TypeChecker.isSizeEqual(self:getModelTileMap():getMapSize(), self:getModelUnitMap():getMapSize()))
 
@@ -110,29 +84,11 @@ function ModelWarField:ctor(param)
     return self
 end
 
-function ModelWarField:initView()
-    local view = self.m_View
-    assert(TypeChecker.isView(view))
-
-    view:setViewTileMap(      self.m_ActorTileMap:getView())
-        :setViewUnitMap(      self.m_ActorUnitMap:getView())
-        :setViewActionPlanner(self.m_ActorActionPlanner:getView())
-        :setViewMapCursor(    self.m_ActorMapCursor:getView())
-        :setViewGridExplosion(self.m_ActorGridExplosion:getView())
-
-        :setContentSizeWithMapSize(self.m_ActorTileMap:getModel():getMapSize())
-
-    return self
-end
-
 function ModelWarField:setRootScriptEventDispatcher(dispatcher)
     assert(self.m_RootScriptEventDispatcher == nil, "ModelWarField:setRootScriptEventDispatcher() the dispatcher has been set.")
 
     self.m_ActorTileMap      :getModel():setRootScriptEventDispatcher(dispatcher)
     self.m_ActorUnitMap      :getModel():setRootScriptEventDispatcher(dispatcher)
-    self.m_ActorMapCursor    :getModel():setRootScriptEventDispatcher(dispatcher)
-    self.m_ActorActionPlanner:getModel():setRootScriptEventDispatcher(dispatcher)
-    self.m_ActorGridExplosion:getModel():setRootScriptEventDispatcher(dispatcher)
 
     self.m_RootScriptEventDispatcher = dispatcher
     dispatcher:addEventListener("EvtPlayerDragField",      self)
@@ -147,9 +103,6 @@ function ModelWarField:unsetRootScriptEventDispatcher()
 
     self.m_ActorTileMap      :getModel():unsetRootScriptEventDispatcher()
     self.m_ActorUnitMap      :getModel():unsetRootScriptEventDispatcher()
-    self.m_ActorMapCursor    :getModel():unsetRootScriptEventDispatcher()
-    self.m_ActorActionPlanner:getModel():unsetRootScriptEventDispatcher()
-    self.m_ActorGridExplosion:getModel():unsetRootScriptEventDispatcher()
 
     self.m_RootScriptEventDispatcher:removeEventListener("EvtPlayerZoomFieldWithTouches", self)
         :removeEventListener("EvtPlayerZoomField", self)
@@ -261,10 +214,6 @@ end
 
 function ModelWarField:getModelTileMap()
     return self.m_ActorTileMap:getModel()
-end
-
-function ModelWarField:getModelActionPlanner()
-    return self.m_ActorActionPlanner:getModel()
 end
 
 return ModelWarField
