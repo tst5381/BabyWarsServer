@@ -86,15 +86,16 @@ local function initThreadForSubscribe(self)
             end
 
             if ((res) and (res[1] == "message")) then
-                local bytes, err = self.m_WebSocket:send_text(res[3])
-                ngx.log(ngx.CRIT, "Session-threadForSubscribe() receive published message: ", res[3])
-                if (not bytes) then
-                    ngx.log(ngx.ERR, "Session-threadForSubscribe main loop: failed to send the published message to the webSocket: ", err)
-                    return self:stop()
-                end
-
                 if (string.find(res[3], '"Logout"')) then
                     ngx.log(ngx.CRIT, "Session-threadForSubscribe main loop: receive a Logout action.")
+                    -- return self:stop()
+                    self:unsubscribeFromPlayerChannel()
+                end
+
+                local bytes, err = self.m_WebSocket:send_text(res[3])
+                -- ngx.log(ngx.CRIT, "Session-threadForSubscribe() receive published message: ", res[3])
+                if (not bytes) then
+                    ngx.log(ngx.ERR, "Session-threadForSubscribe main loop: failed to send the published message to the webSocket: ", err)
                     return self:stop()
                 end
             end
