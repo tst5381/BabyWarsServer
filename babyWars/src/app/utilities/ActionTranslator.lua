@@ -279,6 +279,21 @@ local function translateEndTurn(action, modelScene)
     end
 end
 
+local function translateSurrender(action, modelScene)
+    local sceneWarFileName   = modelScene:getFileName()
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    local _, playerIndex     = modelPlayerManager:getModelPlayerWithAccount(action.playerAccount)
+
+    local actionSurrender = {
+        actionName      = "Surrender",
+        fileName        = sceneWarFileName,
+        lostPlayerIndex = playerIndex,
+    }
+
+    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionSurrender)
+    return actionSurrender, generateActionsForPublish(actionSurrender, modelPlayerManager, action.playerAccount)
+end
+
 local function translateWait(action, modelScene)
     local modelWarField        = modelScene:getModelWarField()
     local modelUnitMap         = modelWarField:getModelUnitMap()
@@ -473,13 +488,6 @@ local function translateProduceOnTile(action, modelScene)
     return actionProduceOnTile, generateActionsForPublish(actionProduceOnTile, modelPlayerManager, action.playerAccount)
 end
 
-local function translateSurrender(action, modelScene)
-    return {
-        actionName = "Message",
-        message    = "Server: the surrender action is not implemented."
-    }
-end
-
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
@@ -531,6 +539,8 @@ function ActionTranslator.translate(action, session)
         return translateBeginTurn(    action, modelSceneWar)
     elseif (actionName == "EndTurn") then
         return translateEndTurn(      action, modelSceneWar)
+    elseif (actionName == "Surrender") then
+        return translateSurrender(    action, modelSceneWar)
     elseif (actionName == "Wait") then
         return translateWait(         action, modelSceneWar)
     elseif (actionName == "Attack") then
@@ -539,8 +549,6 @@ function ActionTranslator.translate(action, session)
         return translateCapture(      action, modelSceneWar)
     elseif (actionName == "ProduceOnTile") then
         return translateProduceOnTile(action, modelSceneWar)
-    elseif (actionName == "Surrender") then
-        return translateSurrender(    action, modelSceneWar)
     end
 
     return {

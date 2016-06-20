@@ -152,6 +152,12 @@ function ModelPlayer:isAlive()
     return self.m_IsAlive
 end
 
+function ModelPlayer:setAlive(isAlive)
+    self.m_IsAlive = isAlive
+
+    return self
+end
+
 function ModelPlayer:getFund()
     return self.m_Fund
 end

@@ -49,6 +49,10 @@ local function doActionEndTurn(self, action)
     self:getModelTurnManager():doActionEndTurn()
 end
 
+local function doActionSurrender(self, action)
+
+end
+
 local function doActionWait(self, action)
     self:getModelWarField():doActionWait(action)
 end
@@ -77,6 +81,8 @@ local function onEvtSystemRequestDoAction(self, event)
         doActionBeginTurn(self, event)
     elseif (actionName == "EndTurn") then
         doActionEndTurn(self, event)
+    elseif (actionName == "Surrender") then
+        doActionSurrender(self, event)
     elseif (actionName == "Wait") then
         doActionWait(self, event)
     elseif (actionName == "Attack") then
