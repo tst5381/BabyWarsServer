@@ -80,6 +80,7 @@ return {
         unitMap = {
             -- There's no template map, so that the grids data is used.
             mapSize = {width = 25, height = 16},
+            availableUnitId = 5,
 
             grids = {
                 {

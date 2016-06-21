@@ -157,17 +157,15 @@ end
 
 local function createUnitActorsMapWithGridsData(gridsData, mapSize)
     local map = createEmptyMap(mapSize.width)
-    local maxUsedUnitID = 0
 
     for _, gridData in ipairs(gridsData) do
         local gridIndex = gridData.GridIndexable.gridIndex
         assert(GridIndexFunctions.isWithinMap(gridIndex, mapSize), "ModelTileMap-createUnitActorsMapWithGridsData() the gridIndex is invalid.")
 
-        maxUsedUnitID = math.max(gridData.unitID, maxUsedUnitID)
         map[gridIndex.x][gridIndex.y] = Actor.createWithModelAndViewName("ModelUnit", gridData, "ViewUnit", gridData)
     end
 
-    return map, mapSize, maxUsedUnitID + 1
+    return map
 end
 
 local function createUnitActorsMapWithTemplate(mapData)
@@ -180,9 +178,9 @@ end
 
 local function createUnitActorsMapWithoutTemplate(mapData)
     -- If the map is created without template, then we build the map with mapData.grids only.
-    local map, mapSize, avaliableUnitID = createUnitActorsMapWithGridsData(mapData.grids, mapData.mapSize)
+    local map = createUnitActorsMapWithGridsData(mapData.grids, mapData.mapSize)
 
-    return map, mapSize, avaliableUnitID
+    return map, mapData.mapSize, mapData.avaliableUnitId
 end
 
 local function createUnitActorsMap(param)
@@ -292,12 +290,13 @@ function ModelUnitMap:toSerializableTable()
     local loaded = {}
 
     return {
-        mapSize = {
+        mapSize        = {
             width  = self.m_MapSize.width,
             height = self.m_MapSize.height,
         },
-        grids   = grids,
-        loaded  = loaded,
+        avaliableUnitId = self.m_AvailableUnitID,
+        grids           = grids,
+        loaded          = loaded,
     }
 end
 
