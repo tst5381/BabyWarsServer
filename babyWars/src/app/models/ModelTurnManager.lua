@@ -18,11 +18,21 @@
 --]]--------------------------------------------------------------------------------
 
 local ModelTurnManager = require("babyWars.src.global.functions.class")("ModelTurnManager")
+local WebSocketManager = nil
 local TableFunctions   = require("babyWars.src.app.utilities.TableFunctions")
 
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
+local function isLoggedInPlayerInTurn(self)
+    if (not WebSocketManager) then
+        return false
+    else
+        local modelPlayerInTurn = self.m_ModelPlayerManager:getModelPlayer(self.m_PlayerIndex)
+        return modelPlayerInTurn:getAccount() == WebSocketManager.getLoggedInAccountAndPassword()
+    end
+end
+
 local function getNextTurnAndPlayerIndex(self, playerManager)
     local nextTurnIndex   = self.m_TurnIndex
     local nextPlayerIndex = self.m_PlayerIndex + 1
@@ -121,6 +131,7 @@ local function runTurnPhaseTickTurnAndPlayerIndex(self)
     self.m_RootScriptEventDispatcher:dispatchEvent({
         name        = "EvtPlayerIndexUpdated",
         playerIndex = self.m_PlayerIndex,
+        modelPlayer = self.m_ModelPlayerManager:getModelPlayer(self.m_PlayerIndex),
     })
 
     -- TODO: Change the vision, weather and so on.
@@ -128,6 +139,12 @@ local function runTurnPhaseTickTurnAndPlayerIndex(self)
 end
 
 local function runTurnPhaseRequestToBegin(self)
+    if (isLoggedInPlayerInTurn(self)) then
+        self.m_RootScriptEventDispatcher:dispatchEvent({
+            name       = "EvtPlayerRequestDoAction",
+            actionName = "BeginTurn",
+        })
+    end
 end
 
 --------------------------------------------------------------------------------
@@ -151,6 +168,13 @@ end
 function ModelTurnManager:setModelWarField(warField)
     assert(self.m_ModelWarField == nil, "ModelTurnManager:setModelWarField() the model has been set.")
     self.m_ModelWarField = warField
+
+    return self
+end
+
+function ModelTurnManager:setModelMessageIndicator(model)
+    assert(self.m_ModelMessageIndicator == nil, "ModelTurnManager:setModelMessageIndicator() the model has been set.")
+    self.m_ModelMessageIndicator = model
 
     return self
 end
@@ -197,7 +221,7 @@ end
 -- The public functions for doing actions.
 --------------------------------------------------------------------------------
 function ModelTurnManager:doActionBeginTurn(action)
-    assert(self.m_TurnPhase == "requestToBegin", "ModelTurnManager:doActionBeginTurn() the turn phase is expected to be 'beginning'.")
+    assert(self.m_TurnPhase == "requestToBegin", "ModelTurnManager:doActionBeginTurn() the turn phase is expected to be 'requestToBegin'.")
 
     self.m_TurnPhase = "beginning"
     self:runTurn()
@@ -266,6 +290,14 @@ function ModelTurnManager:runTurn()
 
     if (self.m_TurnPhase == "requestToBegin") then
         runTurnPhaseRequestToBegin(self)
+    end
+
+    if (self.m_ModelMessageIndicator) then
+        if (isLoggedInPlayerInTurn(self)) then
+            self.m_ModelMessageIndicator:hidePersistentMessage()
+        else
+            self.m_ModelMessageIndicator:showPersistentMessage("It's your opponent's turn. Please wait.")
+        end
     end
 
     return self

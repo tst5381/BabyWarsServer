@@ -50,7 +50,15 @@ local function doActionEndTurn(self, action)
 end
 
 local function doActionSurrender(self, action)
+    local modelPlayerManager = self:getModelPlayerManager()
+    local modelTurnManager   = self:getModelTurnManager()
+    modelPlayerManager:doActionSurrender(action)
+    modelTurnManager:doActionSurrender(action)
+    self:getModelWarField():doActionSurrender(action)
 
+    if (modelPlayerManager:getAlivePlayersCount() == 1) then
+        modelTurnManager:runTurn()
+    end
 end
 
 local function doActionWait(self, action)
@@ -115,7 +123,7 @@ local function initActorPlayerManager(self, playersData)
 end
 
 local function initActorWarField(self, warFieldData)
-    local actor = Actor.createWithModelAndViewName("ModelWarField", warFieldData, "ViewWarField", warFieldData)
+    local actor = Actor.createWithModelAndViewName("ModelWarField", warFieldData)
 
     actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
     self.m_ActorWarField = actor
@@ -188,12 +196,18 @@ end
 --------------------------------------------------------------------------------
 function ModelSceneWar:onStartRunning()
     self.m_ScriptEventDispatcher:dispatchEvent({
-            name = "EvtModelWeatherUpdated",
+            name         = "EvtModelWeatherUpdated",
             modelWeather = self:getModelWeatherManager():getCurrentWeather()
         })
         :dispatchEvent({
             name = "EvtSceneWarStarted",
         })
+        :dispatchEvent({
+            name        = "EvtPlayerIndexUpdated",
+            playerIndex = playerIndex,
+            modelPlayer = self:getModelPlayerManager():getModelPlayer(playerIndex),
+        })
+
     self:getModelTurnManager():runTurn()
 
     return self

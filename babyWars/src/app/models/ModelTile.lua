@@ -59,6 +59,13 @@ local TableFunctions        = require("babyWars.src.app.utilities.TableFunctions
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
+local function dispatchEvtModelTileUpdated(self)
+    self.m_RootScriptEventDispatcher:dispatchEvent({
+        name      = "EvtModelTileUpdated",
+        modelTile = self,
+    })
+end
+
 local function initWithTiledID(self, objectID, baseID)
     self.m_InitialObjectID = self.m_InitialObjectID or objectID
     self.m_InitialBaseID   = self.m_InitialBaseID   or baseID
@@ -86,7 +93,7 @@ local function loadInstantialData(self, param)
     for name, data in pairs(param) do
         if (string.byte(name) > string.byte("z")) or (string.byte(name) < string.byte("a")) then
             local component = ComponentManager.getComponent(self, name)
-            assert(component, "ModelUnit-loadInstantialData() attempting to update a component that the model hasn't bound with.")
+            assert(component, "ModelTile-loadInstantialData() attempting to update a component that the model hasn't bound with.")
 
             component:loadInstantialData(data)
         end
@@ -226,6 +233,63 @@ function ModelTile:toSerializableTable()
 end
 
 --------------------------------------------------------------------------------
+-- The public functions for doing actions.
+--------------------------------------------------------------------------------
+function ModelTile:doActionSurrender(action)
+    if (self:getPlayerIndex() == action.lostPlayerIndex) then
+        self:updateWithPlayerIndex(0)
+    else
+        for _, component in pairs(ComponentManager.getAllComponents(self)) do
+            if (component.doActionSurrender) then
+                component:doActionSurrender(action)
+            end
+        end
+    end
+
+    self:updateView()
+    dispatchEvtModelTileUpdated(self)
+
+    return self
+end
+
+function ModelTile:doActionAttack(action, isAttacker)
+    assert(not isAttacker, "ModelTile:doActionAttack() the param is invalid.")
+    for _, component in pairs(ComponentManager.getAllComponents(self)) do
+        if (component.doActionAttack) then
+            component:doActionAttack(action, isAttacker)
+        end
+    end
+
+    dispatchEvtModelTileUpdated(self)
+
+    return self
+end
+
+function ModelTile:doActionCapture(action)
+    for _, component in pairs(ComponentManager.getAllComponents(self)) do
+        if (component.doActionCapture) then
+            component:doActionCapture(action)
+        end
+    end
+
+    dispatchEvtModelTileUpdated(self)
+
+    return self
+end
+
+function ModelTile:doActionWait(action)
+    for _, component in pairs(ComponentManager.getAllComponents(self)) do
+        if (component.doActionWait) then
+            component:doActionWait(action)
+        end
+    end
+
+    dispatchEvtModelTileUpdated(self)
+
+    return self
+end
+
+--------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
 function ModelTile:updateView()
@@ -258,7 +322,7 @@ function ModelTile:destroyModelTileObject()
     loadInstantialData(self, {GridIndexable = {gridIndex = gridIndex}})
     self:setRootScriptEventDispatcher(dispatcher)
 
-    dispatcher:dispatchEvent({name = "EvtModelTileUpdated", modelTile = self})
+    dispatchEvtModelTileUpdated(self)
 
     return self
 end
@@ -271,44 +335,22 @@ end
 
 function ModelTile:updateWithPlayerIndex(playerIndex)
     assert(self:getPlayerIndex() ~= playerIndex, "ModelTile:updateWithPlayerIndex() the param playerIndex is the same as the one of self.")
-    self.m_ObjectID = GameConstantFunctions.getTiledIdWithTileOrUnitName(GameConstantFunctions.getTileNameWithTiledId(self:getTiledID()), playerIndex)
 
-    return self
-end
+    local tileName = GameConstantFunctions.getTileNameWithTiledId(self:getTiledID())
+    if (tileName ~= "hq") then
+        self.m_ObjectID = GameConstantFunctions.getTiledIdWithTileOrUnitName(tileName, playerIndex)
+    else
+        local gridIndex, currentCapturePoint = self:getGridIndex(), self:getCurrentCapturePoint()
+        local dispatcher = self.m_RootScriptEventDispatcher
 
-function ModelTile:doActionAttack(action, isAttacker)
-    assert(not isAttacker, "ModelTile:doActionAttack() the param is invalid.")
-    for _, component in pairs(ComponentManager.getAllComponents(self)) do
-        if (component.doActionAttack) then
-            component:doActionAttack(action, isAttacker)
-        end
+        self:unsetRootScriptEventDispatcher()
+        initWithTiledID(self, GameConstantFunctions.getTiledIdWithTileOrUnitName("city", playerIndex), self.m_BaseID)
+        loadInstantialData(self, {
+            GridIndexable = {gridIndex           = gridIndex},
+            CaptureTaker  = {currentCapturePoint = currentCapturePoint},
+        })
+        self:setRootScriptEventDispatcher(dispatcher)
     end
-
-    self.m_RootScriptEventDispatcher:dispatchEvent({name = "EvtModelTileUpdated", modelTile = self})
-
-    return self
-end
-
-function ModelTile:doActionCapture(action)
-    for _, component in pairs(ComponentManager.getAllComponents(self)) do
-        if (component.doActionCapture) then
-            component:doActionCapture(action)
-        end
-    end
-
-    self.m_RootScriptEventDispatcher:dispatchEvent({name = "EvtModelTileUpdated", modelTile = self})
-
-    return self
-end
-
-function ModelTile:doActionWait(action)
-    for _, component in pairs(ComponentManager.getAllComponents(self)) do
-        if (component.doActionWait) then
-            component:doActionWait(action)
-        end
-    end
-
-    self.m_RootScriptEventDispatcher:dispatchEvent({name = "EvtModelTileUpdated", modelTile = self})
 
     return self
 end
