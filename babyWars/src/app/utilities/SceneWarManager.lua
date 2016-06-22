@@ -35,7 +35,7 @@ local function toFullFileName(shortName)
 end
 
 local function createActorSceneWar(warData)
-    local modelSceneWar = Actor.createModel("ModelSceneWar", warData)
+    local modelSceneWar = Actor.createModel("sceneWar.ModelSceneWar", warData)
     modelSceneWar:onStartRunning()
     return Actor.createWithModelAndViewInstance(modelSceneWar)
 end

@@ -87,7 +87,7 @@ local function createTileActorsMapWithTiledLayers(objectLayer, baseLayer)
                 GridIndexable = {gridIndex = {x = x, y = y}}
             }
 
-            map[x][y] = Actor.createWithModelAndViewName("ModelTile", actorData, "ViewTile", actorData)
+            map[x][y] = Actor.createWithModelAndViewName("sceneWar.ModelTile", actorData, "sceneWar.ViewTile", actorData)
         end
     end
 

@@ -30,6 +30,8 @@ local ModelSceneWar = require("babyWars.src.global.functions.class")("ModelScene
 
 local Actor            = require("babyWars.src.global.actors.Actor")
 local ActionTranslator = require("babyWars.src.app.utilities.ActionTranslator")
+local EventDispatcher  = require("babyWars.src.global.events.EventDispatcher")
+local TableFunctions   = require("babyWars.src.app.utilities.TableFunctions")
 
 --------------------------------------------------------------------------------
 -- The private functions for serialization.
@@ -108,7 +110,7 @@ end
 -- The composition elements.
 --------------------------------------------------------------------------------
 local function initScriptEventDispatcher(self)
-    local dispatcher = require("babyWars.src.global.events.EventDispatcher"):create()
+    local dispatcher = EventDispatcher:create()
 
     dispatcher:addEventListener("EvtPlayerRequestDoAction", self)
         :addEventListener("EvtSystemRequestDoAction", self)
@@ -116,21 +118,21 @@ local function initScriptEventDispatcher(self)
 end
 
 local function initActorPlayerManager(self, playersData)
-    local actor = Actor.createWithModelAndViewName("ModelPlayerManager", playersData)
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelPlayerManager", playersData)
 
     actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
     self.m_ActorPlayerManager = actor
 end
 
 local function initActorWarField(self, warFieldData)
-    local actor = Actor.createWithModelAndViewName("ModelWarField", warFieldData)
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelWarField", warFieldData)
 
     actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
     self.m_ActorWarField = actor
 end
 
 local function initActorTurnManager(self, turnData)
-    local actor = Actor.createWithModelAndViewName("ModelTurnManager", turnData)
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelTurnManager", turnData)
 
     actor:getModel():setModelPlayerManager(self:getModelPlayerManager())
         :setModelWarField(self.m_ActorWarField:getModel())
@@ -139,7 +141,7 @@ local function initActorTurnManager(self, turnData)
 end
 
 local function initActorWeatherManager(self, weatherData)
-    local actor = Actor.createWithModelAndViewName("ModelWeatherManager", weatherData)
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelWeatherManager", weatherData)
 
     self.m_ActorWeatherManager = actor
 end
@@ -170,7 +172,7 @@ function ModelSceneWar:toStringList(spaces)
     local subSpaces  = spaces .. "    "
     local strList    = {spaces .. "return {\n"}
 
-    local appendList = require("babyWars.src.app.utilities.TableFunctions").appendList
+    local appendList = TableFunctions.appendList
     appendList(strList, serializeFileNameToStringList(self, subSpaces),        ",\n")
     appendList(strList, self:getModelWarField()      :toStringList(subSpaces), ",\n")
     appendList(strList, self:getModelTurnManager()   :toStringList(subSpaces), ",\n")

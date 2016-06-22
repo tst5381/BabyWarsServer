@@ -88,7 +88,7 @@ local function createActorUnit(tiledID, unitID, gridIndex)
         GridIndexable = {gridIndex = gridIndex},
     }
 
-    return Actor.createWithModelAndViewName("ModelUnit", actorData, "ViewUnit", actorData)
+    return Actor.createWithModelAndViewName("sceneWar.ModelUnit", actorData, "sceneWar.ViewUnit", actorData)
 end
 
 local function serializeMapSizeToStringList(mapSize, spaces)
@@ -179,7 +179,7 @@ local function createUnitActorsMapWithGridsData(gridsData, mapSize)
         local gridIndex = gridData.GridIndexable.gridIndex
         assert(GridIndexFunctions.isWithinMap(gridIndex, mapSize), "ModelTileMap-createUnitActorsMapWithGridsData() the gridIndex is invalid.")
 
-        map[gridIndex.x][gridIndex.y] = Actor.createWithModelAndViewName("ModelUnit", gridData, "ViewUnit", gridData)
+        map[gridIndex.x][gridIndex.y] = Actor.createWithModelAndViewName("sceneWar.ModelUnit", gridData, "sceneWar.ViewUnit", gridData)
     end
 
     return map

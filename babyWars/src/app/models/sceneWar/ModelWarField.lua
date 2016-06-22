@@ -63,13 +63,13 @@ end
 -- The composition elements.
 --------------------------------------------------------------------------------
 local function initActorTileMap(self, tileMapData)
-    local actor = Actor.createWithModelAndViewName("ModelTileMap", tileMapData, "ViewTileMap")
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelTileMap", tileMapData, "sceneWar.ViewTileMap")
 
     self.m_ActorTileMap = actor
 end
 
 local function initActorUnitMap(self, unitMapData)
-    local actor = Actor.createWithModelAndViewName("ModelUnitMap", unitMapData, "ViewUnitMap")
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelUnitMap", unitMapData, "sceneWar.ViewUnitMap")
 
     self.m_ActorUnitMap = actor
 end

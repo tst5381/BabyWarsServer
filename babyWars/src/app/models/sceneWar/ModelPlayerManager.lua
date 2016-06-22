@@ -17,7 +17,7 @@
 
 local ModelPlayerManager = require("babyWars.src.global.functions.class")("ModelPlayerManager")
 
-local ModelPlayer    = require("babyWars.src.app.models.ModelPlayer")
+local ModelPlayer    = require("babyWars.src.app.models.sceneWar.ModelPlayer")
 local TableFunctions = require("babyWars.src.app.utilities.TableFunctions")
 
 --------------------------------------------------------------------------------
