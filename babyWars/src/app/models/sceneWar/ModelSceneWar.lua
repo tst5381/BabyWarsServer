@@ -58,7 +58,9 @@ local function doActionSurrender(self, action)
     modelTurnManager:doActionSurrender(action)
     self:getModelWarField():doActionSurrender(action)
 
-    if (modelPlayerManager:getAlivePlayersCount() == 1) then
+    if (modelPlayerManager:getAlivePlayersCount() <= 1) then
+        self.m_IsWarEnded = true
+    else
         modelTurnManager:runTurn()
     end
 end
@@ -154,6 +156,7 @@ function ModelSceneWar:ctor(sceneData)
 
     self.m_FileName    = sceneData.fileName
     self.m_WarPassword = sceneData.warPassword
+    self.m_IsWarEnded  = sceneData.isEnded
 
     initScriptEventDispatcher(self)
     initActorPlayerManager(   self, sceneData.players)
@@ -186,6 +189,7 @@ function ModelSceneWar:toSerializableTable()
     return {
         fileName    = self.m_FileName,
         warPassword = self.m_WarPassword,
+        isEnded     = self.m_IsWarEnded,
         warField    = self.m_ActorWarField:getModel():toSerializableTable(),
         turn        = self.m_ActorTurnManager:getModel():toSerializableTable(),
         players     = self.m_ActorPlayerManager:getModel():toSerializableTable(),
@@ -239,6 +243,10 @@ end
 
 function ModelSceneWar:getFileName()
     return self.m_FileName
+end
+
+function ModelSceneWar:isEnded()
+    return self.m_IsWarEnded
 end
 
 function ModelSceneWar:getScriptEventDispatcher()

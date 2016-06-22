@@ -61,12 +61,17 @@ local function generateWarConfiguration(warData)
 end
 
 local function loadOngoingWar(sceneWarFileName)
-    local fullFileName = toFullFileName(sceneWarFileName)
-    local warData = dofile(fullFileName)
+    local fullFileName  = toFullFileName(sceneWarFileName)
+    local warData       = dofile(fullFileName)
+    local actorSceneWar = createActorSceneWar(warData)
+
+    if (actorSceneWar:getModel():isEnded()) then
+        return nil, "SceneWarManager.loadOngoingWar() the war specified by the param is ended."
+    end
 
     return {
         fullFileName  = fullFileName,
-        actorSceneWar = createActorSceneWar(warData),
+        actorSceneWar = actorSceneWar,
         configuration = generateWarConfiguration(warData),
     }
 end
@@ -181,6 +186,8 @@ local function generateSceneWarData(fileName, param)
     return {
         fileName    = fileName,
         warPassword = param.warPassword,
+        isEnded     = false,
+
         warField    = generateWarFieldData(param.warFieldFileName),
         turn        = generateTurnData(),
         players     = generatePlayersData(param.playerIndex, param.playerAccount, param.skillIndex),
@@ -228,7 +235,12 @@ function SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
         return nil
     else
         if (s_OngoingWarList[sceneWarFileName] == nil) then
-            s_OngoingWarList[sceneWarFileName] = loadOngoingWar(sceneWarFileName)
+            local item, err = loadOngoingWar(sceneWarFileName)
+            if (not item) then
+                return nil, "SceneWarManager.getOngoingModelSceneWar() failed: " .. err
+            end
+
+            s_OngoingWarList[sceneWarFileName] = item
         end
 
         return s_OngoingWarList[sceneWarFileName].actorSceneWar:getModel()
@@ -247,7 +259,12 @@ function SceneWarManager.getOngoingSceneWarConfiguration(sceneWarFileName)
         return nil
     else
         if (s_OngoingWarList[sceneWarFileName] == nil) then
-            s_OngoingWarList[sceneWarFileName] = loadOngoingWar(sceneWarFileName)
+            local item, err = loadOngoingWar(sceneWarFileName)
+            if (not item) then
+                return nil, "SceneWarManager.getOngoingSceneWarConfiguration() failed: " .. err
+            end
+
+            s_OngoingWarList[sceneWarFileName] = item
         end
 
         return s_OngoingWarList[sceneWarFileName].configuration
@@ -323,9 +340,8 @@ function SceneWarManager.joinWar(param)
     if (not isWarReadyForStart(configuration)) then
         return "Join war successfully. Please wait for more players to join."
     else
-        for _, player in pairs(configuration.players) do
-            PlayerProfileManager.updatePlayerProfileWithOngoingWarConfiguration(player.account, sceneWarFileName, configuration)
-        end
+        PlayerProfileManager.updateProfilesWithBeginningWar(sceneWarFileName, configuration)
+
         s_JoinableWarList[sceneWarFileName]     = nil
         s_JoinableWarNameList[sceneWarFileName] = nil
         serialize(SCENE_WAR_JOINABLE_LIST_PATH, s_JoinableWarNameList)
@@ -334,17 +350,17 @@ function SceneWarManager.joinWar(param)
     end
 end
 
-function SceneWarManager.updateModelSceneWarWithAction(fileName, action)
-    assert(SceneWarManager.getOngoingModelSceneWar(fileName) ~= nil, "SceneWarManager.updateModelSceneWarWithAction() the param fileName is invalid.")
+function SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, action)
+    assert(SceneWarManager.getOngoingModelSceneWar(sceneWarFileName) ~= nil, "SceneWarManager.updateModelSceneWarWithAction() the param sceneWarFileName is invalid.")
 
     local cloneAction = {}
     for k, v in pairs(action) do
         cloneAction[k] = v
     end
 
-    serialize(s_OngoingWarList[fileName].fullFileName,
-        s_OngoingWarList[fileName].actorSceneWar:getModel():doSystemAction(cloneAction):toSerializableTable()
-    )
+    local modelSceneWar = s_OngoingWarList[sceneWarFileName].actorSceneWar:getModel()
+    serialize(s_OngoingWarList[sceneWarFileName].fullFileName, modelSceneWar:doSystemAction(cloneAction):toSerializableTable())
+    PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
     return SceneWarManager
 end

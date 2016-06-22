@@ -2,6 +2,7 @@
 return {
     fileName = "0000000000000001",
     warPassword = "",
+    isEnded = false,
 
     warField = {
         tileMap = {

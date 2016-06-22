@@ -506,8 +506,9 @@ function ActionTranslator.translate(action, session)
         return translateRegister(action)
     end
 
-    if (PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
-        session:subscribeToPlayerChannel(action.playerAccount, action.playerPassword)
+    local playerAccount = action.playerAccount
+    if (PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
+        session:subscribeToPlayerChannel(playerAccount, action.playerPassword)
     else
         return {
             actionName = "Logout",
@@ -527,14 +528,22 @@ function ActionTranslator.translate(action, session)
         return translateJoinWar(action)
     end
 
-    if (not SceneWarManager.isPlayerInTurn(action.sceneWarFileName, action.playerAccount)) then
+    local sceneWarFileName = action.sceneWarFileName
+    if (not SceneWarManager.isPlayerInTurn(sceneWarFileName, playerAccount)) then
         return {
             actionName = "Message",
             message    = "You are not the in-turn player. Please reenter the war."
         }
     end
 
-    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(action.sceneWarFileName)
+    local modelSceneWar, err = SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
+    if (not modelSceneWar) then
+        return {
+            actionName = "Message",
+            message    = "The war is ended or invalid. Please go back to the main menu.\n" .. err
+        }
+    end
+
     if (actionName == "BeginTurn") then
         return translateBeginTurn(    action, modelSceneWar)
     elseif (actionName == "EndTurn") then
