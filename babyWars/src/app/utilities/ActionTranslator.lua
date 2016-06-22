@@ -141,12 +141,11 @@ local function translateGetOngoingWarList(action)
 end
 
 local function translateGetSceneWarData(action)
-    local data = SceneWarManager.getOngoingSceneWarData(action.fileName)
+    local data, err = SceneWarManager.getOngoingSceneWarData(action.fileName)
     if (not data) then
-        ngx.log(ngx.ERR, "ActionTranslator-translateGetSceneWarData() failed to get the data with the param action.fileName: ", action.fileName)
         return {
             actionName = "Message",
-            message    = "Server: translateGetSceneWarData() failed to get the data with the param action.fileName."
+            message    = "Failed entering the war, possibly because the war is ended."
         }
     else
         return {

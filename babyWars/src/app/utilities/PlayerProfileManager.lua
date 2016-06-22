@@ -125,7 +125,7 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
     modelSceneWar:getModelPlayerManager():forEachModelPlayer(function(modelPlayer, playerIndex)
         local account = modelPlayer:getAccount()
-        if (modelPlayer:isAlive() then
+        if (modelPlayer:isAlive()) then
             alivePlayersCount  = alivePlayersCount + 1
             alivePlayerAccount = account
         else
