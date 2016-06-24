@@ -34,6 +34,25 @@ local EventDispatcher  = require("babyWars.src.global.events.EventDispatcher")
 local TableFunctions   = require("babyWars.src.app.utilities.TableFunctions")
 
 --------------------------------------------------------------------------------
+-- The util functions.
+--------------------------------------------------------------------------------
+local function getAliveModelUnitsCount(modelUnitMap, playerIndex)
+    local count = 0
+    modelUnitMap:forEachModelUnitOnMap(function(modelUnit)
+        if (modelUnit:getPlayerIndex() == playerIndex) then
+            count = count + 1
+        end
+    end)
+
+    return count
+end
+
+local function clearPlayerForce(self, playerIndex)
+    self:getModelPlayerManager():getModelPlayer(playerIndex):setAlive(false)
+    self:getModelWarField():clearPlayerForce(playerIndex)
+end
+
+--------------------------------------------------------------------------------
 -- The private functions for serialization.
 --------------------------------------------------------------------------------
 local function serializeFileNameToStringList(self, spaces)
@@ -60,8 +79,6 @@ local function doActionSurrender(self, action)
 
     if (modelPlayerManager:getAlivePlayersCount() <= 1) then
         self.m_IsWarEnded = true
-    else
-        modelTurnManager:runTurn()
     end
 end
 
@@ -70,7 +87,23 @@ local function doActionWait(self, action)
 end
 
 local function doActionAttack(self, action)
+    local modelUnitMap        = self:getModelWarField():getModelUnitMap()
+    local attackerPlayerIndex = modelUnitMap:getModelUnit(action.path[1]):getPlayerIndex()
+    local targetModelUnit     = modelUnitMap:getModelUnit(action.targetGridIndex)
+    local targetPlayerIndex   = (targetModelUnit) and (targetModelUnit:getPlayerIndex()) or (nil)
+
     self:getModelWarField():doActionAttack(action)
+
+    if (getAliveModelUnitsCount(modelUnitMap, attackerPlayerIndex) == 0) then
+        clearPlayerForce(self, attackerPlayerIndex)
+        self:getModelTurnManager():doActionSurrender({lostPlayerIndex = attackerPlayerIndex})
+    elseif ((targetPlayerIndex) and (getAliveModelUnitsCount(modelUnitMap, targetPlayerIndex) == 0)) then
+        clearPlayerForce(self, targetPlayerIndex)
+    end
+
+    if (self:getModelPlayerManager():getAlivePlayersCount() <= 1) then
+        self.m_IsWarEnded = true
+    end
 end
 
 local function doActionCapture(self, action)

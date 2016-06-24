@@ -28,10 +28,6 @@ local PlayerProfileManager   = require("babyWars.src.app.utilities.PlayerProfile
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
-local function getPlayerAccountForModelUnit(modelUnit, modelPlayerManager)
-    return modelPlayerManager:getModelPlayer(modelUnit:getPlayerIndex()):getAccount()
-end
-
 local function isModelUnitVisible(modelUnit, modelWeatherManager)
     -- TODO: add code to do the real job.
     return true
@@ -382,9 +378,23 @@ local function translateAttack(action, modelScene)
         attackDamage    = attackDamage,
         counterDamage   = counterDamage
     }
-
     SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionAttack)
-    return actionAttack, generateActionsForPublish(actionAttack, modelPlayerManager, action.playerAccount)
+
+    local attackerPlayerIndex = attackerModelUnit:getPlayerIndex()
+    local targetPlayerIndex   = attackTarget:getPlayerIndex()
+    if (not modelPlayerManager:getModelPlayer(attackerPlayerIndex):isAlive()) then
+        actionAttack.lostPlayerIndex = attackerPlayerIndex
+    elseif ((targetPlayerIndex ~= 0) and (not modelPlayerManager:getModelPlayer(targetPlayerIndex):isAlive())) then
+        actionAttack.lostPlayerIndex = targetPlayerIndex
+    end
+
+    local actionsForPublish = generateActionsForPublish(actionAttack, modelPlayerManager, action.playerAccount) or {}
+    if ((actionAttack.lostPlayerIndex) and (actionAttack.lostPlayerIndex == targetPlayerIndex)) then
+        local lostModelPlayer = modelPlayerManager:getModelPlayer(actionAttack.lostPlayerIndex)
+        actionsForPublish[lostModelPlayer:getAccount()] = actionAttack
+    end
+
+    return actionAttack, actionsForPublish
 end
 
 local function translateCapture(action, modelScene)
