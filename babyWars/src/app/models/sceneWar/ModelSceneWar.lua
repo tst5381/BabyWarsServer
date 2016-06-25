@@ -107,7 +107,19 @@ local function doActionAttack(self, action)
 end
 
 local function doActionCapture(self, action)
-    self:getModelWarField():doActionCapture(action)
+    local modelWarField     = self:getModelWarField()
+    local targetModelTile   = modelWarField:getModelTileMap():getModelTile(action.path[#action.path])
+    local targetPlayerIndex = targetModelTile:getPlayerIndex()
+    local isDefeatOnCapture = targetModelTile:isDefeatOnCapture()
+
+    modelWarField:doActionCapture(action)
+
+    if ((isDefeatOnCapture) and (targetModelTile:getPlayerIndex() ~= targetPlayerIndex)) then
+        clearPlayerForce(self, targetPlayerIndex)
+        if (self:getModelPlayerManager():getAlivePlayersCount() <= 1) then
+            self.m_IsWarEnded = true
+        end
+    end
 end
 
 local function doActionProduceOnTile(self, action)

@@ -430,21 +430,34 @@ local function translateCapture(action, modelScene)
 
     local modelTileMap      = modelWarField:getModelTileMap()
     local capturerModelUnit = modelUnitMap:getModelUnit(translatedPath[1])
+    local targetModelTile   = modelTileMap:getModelTile(targetGridIndex)
     if ((not capturerModelUnit.canCapture) or
-        (not capturerModelUnit:canCapture(modelTileMap:getModelTile(targetGridIndex)))) then
+        (not capturerModelUnit:canCapture(targetModelTile))) then
         return {
             actionName = "Message",
             message    = "Failed because the focus unit can't capture the target tile. Please reenter the war."
         }
     end
 
-    local actionCapture = {
+    local targetPlayerIndex = targetModelTile:getPlayerIndex()
+    local actionCapture     = {
         actionName = "Capture",
         fileName   = sceneWarFileName,
         path       = translatedPath,
     }
     SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionCapture)
-    return actionCapture, generateActionsForPublish(actionCapture, modelPlayerManager, action.playerAccount)
+
+    if (not modelPlayerManager:getModelPlayer(targetPlayerIndex):isAlive()) then
+        actionCapture.lostPlayerIndex = targetPlayerIndex
+    end
+
+    local actionsForPublish = generateActionsForPublish(actionCapture, modelPlayerManager, action.playerAccount) or {}
+    if (actionCapture.lostPlayerIndex) then
+        local lostModelPlayer = modelPlayerManager:getModelPlayer(actionCapture.lostPlayerIndex)
+        actionsForPublish[lostModelPlayer:getAccount()] = actionCapture
+    end
+
+    return actionCapture, actionsForPublish
 end
 
 local function translateProduceOnTile(action, modelScene)
