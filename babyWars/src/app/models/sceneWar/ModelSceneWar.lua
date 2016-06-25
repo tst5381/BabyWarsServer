@@ -63,7 +63,23 @@ end
 -- The functions that do the actions the system requested.
 --------------------------------------------------------------------------------
 local function doActionBeginTurn(self, action)
-    self:getModelTurnManager():doActionBeginTurn()
+    local modelTurnManager         = self:getModelTurnManager()
+    local modelUnitMap             = self:getModelWarField():getModelUnitMap()
+    local playerIndex              = modelTurnManager:getPlayerIndex()
+    local prevAliveModelUnitsCount = getAliveModelUnitsCount(modelUnitMap, playerIndex)
+
+    modelTurnManager:doActionBeginTurn(action)
+
+    if ((prevAliveModelUnitsCount > 0) and
+        (getAliveModelUnitsCount(modelUnitMap, playerIndex) == 0)) then
+        clearPlayerForce(self, playerIndex)
+
+        if (self:getModelPlayerManager():getAlivePlayersCount() == 1) then
+            self.m_IsWarEnded = true
+        else
+            modelTurnManager:endTurn()
+        end
+    end
 end
 
 local function doActionEndTurn(self, action)
@@ -96,7 +112,7 @@ local function doActionAttack(self, action)
 
     if (getAliveModelUnitsCount(modelUnitMap, attackerPlayerIndex) == 0) then
         clearPlayerForce(self, attackerPlayerIndex)
-        self:getModelTurnManager():doActionSurrender({lostPlayerIndex = attackerPlayerIndex})
+        self:getModelTurnManager():endTurn()
     elseif ((targetPlayerIndex) and (getAliveModelUnitsCount(modelUnitMap, targetPlayerIndex) == 0)) then
         clearPlayerForce(self, targetPlayerIndex)
     end

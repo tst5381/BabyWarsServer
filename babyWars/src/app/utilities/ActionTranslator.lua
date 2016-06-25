@@ -241,23 +241,29 @@ local function translatePath(path, modelSceneWar)
 end
 
 local function translateBeginTurn(action, modelScene)
-    local modelPlayerManager = modelScene:getModelPlayerManager()
-    local modelTurnManager   = modelScene:getModelTurnManager()
+    local modelTurnManager = modelScene:getModelTurnManager()
+    local playerIndex      = modelTurnManager:getPlayerIndex()
 
     if (modelTurnManager:getTurnPhase() ~= "requestToBegin") then
         ngx.log(ngx.ERR, "ActionTranslator-translateBeginTurn() the current turn phase is expected to be 'requestToBegin'.")
         return {
             actionName = "Message",
-            message    = "Server: translateBeginTurn() the current turn phase is expected to be 'requestToBegin'. Please reenter the war.",
+            message    = "The current turn phase is invalid. Please reenter the war.",
         }
-    else
-        local actionBeginTurn = {
-            actionName = "BeginTurn",
-            fileName   = modelScene:getFileName(),
-        }
-        SceneWarManager.updateModelSceneWarWithAction(modelScene:getFileName(), actionBeginTurn)
-        return actionBeginTurn, generateActionsForPublish(actionBeginTurn, modelPlayerManager, action.playerAccount)
     end
+
+    local actionBeginTurn = {
+        actionName = "BeginTurn",
+        fileName   = modelScene:getFileName(),
+    }
+    SceneWarManager.updateModelSceneWarWithAction(modelScene:getFileName(), actionBeginTurn)
+
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    if (not modelPlayerManager:getModelPlayer(playerIndex):isAlive()) then
+        actionBeginTurn.lostPlayerIndex = playerIndex
+    end
+
+    return actionBeginTurn, generateActionsForPublish(actionBeginTurn, modelPlayerManager, action.playerAccount)
 end
 
 local function translateEndTurn(action, modelScene)
