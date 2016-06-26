@@ -32,7 +32,7 @@
 local Actor = require("babyWars.src.global.functions.class")("Actor")
 
 local MODEL_PATH = "babyWars.src.app.models."
-local VIEW_PATH  = "babyWars.src.app.views"
+local VIEW_PATH  = "babyWars.src.app.views."
 
 function Actor.createModel(name, param)
     if (not name) then

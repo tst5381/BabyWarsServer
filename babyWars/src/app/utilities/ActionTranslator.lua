@@ -28,14 +28,6 @@ local PlayerProfileManager   = require("babyWars.src.app.utilities.PlayerProfile
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
-local function getCurrentPlayerAccount(modelPlayerManager, modelTurnManager)
-    return modelPlayerManager:getModelPlayer(modelTurnManager:getPlayerIndex()):getAccount()
-end
-
-local function getPlayerAccountForModelUnit(modelUnit, modelPlayerManager)
-    return modelPlayerManager:getModelPlayer(modelUnit:getPlayerIndex()):getAccount()
-end
-
 local function isModelUnitVisible(modelUnit, modelWeatherManager)
     -- TODO: add code to do the real job.
     return true
@@ -59,331 +51,6 @@ end
 --------------------------------------------------------------------------------
 -- The translate functions.
 --------------------------------------------------------------------------------
--- This translation ignores the existing unit of the same player at the end of the path, so that the actions of Join/Attack/Wait can reuse this function.
-local function translatePath(path, modelUnitMap, modelTileMap, modelWeatherManager, modelPlayerManager, currentPlayerAccount, modelPlayer)
-    local modelFocusUnit = modelUnitMap:getModelUnit(path[1].gridIndex)
-    if (not modelFocusUnit) then
-        return nil, "ActionTranslator-translatePath() there is no unit on the starting grid of the path."
-    elseif (getPlayerAccountForModelUnit(modelFocusUnit, modelPlayerManager) ~= currentPlayerAccount) then
-        return nil, "ActionTranslator-translatePath() the player account of the moving unit is not the same as the one of the in-turn player."
-    elseif (modelFocusUnit:getState() ~= "idle") then
-        return nil, "ActionTranslator-translatePath() the moving unit is not in idle state."
-    end
-
-    local moveType             = modelFocusUnit:getMoveType()
-    local modelWeather         = modelWeatherManager:getCurrentWeather()
-    local totalFuelConsumption = 0
-    local translatedPath       = {GridIndexFunctions.clone(path[1].gridIndex), length = 1}
-
-    for i = 2, #path do
-        local gridIndex = GridIndexFunctions.clone(path[i].gridIndex)
-        if (not GridIndexFunctions.isAdjacent(path[i - 1].gridIndex, gridIndex)) then
-            return nil, "ActionTranslator-translatePath() the path is invalid because some grids are not adjacent to previous ones."
-        end
-
-        local existingModelUnit = modelUnitMap:getModelUnit(gridIndex)
-        if (existingModelUnit) and (getPlayerAccountForModelUnit(existingModelUnit, modelPlayerManager) ~= currentPlayerAccount) then
-            if (isModelUnitVisible(existingModelUnit, modelWeatherManager)) then
-                return nil, "ActionTranslator-translatePath() the path is invalid because it is blocked by a visible enemy unit."
-            else
-                translatedPath.isBlocked = true
-                break
-            end
-        end
-
-        local fuelConsumption = modelTileMap:getModelTile(path[i].gridIndex):getMoveCost(moveType)
-        if (not fuelConsumption) then
-            return nil, "ActionTranslator-translatedPath() the path is invalid because some tiles on it is impassable."
-        end
-
-        totalFuelConsumption = totalFuelConsumption + fuelConsumption
-        translatedPath.length = translatedPath.length + 1
-        translatedPath[translatedPath.length] = gridIndex
-    end
-
-    if ((totalFuelConsumption > modelFocusUnit:getCurrentFuel()) or
-        (totalFuelConsumption > modelFocusUnit:getMoveRange(modelPlayer, modelWeather))) then
-        return nil, "ActionTranslator-translatedPath() the path is invalid because the fuel consumption is too high."
-    else
-        translatedPath.fuelConsumption = totalFuelConsumption
-        return translatedPath
-    end
-end
-
-local function translateBeginTurn(action, modelScene)
-    local modelPlayerManager = modelScene:getModelPlayerManager()
-    local modelTurnManager   = modelScene:getModelTurnManager()
-
-    if (getCurrentPlayerAccount(modelPlayerManager, modelTurnManager) ~= action.playerAccount) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateBeginTurn() you are not the in-turn player. Please reenter the war."
-        }
-    elseif (modelTurnManager:getTurnPhase() ~= "beginning") then
-        ngx.log(ngx.ERR, "ActionTranslator-translateBeginTurn() the current turn phase is expected to be 'beginning'.")
-        return {
-            actionName = "Message",
-            message    = "Server: translateBeginTurn() the current turn phase is expected to be 'beginning'. Please reenter the war.",
-        }
-    else
-        local actionBeginTurn = {
-            actionName = "BeginTurn",
-            fileName   = modelScene:getFileName(),
-        }
-        SceneWarManager.updateModelSceneWarWithAction(modelScene:getFileName(), actionBeginTurn)
-        return actionBeginTurn, generateActionsForPublish(actionBeginTurn, modelPlayerManager, action.playerAccount)
-    end
-end
-
-local function translateEndTurn(action, modelScene)
-    local modelPlayerManager = modelScene:getModelPlayerManager()
-    local modelTurnManager   = modelScene:getModelTurnManager()
-
-    if (getCurrentPlayerAccount(modelPlayerManager, modelTurnManager) ~= action.playerAccount) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateEndTurn() you are not the in-turn player. Please reenter the war."
-        }
-    elseif (modelTurnManager:getTurnPhase() ~= "main") then
-        ngx.log(ngx.ERR, "ActionTranslator-translateEndTurn() the current turn phase is expected to be 'main'.")
-        return {
-            actionName = "Error",
-            error      = "Server: translateEndTurn() the current turn phase is expected to be 'main'. Something is wrong with the server."
-        }
-    else
-        -- TODO: enable the fog of war.
-        local actionEndTurn = {
-            actionName  = "EndTurn",
-            fileName    = modelScene:getFileName(),
-            nextWeather = modelScene:getModelWeatherManager():getNextWeather(),
-        }
-        SceneWarManager.updateModelSceneWarWithAction(modelScene:getFileName(), actionEndTurn)
-        return actionEndTurn, generateActionsForPublish(actionEndTurn, modelPlayerManager, action.playerAccount)
-    end
-end
-
-local function translateWait(action, modelScene)
-    local modelWarField        = modelScene:getModelWarField()
-    local modelUnitMap         = modelWarField:getModelUnitMap()
-    local modelTileMap         = modelWarField:getModelTileMap()
-    local modelPlayerManager   = modelScene:getModelPlayerManager()
-    local modelTurnManager     = modelScene:getModelTurnManager()
-    local modelWeatherManager  = modelScene:getModelWeatherManager()
-    local modelPlayer          = modelPlayerManager:getModelPlayer(modelTurnManager:getPlayerIndex())
-    local currentPlayerAccount = modelPlayer:getAccount()
-
-    if (currentPlayerAccount ~= action.playerAccount) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateWait() you are not the in-turn player. Please reenter the war."
-        }
-    end
-
-    local translatedPath, translateMsg = translatePath(action.path, modelUnitMap, modelTileMap, modelWeatherManager, modelPlayerManager, currentPlayerAccount, modelPlayer)
-    if (not translatedPath) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateWait() failed to translate the move path. Please reenter the war. " .. (translateMsg or ""),
-        }
-    end
-
-    local existingModelUnit = modelUnitMap:getModelUnit(translatedPath[translatedPath.length])
-    if (existingModelUnit) and (modelUnitMap:getModelUnit(translatedPath[1]) ~= existingModelUnit) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateWait() failed because there is another unit on the destination grid. Please reenter the war.",
-        }
-    end
-
-    local fileName = modelScene:getFileName()
-    local actionWait = {
-        actionName = "Wait",
-        fileName   = fileName,
-        path       = translatedPath,
-    }
-    SceneWarManager.updateModelSceneWarWithAction(fileName, actionWait)
-    return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
-end
-
-local function translateAttack(action, modelScene)
-    local modelWarField        = modelScene:getModelWarField()
-    local modelUnitMap         = modelWarField:getModelUnitMap()
-    local modelTileMap         = modelWarField:getModelTileMap()
-    local modelPlayerManager   = modelScene:getModelPlayerManager()
-    local modelWeatherManager  = modelScene:getModelWeatherManager()
-    local modelPlayer          = modelPlayerManager:getModelPlayer(modelScene:getModelTurnManager():getPlayerIndex())
-    local currentPlayerAccount = modelPlayer:getAccount()
-
-    if (currentPlayerAccount ~= action.playerAccount) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateAttack() you are not the in-turn player. Please reenter the war."
-        }
-    end
-
-    local translatedPath, translateMsg = translatePath(action.path, modelUnitMap, modelTileMap, modelWeatherManager, modelPlayerManager, currentPlayerAccount, modelPlayer)
-    if (not translatedPath) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateAttack() failed to translate the move path. Please reenter the war. " .. (translateMsg or ""),
-        }
-    end
-
-    local fileName = modelScene:getFileName()
-    if (translatedPath.isBlocked) then
-        local actionWait = {
-            actionName = "Wait",
-            fileName   = fileName,
-            path       = translatedPath,
-        }
-        SceneWarManager.updateModelSceneWarWithAction(fileName, actionWait)
-        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
-    end
-
-    local attackerGridIndex = translatedPath[#translatedPath]
-    local targetGridIndex   = action.targetGridIndex
-    local attacker          = modelUnitMap:getModelUnit(translatedPath[1])
-    local target            = modelUnitMap:getModelUnit(action.targetGridIndex) or modelTileMap:getModelTile(action.targetGridIndex)
-    local existingModelUnit = modelUnitMap:getModelUnit(attackerGridIndex)
-    if (existingModelUnit) and (attacker ~= existingModelUnit) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateAttack() failed because there is another unit on the destination grid. Please reenter the war."
-        }
-    end
-
-    if ((not attacker.canAttackTarget) or
-        (not attacker:canAttackTarget(attackerGridIndex, target, targetGridIndex))) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateAttack() failed because the attacker can't attack the target.",
-        }
-    end
-
-    local attackDamage, counterDamage = attacker:getUltimateBattleDamage(modelTileMap:getModelTile(attackerGridIndex), target, modelTileMap:getModelTile(targetGridIndex), modelPlayerManager, modelWeatherManager:getCurrentWeather())
-    local actionAttack = {
-        actionName      = "Attack",
-        fileName        = fileName,
-        path            = translatedPath,
-        targetGridIndex = GridIndexFunctions.clone(targetGridIndex),
-        attackDamage    = attackDamage,
-        counterDamage   = counterDamage
-    }
-    SceneWarManager.updateModelSceneWarWithAction(fileName, actionAttack)
-    return actionAttack, generateActionsForPublish(actionAttack, modelPlayerManager, action.playerAccount)
-end
-
-local function translateCapture(action, modelScene)
-    local modelWarField        = modelScene:getModelWarField()
-    local modelUnitMap         = modelWarField:getModelUnitMap()
-    local modelTileMap         = modelWarField:getModelTileMap()
-    local modelPlayerManager   = modelScene:getModelPlayerManager()
-    local modelWeatherManager  = modelScene:getModelWeatherManager()
-    local modelPlayer          = modelPlayerManager:getModelPlayer(modelScene:getModelTurnManager():getPlayerIndex())
-    local currentPlayerAccount = modelPlayer:getAccount()
-
-    if (currentPlayerAccount ~= action.playerAccount) then
-        return {
-            actionName = "Message",
-            message = "Server: translateCapture() you are not the in-turn player. Please reenter the war.",
-        }
-    end
-
-    local translatedPath, translateMsg = translatePath(action.path, modelUnitMap, modelTileMap, modelWeatherManager, modelPlayerManager, currentPlayerAccount, modelPlayer)
-    if (not translatedPath) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateAttack() failed to translate the move path: " .. (translateMsg or ""),
-        }
-    end
-
-    local fileName = modelScene:getFileName()
-    if (translatedPath.isBlocked) then
-        local actionWait = {
-            actionName = "Wait",
-            fileName   = fileName,
-            path       = translatedPath,
-        }
-        SceneWarManager.updateModelSceneWarWithAction(fileName, actionWait)
-        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
-    end
-
-    local destination       = translatedPath[#translatedPath]
-    local capturer          = modelUnitMap:getModelUnit(translatedPath[1])
-    local existingModelUnit = modelUnitMap:getModelUnit(destination)
-    if ((existingModelUnit) and (existingModelUnit ~= capturer)) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateCapture() failed because there's another unit on the destination grid. Please reenter the war.",
-        }
-    end
-
-    if ((not capturer.canCapture) or (not capturer:canCapture(modelTileMap:getModelTile(destination)))) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateCapture() failed because the focus unit can't capture the target tile. Please reenter the war."
-        }
-    end
-
-    local actionCapture = {
-        actionName = "Capture",
-        fileName   = fileName,
-        path       = translatedPath,
-    }
-    SceneWarManager.updateModelSceneWarWithAction(fileName, actionCapture)
-    return actionCapture, generateActionsForPublish(actionCapture, modelPlayerManager, action.playerAccount)
-end
-
-local function translateProduceOnTile(action, modelScene)
-    local playerIndex        = modelScene:getModelTurnManager():getPlayerIndex()
-    local modelPlayerManager = modelScene:getModelPlayerManager()
-    local modelPlayer        = modelPlayerManager:getModelPlayer(playerIndex)
-    local modelWarField      = modelScene:getModelWarField()
-    local gridIndex          = action.gridIndex
-    local tiledID            = action.tiledID
-
-    if (modelPlayer:getAccount() ~= action.playerAccount) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateProduceOnTile() you are not the in-turn player. Please reenter the war."
-        }
-    end
-
-    if (modelWarField:getModelUnitMap():getModelUnit(gridIndex)) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateProduceOnTile() failed because there's a unit on the tile. Please reenter the war.",
-        }
-    end
-
-    local modelTile = modelWarField:getModelTileMap():getModelTile(action.gridIndex)
-    if (not modelTile.getProductionCostWithTiledId) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateProduceOnTile() failed because the tile can't produce units. Please reenter the war.",
-        }
-    end
-
-    local cost = modelTile:getProductionCostWithTiledId(tiledID, modelPlayer)
-    if ((not cost) or (cost > modelPlayer:getFund())) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateProduceOnTile() failed because the player has not enough fund. Please reenter the war.",
-        }
-    end
-
-    local fileName = modelScene:getFileName()
-    local actionProduceOnTile = {
-        actionName = "ProduceOnTile",
-        fileName   = fileName,
-        gridIndex  = GridIndexFunctions.clone(gridIndex),
-        tiledID    = tiledID,
-        cost       = cost, -- the cost can be calculated by the clients, but that calculations can be saved by sending the cost to clients.
-    }
-    SceneWarManager.updateModelSceneWarWithAction(fileName, actionProduceOnTile)
-    return actionProduceOnTile, generateActionsForPublish(actionProduceOnTile, modelPlayerManager, action.playerAccount)
-end
-
 local function translateLogin(action, session)
     local account, password = action.account, action.password
     if (not PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
@@ -470,12 +137,11 @@ local function translateGetOngoingWarList(action)
 end
 
 local function translateGetSceneWarData(action)
-    local data = SceneWarManager.getOngoingSceneWarData(action.fileName)
+    local data, err = SceneWarManager.getOngoingSceneWarData(action.fileName)
     if (not data) then
-        ngx.log(ngx.ERR, "ActionTranslator-translateGetSceneWarData() failed to get the data with the param action.fileName: ", action.fileName)
         return {
             actionName = "Message",
-            message    = "Server: translateGetSceneWarData() failed to get the data with the param action.fileName."
+            message    = "Failed entering the war, possibly because the war is ended."
         }
     else
         return {
@@ -515,6 +181,334 @@ local function translateJoinWar(action)
     end
 end
 
+-- This translation ignores the existing unit of the same player at the end of the path, so that the actions of Join/Attack/Wait can reuse this function.
+local function translatePath(path, modelSceneWar)
+    local modelWarField    = modelSceneWar:getModelWarField()
+    local modelTurnManager = modelSceneWar:getModelTurnManager()
+    local modelUnitMap     = modelWarField:getModelUnitMap()
+    local modelTileMap     = modelWarField:getModelTileMap()
+
+    local playerIndexInTurn = modelTurnManager:getPlayerIndex()
+    local focusModelUnit    = modelUnitMap:getModelUnit(path[1].gridIndex)
+    if (not focusModelUnit) then
+        return nil, "ActionTranslator-translatePath() there is no unit on the starting grid of the path."
+    elseif (focusModelUnit:getPlayerIndex() ~= playerIndexInTurn) then
+        return nil, "ActionTranslator-translatePath() the owner player of the moving unit is not in his turn."
+    elseif (focusModelUnit:getState() ~= "idle") then
+        return nil, "ActionTranslator-translatePath() the moving unit is not in idle state."
+    end
+
+    local modelWeatherManager  = modelSceneWar:getModelWeatherManager()
+    local moveType             = focusModelUnit:getMoveType()
+    local totalFuelConsumption = 0
+    local translatedPath       = {GridIndexFunctions.clone(path[1].gridIndex)}
+
+    for i = 2, #path do
+        local gridIndex = GridIndexFunctions.clone(path[i].gridIndex)
+        if (not GridIndexFunctions.isAdjacent(path[i - 1].gridIndex, gridIndex)) then
+            return nil, "ActionTranslator-translatePath() the path is invalid because some grids are not adjacent to previous ones."
+        end
+
+        local existingModelUnit = modelUnitMap:getModelUnit(gridIndex)
+        if ((existingModelUnit) and (existingModelUnit:getPlayerIndex() ~= playerIndexInTurn)) then
+            if (isModelUnitVisible(existingModelUnit, modelWeatherManager)) then
+                return nil, "ActionTranslator-translatePath() the path is invalid because it is blocked by a visible enemy unit."
+            else
+                translatedPath.isBlocked = true
+                break
+            end
+        end
+
+        local fuelConsumption = modelTileMap:getModelTile(gridIndex):getMoveCost(moveType)
+        if (not fuelConsumption) then
+            return nil, "ActionTranslator-translatePath() the path is invalid because some tiles on it is impassable."
+        end
+
+        totalFuelConsumption = totalFuelConsumption + fuelConsumption
+        translatedPath[#translatedPath + 1] = gridIndex
+    end
+
+    local modelPlayerManager = modelSceneWar:getModelPlayerManager()
+    local modelPlayerInTurn  = modelPlayerManager:getModelPlayer(playerIndexInTurn)
+    local modelWeather       = modelWeatherManager:getCurrentWeather()
+    if ((totalFuelConsumption > focusModelUnit:getCurrentFuel()) or
+        (totalFuelConsumption > focusModelUnit:getMoveRange(modelPlayerInTurn, modelWeather))) then
+        return nil, "ActionTranslator-translatePath() the path is invalid because the fuel consumption is too high."
+    else
+        translatedPath.fuelConsumption = totalFuelConsumption
+        return translatedPath
+    end
+end
+
+local function translateBeginTurn(action, modelScene)
+    local modelTurnManager = modelScene:getModelTurnManager()
+    local playerIndex      = modelTurnManager:getPlayerIndex()
+
+    if (modelTurnManager:getTurnPhase() ~= "requestToBegin") then
+        ngx.log(ngx.ERR, "ActionTranslator-translateBeginTurn() the current turn phase is expected to be 'requestToBegin'.")
+        return {
+            actionName = "Message",
+            message    = "The current turn phase is invalid. Please reenter the war.",
+        }
+    end
+
+    local actionBeginTurn = {
+        actionName = "BeginTurn",
+        fileName   = modelScene:getFileName(),
+    }
+    SceneWarManager.updateModelSceneWarWithAction(modelScene:getFileName(), actionBeginTurn)
+
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    if (not modelPlayerManager:getModelPlayer(playerIndex):isAlive()) then
+        actionBeginTurn.lostPlayerIndex = playerIndex
+    end
+
+    return actionBeginTurn, generateActionsForPublish(actionBeginTurn, modelPlayerManager, action.playerAccount)
+end
+
+local function translateEndTurn(action, modelScene)
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    local modelTurnManager   = modelScene:getModelTurnManager()
+
+    if (modelTurnManager:getTurnPhase() ~= "main") then
+        ngx.log(ngx.ERR, "ActionTranslator-translateEndTurn() the current turn phase is expected to be 'main'.")
+        return {
+            actionName = "Error",
+            error      = "Server: translateEndTurn() the current turn phase is expected to be 'main'. Something is wrong with the server."
+        }
+    else
+        -- TODO: enable the fog of war.
+        local actionEndTurn = {
+            actionName  = "EndTurn",
+            fileName    = modelScene:getFileName(),
+            nextWeather = modelScene:getModelWeatherManager():getNextWeather(),
+        }
+        SceneWarManager.updateModelSceneWarWithAction(modelScene:getFileName(), actionEndTurn)
+        return actionEndTurn, generateActionsForPublish(actionEndTurn, modelPlayerManager, action.playerAccount)
+    end
+end
+
+local function translateSurrender(action, modelScene)
+    local sceneWarFileName   = modelScene:getFileName()
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    local _, playerIndex     = modelPlayerManager:getModelPlayerWithAccount(action.playerAccount)
+
+    local actionSurrender = {
+        actionName      = "Surrender",
+        fileName        = sceneWarFileName,
+        lostPlayerIndex = playerIndex,
+    }
+
+    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionSurrender)
+    return actionSurrender, generateActionsForPublish(actionSurrender, modelPlayerManager, action.playerAccount)
+end
+
+local function translateWait(action, modelScene)
+    local translatedPath, translateMsg = translatePath(action.path, modelScene)
+    if (not translatedPath) then
+        return {
+            actionName = "Message",
+            message    = "Failed to translate the move path. Please reenter the war.\n" .. (translateMsg or ""),
+        }
+    end
+
+    local modelUnitMap = modelScene:getModelWarField():getModelUnitMap()
+    if ((#translatedPath ~= 1) and (modelUnitMap:getModelUnit(translatedPath[#translatedPath]))) then
+        return {
+            actionName = "Message",
+            message    = "There is another unit on the destination grid. Please reenter the war.",
+        }
+    end
+
+    local sceneWarFileName = modelScene:getFileName()
+    local actionWait = {
+        actionName = "Wait",
+        fileName   = sceneWarFileName,
+        path       = translatedPath,
+    }
+
+    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+    return actionWait, generateActionsForPublish(actionWait, modelScene:getModelPlayerManager(), action.playerAccount)
+end
+
+local function translateAttack(action, modelScene)
+    local translatedPath, translateMsg = translatePath(action.path, modelScene)
+    if (not translatedPath) then
+        return {
+            actionName = "Message",
+            message    = "Failed to translate the move path. Please reenter the war.\n" .. (translateMsg or ""),
+        }
+    end
+
+    local sceneWarFileName   = modelScene:getFileName()
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    if (translatedPath.isBlocked) then
+        local actionWait = {
+            actionName = "Wait",
+            fileName   = sceneWarFileName,
+            path       = translatedPath,
+        }
+        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+    end
+
+    local modelWarField     = modelScene:getModelWarField()
+    local modelUnitMap      = modelWarField:getModelUnitMap()
+    local attackerGridIndex = translatedPath[#translatedPath]
+    if ((#translatedPath ~= 1) and (modelUnitMap:getModelUnit(attackerGridIndex))) then
+        return {
+            actionName = "Message",
+            message    = "There is another unit on the destination grid. Please reenter the war."
+        }
+    end
+
+    local modelTileMap      = modelWarField:getModelTileMap()
+    local targetGridIndex   = action.targetGridIndex
+    local attackerModelUnit = modelUnitMap:getModelUnit(translatedPath[1])
+    local attackTarget      = modelUnitMap:getModelUnit(targetGridIndex) or modelTileMap:getModelTile(targetGridIndex)
+    if ((not attackerModelUnit.canAttackTarget) or
+        (not attackerModelUnit:canAttackTarget(attackerGridIndex, attackTarget, targetGridIndex))) then
+        return {
+            actionName = "Message",
+            message    = "The attacker can't attack the target. Please reenter the war.",
+        }
+    end
+
+    local modelWeatherManager = modelScene:getModelWeatherManager()
+    local attackDamage, counterDamage = attackerModelUnit:getUltimateBattleDamage(modelTileMap:getModelTile(attackerGridIndex), attackTarget, modelTileMap:getModelTile(targetGridIndex), modelPlayerManager, modelWeatherManager:getCurrentWeather())
+    local actionAttack = {
+        actionName      = "Attack",
+        fileName        = sceneWarFileName,
+        path            = translatedPath,
+        targetGridIndex = GridIndexFunctions.clone(targetGridIndex),
+        attackDamage    = attackDamage,
+        counterDamage   = counterDamage
+    }
+    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionAttack)
+
+    local attackerPlayerIndex = attackerModelUnit:getPlayerIndex()
+    local targetPlayerIndex   = attackTarget:getPlayerIndex()
+    if (not modelPlayerManager:getModelPlayer(attackerPlayerIndex):isAlive()) then
+        actionAttack.lostPlayerIndex = attackerPlayerIndex
+    elseif ((targetPlayerIndex ~= 0) and (not modelPlayerManager:getModelPlayer(targetPlayerIndex):isAlive())) then
+        actionAttack.lostPlayerIndex = targetPlayerIndex
+    end
+
+    local actionsForPublish = generateActionsForPublish(actionAttack, modelPlayerManager, action.playerAccount) or {}
+    if ((actionAttack.lostPlayerIndex) and (actionAttack.lostPlayerIndex == targetPlayerIndex)) then
+        local lostModelPlayer = modelPlayerManager:getModelPlayer(actionAttack.lostPlayerIndex)
+        actionsForPublish[lostModelPlayer:getAccount()] = actionAttack
+    end
+
+    return actionAttack, actionsForPublish
+end
+
+local function translateCapture(action, modelScene)
+    local translatedPath, translateMsg = translatePath(action.path, modelScene)
+    if (not translatedPath) then
+        return {
+            actionName = "Message",
+            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+        }
+    end
+
+    local sceneWarFileName   = modelScene:getFileName()
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    if (translatedPath.isBlocked) then
+        local actionWait = {
+            actionName = "Wait",
+            fileName   = sceneWarFileName,
+            path       = translatedPath,
+        }
+        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+    end
+
+    local modelWarField   = modelScene:getModelWarField()
+    local modelUnitMap    = modelWarField:getModelUnitMap()
+    local targetGridIndex = translatedPath[#translatedPath]
+    if ((#translatedPath ~= 1) and (modelUnitMap:getModelUnit(targetGridIndex))) then
+        return {
+            actionName = "Message",
+            message    = "Failed because there's another unit on the target grid. Please reenter the war.",
+        }
+    end
+
+    local modelTileMap      = modelWarField:getModelTileMap()
+    local capturerModelUnit = modelUnitMap:getModelUnit(translatedPath[1])
+    local targetModelTile   = modelTileMap:getModelTile(targetGridIndex)
+    if ((not capturerModelUnit.canCapture) or
+        (not capturerModelUnit:canCapture(targetModelTile))) then
+        return {
+            actionName = "Message",
+            message    = "Failed because the focus unit can't capture the target tile. Please reenter the war."
+        }
+    end
+
+    local targetPlayerIndex = targetModelTile:getPlayerIndex()
+    local actionCapture     = {
+        actionName = "Capture",
+        fileName   = sceneWarFileName,
+        path       = translatedPath,
+    }
+    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionCapture)
+
+    if ((targetPlayerIndex ~= 0) and (not modelPlayerManager:getModelPlayer(targetPlayerIndex):isAlive())) then
+        actionCapture.lostPlayerIndex = targetPlayerIndex
+    end
+
+    local actionsForPublish = generateActionsForPublish(actionCapture, modelPlayerManager, action.playerAccount) or {}
+    if (actionCapture.lostPlayerIndex) then
+        local lostModelPlayer = modelPlayerManager:getModelPlayer(actionCapture.lostPlayerIndex)
+        actionsForPublish[lostModelPlayer:getAccount()] = actionCapture
+    end
+
+    return actionCapture, actionsForPublish
+end
+
+local function translateProduceOnTile(action, modelScene)
+    local playerIndex        = modelScene:getModelTurnManager():getPlayerIndex()
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    local modelPlayer        = modelPlayerManager:getModelPlayer(playerIndex)
+    local modelWarField      = modelScene:getModelWarField()
+    local gridIndex          = action.gridIndex
+    local tiledID            = action.tiledID
+
+    if (modelWarField:getModelUnitMap():getModelUnit(gridIndex)) then
+        return {
+            actionName = "Message",
+            message    = "Server: translateProduceOnTile() failed because there's a unit on the tile. Please reenter the war.",
+        }
+    end
+
+    local modelTile = modelWarField:getModelTileMap():getModelTile(action.gridIndex)
+    if (not modelTile.getProductionCostWithTiledId) then
+        return {
+            actionName = "Message",
+            message    = "Server: translateProduceOnTile() failed because the tile can't produce units. Please reenter the war.",
+        }
+    end
+
+    local cost = modelTile:getProductionCostWithTiledId(tiledID, modelPlayer)
+    if ((not cost) or (cost > modelPlayer:getFund())) then
+        return {
+            actionName = "Message",
+            message    = "Server: translateProduceOnTile() failed because the player has not enough fund. Please reenter the war.",
+        }
+    end
+
+    local fileName = modelScene:getFileName()
+    local actionProduceOnTile = {
+        actionName = "ProduceOnTile",
+        fileName   = fileName,
+        gridIndex  = GridIndexFunctions.clone(gridIndex),
+        tiledID    = tiledID,
+        cost       = cost, -- the cost can be calculated by the clients, but that calculations can be saved by sending the cost to clients.
+    }
+    SceneWarManager.updateModelSceneWarWithAction(fileName, actionProduceOnTile)
+    return actionProduceOnTile, generateActionsForPublish(actionProduceOnTile, modelPlayerManager, action.playerAccount)
+end
+
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
@@ -533,8 +527,9 @@ function ActionTranslator.translate(action, session)
         return translateRegister(action)
     end
 
-    if (PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
-        session:subscribeToPlayerChannel(action.playerAccount, action.playerPassword)
+    local playerAccount = action.playerAccount
+    if (PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
+        session:subscribeToPlayerChannel(playerAccount, action.playerPassword)
     else
         return {
             actionName = "Logout",
@@ -554,11 +549,28 @@ function ActionTranslator.translate(action, session)
         return translateJoinWar(action)
     end
 
-    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(action.sceneWarFileName)
+    local sceneWarFileName = action.sceneWarFileName
+    if (not SceneWarManager.isPlayerInTurn(sceneWarFileName, playerAccount)) then
+        return {
+            actionName = "Message",
+            message    = "You are not the in-turn player. Please reenter the war."
+        }
+    end
+
+    local modelSceneWar, err = SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
+    if (not modelSceneWar) then
+        return {
+            actionName = "Message",
+            message    = "The war is ended or invalid. Please go back to the main menu.\n" .. err
+        }
+    end
+
     if (actionName == "BeginTurn") then
         return translateBeginTurn(    action, modelSceneWar)
     elseif (actionName == "EndTurn") then
         return translateEndTurn(      action, modelSceneWar)
+    elseif (actionName == "Surrender") then
+        return translateSurrender(    action, modelSceneWar)
     elseif (actionName == "Wait") then
         return translateWait(         action, modelSceneWar)
     elseif (actionName == "Attack") then

@@ -30,6 +30,27 @@ local ModelSceneWar = require("babyWars.src.global.functions.class")("ModelScene
 
 local Actor            = require("babyWars.src.global.actors.Actor")
 local ActionTranslator = require("babyWars.src.app.utilities.ActionTranslator")
+local EventDispatcher  = require("babyWars.src.global.events.EventDispatcher")
+local TableFunctions   = require("babyWars.src.app.utilities.TableFunctions")
+
+--------------------------------------------------------------------------------
+-- The util functions.
+--------------------------------------------------------------------------------
+local function getAliveModelUnitsCount(modelUnitMap, playerIndex)
+    local count = 0
+    modelUnitMap:forEachModelUnitOnMap(function(modelUnit)
+        if (modelUnit:getPlayerIndex() == playerIndex) then
+            count = count + 1
+        end
+    end)
+
+    return count
+end
+
+local function clearPlayerForce(self, playerIndex)
+    self:getModelPlayerManager():getModelPlayer(playerIndex):setAlive(false)
+    self:getModelWarField():clearPlayerForce(playerIndex)
+end
 
 --------------------------------------------------------------------------------
 -- The private functions for serialization.
@@ -42,11 +63,39 @@ end
 -- The functions that do the actions the system requested.
 --------------------------------------------------------------------------------
 local function doActionBeginTurn(self, action)
-    self:getModelTurnManager():doActionBeginTurn()
+    local modelTurnManager         = self:getModelTurnManager()
+    local modelUnitMap             = self:getModelWarField():getModelUnitMap()
+    local playerIndex              = modelTurnManager:getPlayerIndex()
+    local prevAliveModelUnitsCount = getAliveModelUnitsCount(modelUnitMap, playerIndex)
+
+    modelTurnManager:doActionBeginTurn(action)
+
+    if ((prevAliveModelUnitsCount > 0) and
+        (getAliveModelUnitsCount(modelUnitMap, playerIndex) == 0)) then
+        clearPlayerForce(self, playerIndex)
+
+        if (self:getModelPlayerManager():getAlivePlayersCount() == 1) then
+            self.m_IsWarEnded = true
+        else
+            modelTurnManager:endTurn()
+        end
+    end
 end
 
 local function doActionEndTurn(self, action)
     self:getModelTurnManager():doActionEndTurn()
+end
+
+local function doActionSurrender(self, action)
+    local modelPlayerManager = self:getModelPlayerManager()
+    local modelTurnManager   = self:getModelTurnManager()
+    modelPlayerManager:doActionSurrender(action)
+    modelTurnManager:doActionSurrender(action)
+    self:getModelWarField():doActionSurrender(action)
+
+    if (modelPlayerManager:getAlivePlayersCount() <= 1) then
+        self.m_IsWarEnded = true
+    end
 end
 
 local function doActionWait(self, action)
@@ -54,11 +103,39 @@ local function doActionWait(self, action)
 end
 
 local function doActionAttack(self, action)
+    local modelUnitMap        = self:getModelWarField():getModelUnitMap()
+    local attackerPlayerIndex = modelUnitMap:getModelUnit(action.path[1]):getPlayerIndex()
+    local targetModelUnit     = modelUnitMap:getModelUnit(action.targetGridIndex)
+    local targetPlayerIndex   = (targetModelUnit) and (targetModelUnit:getPlayerIndex()) or (nil)
+
     self:getModelWarField():doActionAttack(action)
+
+    if (getAliveModelUnitsCount(modelUnitMap, attackerPlayerIndex) == 0) then
+        clearPlayerForce(self, attackerPlayerIndex)
+        self:getModelTurnManager():endTurn()
+    elseif ((targetPlayerIndex) and (getAliveModelUnitsCount(modelUnitMap, targetPlayerIndex) == 0)) then
+        clearPlayerForce(self, targetPlayerIndex)
+    end
+
+    if (self:getModelPlayerManager():getAlivePlayersCount() <= 1) then
+        self.m_IsWarEnded = true
+    end
 end
 
 local function doActionCapture(self, action)
-    self:getModelWarField():doActionCapture(action)
+    local modelWarField     = self:getModelWarField()
+    local targetModelTile   = modelWarField:getModelTileMap():getModelTile(action.path[#action.path])
+    local targetPlayerIndex = targetModelTile:getPlayerIndex()
+    local isDefeatOnCapture = targetModelTile:isDefeatOnCapture()
+
+    modelWarField:doActionCapture(action)
+
+    if ((isDefeatOnCapture) and (targetModelTile:getPlayerIndex() ~= targetPlayerIndex)) then
+        clearPlayerForce(self, targetPlayerIndex)
+        if (self:getModelPlayerManager():getAlivePlayersCount() <= 1) then
+            self.m_IsWarEnded = true
+        end
+    end
 end
 
 local function doActionProduceOnTile(self, action)
@@ -77,6 +154,8 @@ local function onEvtSystemRequestDoAction(self, event)
         doActionBeginTurn(self, event)
     elseif (actionName == "EndTurn") then
         doActionEndTurn(self, event)
+    elseif (actionName == "Surrender") then
+        doActionSurrender(self, event)
     elseif (actionName == "Wait") then
         doActionWait(self, event)
     elseif (actionName == "Attack") then
@@ -94,7 +173,7 @@ end
 -- The composition elements.
 --------------------------------------------------------------------------------
 local function initScriptEventDispatcher(self)
-    local dispatcher = require("babyWars.src.global.events.EventDispatcher"):create()
+    local dispatcher = EventDispatcher:create()
 
     dispatcher:addEventListener("EvtPlayerRequestDoAction", self)
         :addEventListener("EvtSystemRequestDoAction", self)
@@ -102,21 +181,21 @@ local function initScriptEventDispatcher(self)
 end
 
 local function initActorPlayerManager(self, playersData)
-    local actor = Actor.createWithModelAndViewName("ModelPlayerManager", playersData)
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelPlayerManager", playersData)
 
     actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
     self.m_ActorPlayerManager = actor
 end
 
 local function initActorWarField(self, warFieldData)
-    local actor = Actor.createWithModelAndViewName("ModelWarField", warFieldData, "ViewWarField", warFieldData)
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelWarField", warFieldData)
 
     actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
     self.m_ActorWarField = actor
 end
 
 local function initActorTurnManager(self, turnData)
-    local actor = Actor.createWithModelAndViewName("ModelTurnManager", turnData)
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelTurnManager", turnData)
 
     actor:getModel():setModelPlayerManager(self:getModelPlayerManager())
         :setModelWarField(self.m_ActorWarField:getModel())
@@ -125,7 +204,7 @@ local function initActorTurnManager(self, turnData)
 end
 
 local function initActorWeatherManager(self, weatherData)
-    local actor = Actor.createWithModelAndViewName("ModelWeatherManager", weatherData)
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelWeatherManager", weatherData)
 
     self.m_ActorWeatherManager = actor
 end
@@ -138,6 +217,7 @@ function ModelSceneWar:ctor(sceneData)
 
     self.m_FileName    = sceneData.fileName
     self.m_WarPassword = sceneData.warPassword
+    self.m_IsWarEnded  = sceneData.isEnded
 
     initScriptEventDispatcher(self)
     initActorPlayerManager(   self, sceneData.players)
@@ -156,7 +236,7 @@ function ModelSceneWar:toStringList(spaces)
     local subSpaces  = spaces .. "    "
     local strList    = {spaces .. "return {\n"}
 
-    local appendList = require("babyWars.src.app.utilities.TableFunctions").appendList
+    local appendList = TableFunctions.appendList
     appendList(strList, serializeFileNameToStringList(self, subSpaces),        ",\n")
     appendList(strList, self:getModelWarField()      :toStringList(subSpaces), ",\n")
     appendList(strList, self:getModelTurnManager()   :toStringList(subSpaces), ",\n")
@@ -170,6 +250,7 @@ function ModelSceneWar:toSerializableTable()
     return {
         fileName    = self.m_FileName,
         warPassword = self.m_WarPassword,
+        isEnded     = self.m_IsWarEnded,
         warField    = self.m_ActorWarField:getModel():toSerializableTable(),
         turn        = self.m_ActorTurnManager:getModel():toSerializableTable(),
         players     = self.m_ActorPlayerManager:getModel():toSerializableTable(),
@@ -182,12 +263,18 @@ end
 --------------------------------------------------------------------------------
 function ModelSceneWar:onStartRunning()
     self.m_ScriptEventDispatcher:dispatchEvent({
-            name = "EvtModelWeatherUpdated",
+            name         = "EvtModelWeatherUpdated",
             modelWeather = self:getModelWeatherManager():getCurrentWeather()
         })
         :dispatchEvent({
             name = "EvtSceneWarStarted",
         })
+        :dispatchEvent({
+            name        = "EvtPlayerIndexUpdated",
+            playerIndex = playerIndex,
+            modelPlayer = self:getModelPlayerManager():getModelPlayer(playerIndex),
+        })
+
     self:getModelTurnManager():runTurn()
 
     return self
@@ -217,6 +304,10 @@ end
 
 function ModelSceneWar:getFileName()
     return self.m_FileName
+end
+
+function ModelSceneWar:isEnded()
+    return self.m_IsWarEnded
 end
 
 function ModelSceneWar:getScriptEventDispatcher()

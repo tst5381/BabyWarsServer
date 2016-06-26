@@ -36,9 +36,9 @@ return {
   },
  },
  ["gameRecords"] = {
-  ["win"] = 0,
-  ["draw"] = 0,
-  ["lose"] = 0,
+    [2] = {win  = 0, lose = 0, draw = 0,},
+    [3] = {win  = 0, lose = 0, draw = 0,},
+    [4] = {win  = 0, lose = 0, draw = 0,},
  },
  ["warLists"] = {
   ["created"] = {

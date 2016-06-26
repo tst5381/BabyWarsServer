@@ -35,7 +35,7 @@ local function toFullFileName(shortName)
 end
 
 local function createActorSceneWar(warData)
-    local modelSceneWar = Actor.createModel("ModelSceneWar", warData)
+    local modelSceneWar = Actor.createModel("sceneWar.ModelSceneWar", warData)
     modelSceneWar:onStartRunning()
     return Actor.createWithModelAndViewInstance(modelSceneWar)
 end
@@ -61,14 +61,32 @@ local function generateWarConfiguration(warData)
 end
 
 local function loadOngoingWar(sceneWarFileName)
-    local fullFileName = toFullFileName(sceneWarFileName)
-    local warData = dofile(fullFileName)
+    local warData = dofile(toFullFileName(sceneWarFileName))
+    if (warData.isEnded) then
+        return nil, "SceneWarManager.loadOngoingWar() the war specified by the param is ended."
+    end
 
     return {
-        fullFileName  = fullFileName,
         actorSceneWar = createActorSceneWar(warData),
         configuration = generateWarConfiguration(warData),
     }
+end
+
+local function getOngoingWarListItem(sceneWarFileName)
+    if (not s_OngoingWarList[sceneWarFileName]) then
+        local item, err = loadOngoingWar(sceneWarFileName)
+        if (not item) then
+            return nil, err
+        end
+
+        s_OngoingWarList[sceneWarFileName] = item
+    end
+
+    return s_OngoingWarList[sceneWarFileName]
+end
+
+local function removeOngoingWarListItem(sceneWarFileName)
+    s_OngoingWarList[sceneWarFileName] = nil
 end
 
 local function loadJoinableWar(sceneWarFileName)
@@ -138,7 +156,7 @@ local function generateTurnData()
     return {
         turnIndex   = 1,
         playerIndex = 1,
-        phase       = "beginning",
+        phase       = "requestToBegin",
     }
 end
 
@@ -181,6 +199,8 @@ local function generateSceneWarData(fileName, param)
     return {
         fileName    = fileName,
         warPassword = param.warPassword,
+        isEnded     = false,
+
         warField    = generateWarFieldData(param.warFieldFileName),
         turn        = generateTurnData(),
         players     = generatePlayersData(param.playerIndex, param.playerAccount, param.skillIndex),
@@ -224,34 +244,20 @@ function SceneWarManager.createNewWar(param)
 end
 
 function SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
-    if (not sceneWarFileName) then
-        return nil
-    else
-        if (s_OngoingWarList[sceneWarFileName] == nil) then
-            s_OngoingWarList[sceneWarFileName] = loadOngoingWar(sceneWarFileName)
-        end
-
-        return s_OngoingWarList[sceneWarFileName].actorSceneWar:getModel()
-    end
+    return getOngoingWarListItem(sceneWarFileName).actorSceneWar:getModel()
 end
 
-function SceneWarManager.getOngoingSceneWarData(fileName)
-    assert(type(fileName) == "string", "SceneWarManager.getOngoingSceneWarData() the param fileName is invalid.")
+function SceneWarManager.getOngoingSceneWarData(sceneWarFileName)
+    local item = getOngoingWarListItem(sceneWarFileName)
+    if (not item) then
+        return nil, "SceneWarManager.getOngoingSceneWarData() the war is invalid or ended."
+    end
 
-    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(fileName)
-    return (modelSceneWar) and (modelSceneWar:toSerializableTable()) or nil
+    return item.actorSceneWar:getModel():toSerializableTable()
 end
 
 function SceneWarManager.getOngoingSceneWarConfiguration(sceneWarFileName)
-    if (not sceneWarFileName) then
-        return nil
-    else
-        if (s_OngoingWarList[sceneWarFileName] == nil) then
-            s_OngoingWarList[sceneWarFileName] = loadOngoingWar(sceneWarFileName)
-        end
-
-        return s_OngoingWarList[sceneWarFileName].configuration
-    end
+    return getOngoingWarListItem(sceneWarFileName).configuration
 end
 
 function SceneWarManager.getJoinableSceneWarList(playerAccount, sceneWarShortName)
@@ -323,9 +329,8 @@ function SceneWarManager.joinWar(param)
     if (not isWarReadyForStart(configuration)) then
         return "Join war successfully. Please wait for more players to join."
     else
-        for _, player in pairs(configuration.players) do
-            PlayerProfileManager.updatePlayerProfileWithOngoingWarConfiguration(player.account, sceneWarFileName, configuration)
-        end
+        PlayerProfileManager.updateProfilesWithBeginningWar(sceneWarFileName, configuration)
+
         s_JoinableWarList[sceneWarFileName]     = nil
         s_JoinableWarNameList[sceneWarFileName] = nil
         serialize(SCENE_WAR_JOINABLE_LIST_PATH, s_JoinableWarNameList)
@@ -334,17 +339,21 @@ function SceneWarManager.joinWar(param)
     end
 end
 
-function SceneWarManager.updateModelSceneWarWithAction(fileName, action)
-    assert(SceneWarManager.getOngoingModelSceneWar(fileName) ~= nil, "SceneWarManager.updateModelSceneWarWithAction() the param fileName is invalid.")
+function SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, action)
+    assert(SceneWarManager.getOngoingModelSceneWar(sceneWarFileName) ~= nil, "SceneWarManager.updateModelSceneWarWithAction() the param sceneWarFileName is invalid.")
 
     local cloneAction = {}
     for k, v in pairs(action) do
         cloneAction[k] = v
     end
 
-    serialize(s_OngoingWarList[fileName].fullFileName,
-        s_OngoingWarList[fileName].actorSceneWar:getModel():doSystemAction(cloneAction):toSerializableTable()
-    )
+    local modelSceneWar = s_OngoingWarList[sceneWarFileName].actorSceneWar:getModel()
+    serialize(toFullFileName(sceneWarFileName), modelSceneWar:doSystemAction(cloneAction):toSerializableTable())
+    PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
+
+    if (modelSceneWar:isEnded()) then
+        removeOngoingWarListItem(sceneWarFileName)
+    end
 
     return SceneWarManager
 end

@@ -6,9 +6,9 @@ return {
     rankScore = 1000,
 
     gameRecords = {
-        win  = 0,
-        lose = 0,
-        draw = 0
+        [2] = {win  = 0, lose = 0, draw = 0,},
+        [3] = {win  = 0, lose = 0, draw = 0,},
+        [4] = {win  = 0, lose = 0, draw = 0,},
     },
 
     skillConfigurations = {

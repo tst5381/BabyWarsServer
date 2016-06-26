@@ -152,6 +152,12 @@ function ModelPlayer:isAlive()
     return self.m_IsAlive
 end
 
+function ModelPlayer:setAlive(isAlive)
+    self.m_IsAlive = isAlive
+
+    return self
+end
+
 function ModelPlayer:getFund()
     return self.m_Fund
 end
@@ -170,9 +176,9 @@ function ModelPlayer:getActiveSkillEnergyRequirement(skillIndex)
     assert((skillIndex == 1) or (skillIndex == 2), "ModelPlayer:getActiveSkillEnergyRequirement() the param skillIndex is invalid.")
 
     if (skillIndex == 1) then
-        return self.m_ActiveSkill1.energyRequirement
+        return self.m_ActiveSkill1.energyRequirement or 0
     else
-        return self.m_ActiveSkill2.energyRequirement
+        return self.m_ActiveSkill2.energyRequirement or 0
     end
 end
 

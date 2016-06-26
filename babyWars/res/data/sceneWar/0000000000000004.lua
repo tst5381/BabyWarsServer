@@ -2,6 +2,7 @@
 return {
     fileName = "0000000000000004",
     warPassword = "",
+    isEnded = false,
 
     warField = {
         tileMap = {
@@ -80,6 +81,7 @@ return {
         unitMap = {
             -- There's no template map, so that the grids data is used.
             mapSize = {width = 25, height = 16},
+            availableUnitId = 5,
 
             grids = {
                 {
@@ -109,7 +111,7 @@ return {
     turn = {
         turnIndex   = 1,
         playerIndex = 1,
-        phase       = "beginning",
+        phase       = "requestToBegin",
     },
 
     players = {
