@@ -453,7 +453,7 @@ local function translateCapture(action, modelScene)
     }
     SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionCapture)
 
-    if (not modelPlayerManager:getModelPlayer(targetPlayerIndex):isAlive()) then
+    if ((targetPlayerIndex ~= 0) and (not modelPlayerManager:getModelPlayer(targetPlayerIndex):isAlive())) then
         actionCapture.lostPlayerIndex = targetPlayerIndex
     end
 
