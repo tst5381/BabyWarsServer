@@ -24,6 +24,7 @@ local SerializationFunctions = require("babyWars.src.app.utilities.Serialization
 local SceneWarManager        = require("babyWars.src.app.utilities.SceneWarManager")
 local SessionManager         = require("babyWars.src.app.utilities.SessionManager")
 local PlayerProfileManager   = require("babyWars.src.app.utilities.PlayerProfileManager")
+local LocalizationFunctions  = require("babyWars.src.app.utilities.LocalizationFunctions")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -56,7 +57,7 @@ local function translateLogin(action, session)
     if (not PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
         return {
             actionName = "Message",
-            message    = "Invalid account/password.",
+            message    = LocalizationFunctions.getLocalizedText(22),
         }
     else
         -- By returning the actionLogin, the session will then automatically call subscribeToPlayerChannel().
@@ -71,13 +72,13 @@ local function translateLogin(action, session)
         elseif (session:isSubscribingToPlayerChannel(account)) then
             return {
                 actionName = "Message",
-                message    = "You have already logged in as " .. account,
+                message    = LocalizationFunctions.getLocalizedText(21, account),
             }
         else
             return actionLogin, {
                 [account] = {
                     actionName = "Logout",
-                    message    = "Another device is logging in with your account!",
+                    message    = LocalizationFunctions.getLocalizedText(23, account),
                 }
             }
         end
@@ -89,7 +90,7 @@ local function translateRegister(action, session)
     if (PlayerProfileManager.getPlayerProfile(account)) then
         return {
             actionName = "Message",
-            message    = "The account is registered already. Please use another account.",
+            message    = LocalizationFunctions.getLocalizedText(25),
         }
     else
         PlayerProfileManager.createPlayerProfile(account, password)
