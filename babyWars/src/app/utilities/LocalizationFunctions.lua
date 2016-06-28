@@ -17,7 +17,7 @@ local s_LongText1_1 = [[
 加入他人战局的流程：
 1. 点击“参战”，里面将列出您可以加入的、由他人所建立的战局。您也可以通过里面的“搜索”按钮，用房间号来筛选出您所希望加入的战局。
 2. 选中您所希望加入的战局，再选择回合顺序、密码等设定，并确认加入战局（注意，游戏不会自动进入战局画面）。
-3. 回到主菜单选择“继续”，里面会出现该战局（前提是该战局已经满员。若未满员，则您仍需等候）。点击相应选项即可进入战局。
+3. 回到主菜单选择“继续”，里面会出现该战局（前提是该战局已经满员。若未满员，则该战局不会出现，您仍需等候他人加入）。点击相应选项即可进入战局。
 ]]
 
 local s_LongText2_1 = [[
@@ -188,8 +188,8 @@ local s_Texts = {
         [2] = function() return "Connection lost. Now reconnecting..." end,
     },
     [32] = {
-        [1] = function(err) return "与服务器的连接出现错误：" .. err .. "\n正在尝试重新连接…"                end,
-        [2] = function(err) return "Connection lost with error: " .. param.error .. "Now reconnecting..." end,
+        [1] = function(err) return "与服务器的连接出现错误：" .. (err or "") .. "\n正在尝试重新连接…"                end,
+        [2] = function(err) return "Connection lost with error: " .. (err or "") .. "Now reconnecting..." end,
     },
     [33] = {
         [1] = function() return "下 一 步" end,
@@ -254,6 +254,38 @@ local s_Texts = {
     [48] = {
         [1] = function() return "作者："   end,
         [2] = function() return "Author: " end,
+    },
+    [49] = {
+        [1] = function() return "回 合 内"   end,
+        [2] = function() return "In Turn" end,
+    },
+    [50] = {
+        [1] = function(err) return "无法创建战局。请重试或联系作者解决。\n" .. (err or "") end,
+        [2] = function(err) return "Failed to create the war:\n" .. (err or "")         end,
+    },
+    [51] = {
+        [1] = function(warShortName) return "【" .. warShortName .. "】战局已创建，请等待其他玩家参战。"                                          end,
+        [2] = function(warShortName) return "The war [" .. warShortName .. "] is created successfully. Please wait for other players to join." end,
+    },
+    [52] = {
+        [1] = function() return "无法进入战局，可能因为该战局已结束。"                           end,
+        [2] = function() return "Failed entering the war, possibly because the war has ended." end,
+    },
+    [53] = {
+        [1] = function(err) return "无法获取可参战列表。请重试或联系作者解决。\n" .. (err or "") end,
+        [2] = function(err) return "Failed to get the joinable war list:\n" .. (err or "")   end,
+    },
+    [54] = {
+        [1] = function(err) return "无法加入战局，可能因为您选择的行动顺序已被其他玩家占用，或密码不正确。\n" end,
+        [2] = function(err) return "Failed to join the war:\n" .. (err or "")                          end,
+    },
+    [55] = {
+        [1] = function() return "参战成功。战局尚未满员，请耐心等候。"                            end,
+        [2] = function() return "Join war successfully. Please wait for more players to join." end,
+    },
+    [56] = {
+        [1] = function(warShortName) return "【" .. warShortName .. '】参战成功。战局已开始，您可以通过"继续"选项进入战局。' end,
+        [2] = function(warShortName) return "Join war [" .. warShortName .. "] successfully. The war has started."      end,
     },
 }
 

@@ -4,6 +4,7 @@ local SceneWarManager = {}
 local Actor                  = require("babyWars.src.global.actors.Actor")
 local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
 local PlayerProfileManager   = require("babyWars.src.app.utilities.PlayerProfileManager")
+local LocalizationFunctions  = require("babyWars.src.app.utilities.LocalizationFunctions")
 
 local SCENE_WAR_PATH               = "babyWars/res/data/sceneWar/"
 local SCENE_WAR_NEXT_NAME_PATH     = SCENE_WAR_PATH .. "NextName.lua"
@@ -54,9 +55,9 @@ local function generateWarConfiguration(warData)
         warPassword      = warData.warPassword,
         players          = players,
         -- TODO: add code to generate the real configuration of the weather/fog/max skill points.
-        fog              = "off",
-        weather          = "clear",
-        maxSkillPoints   = "Unavailable",
+        fog              = {data = false,   text = LocalizationFunctions.getLocalizedText(29),},
+        weather          = {data = "clear", text = LocalizationFunctions.getLocalizedText(40),},
+        maxSkillPoints   = {data = 100,     text = LocalizationFunctions.getLocalizedText(45),},
     }
 end
 
@@ -327,7 +328,7 @@ function SceneWarManager.joinWar(param)
     serialize(toFullFileName(sceneWarFileName), joiningSceneWar)
 
     if (not isWarReadyForStart(configuration)) then
-        return "Join war successfully. Please wait for more players to join."
+        return LocalizationFunctions.getLocalizedText(55)
     else
         PlayerProfileManager.updateProfilesWithBeginningWar(sceneWarFileName, configuration)
 
@@ -335,7 +336,7 @@ function SceneWarManager.joinWar(param)
         s_JoinableWarNameList[sceneWarFileName] = nil
         serialize(SCENE_WAR_JOINABLE_LIST_PATH, s_JoinableWarNameList)
 
-        return "Join war successfully. The war has started."
+        return LocalizationFunctions.getLocalizedText(56, sceneWarFileName:sub(13))
     end
 end
 

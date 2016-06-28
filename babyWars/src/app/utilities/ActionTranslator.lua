@@ -108,12 +108,12 @@ local function translateNewWar(action)
     if (not sceneWarFileName) then
         return {
             actionName = "Message",
-            message    = "Server: translateNewWar() failed: " .. err
+            message    = LocalizationFunctions.getLocalizedText(50, err)
         }
     else
         return {
             actionName = "NewWar",
-            message    = "The war [" .. sceneWarFileName:sub(13) .. "] is created successfully. Please wait for other players to join."
+            message    = LocalizationFunctions.getLocalizedText(51, sceneWarFileName:sub(13))
         }
     end
 end
@@ -142,7 +142,7 @@ local function translateGetSceneWarData(action)
     if (not data) then
         return {
             actionName = "Message",
-            message    = "Failed entering the war, possibly because the war is ended."
+            message    = LocalizationFunctions.getLocalizedText(52)
         }
     else
         return {
@@ -157,7 +157,7 @@ local function translateGetJoinableWarList(action)
     if (not list) then
         return {
             actionName = "Message",
-            message    = "Server: failed to get the joinable war list: " .. (err or "")
+            message    = LocalizationFunctions.getLocalizedText(53, err)
         }
     else
         return {
@@ -172,7 +172,7 @@ local function translateJoinWar(action)
     if (not msg) then
         return {
             actionName = "Message",
-            message    = "Failed to join the war. " .. err,
+            message    = LocalizationFunctions.getLocalizedText(54, err),
         }
     else
         return {
