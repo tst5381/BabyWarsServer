@@ -287,16 +287,164 @@ local s_Texts = {
         [1] = function(warShortName) return "【" .. warShortName .. '】参战成功。战局已开始，您可以通过"继续"选项进入战局。' end,
         [2] = function(warShortName) return "Join war [" .. warShortName .. "] successfully. The war has started."      end,
     },
+    [57] = {
+        [1] = function() return "查 找："   end,
+        [2] = function() return "Find:" end,
+    },
+    [58] = {
+        [1] = function() return "房号"   end,
+        [2] = function() return "War ID" end,
+    },
+    [59] = {
+        [1] = function() return "您输入的房号无效，请重试。"                 end,
+        [2] = function() return "The War ID is invalid. Please try again." end,
+    },
+    [60] = {
+        [1] = function() return "当前没有可加入（或符合查找条件）的战局。请等候，或自行建立战局。"                    end,
+        [2] = function() return "Sorry, but no war is currently joinable. Please wait for or create a new war." end,
+    },
+    [61] = {
+        [1] = function() return "您输入的密码无效，请重试。"                   end,
+        [2] = function() return "The password is invalid. Please try again." end,
+    },
+    [62] = {
+        [1] = function(nickname) return "玩家：" .. nickname    end,
+        [2] = function(nickname) return "Player:  " .. nickname end,
+    },
+    [63] = {
+        [1] = function(fund) return "金钱：" .. fund     end,
+        [2] = function(fund) return "Fund:     " .. fund end,
+    },
+    [64] = {
+        [1] = function(energy) return "能量：" .. energy    end,
+        [2] = function(energy) return "Energy:  " .. energy end,
+    },
+    [65] = {
+        [1] = function() return "退 出" end,
+        [2] = function() return "Quit" end,
+    },
+    [66] = {
+        [1] = function() return "您将回到主界面（可以随时再回到本战局）。\n是否确定退出？" end,
+        [2] = function() return "You are quitting the war (you may reenter it later).\nAre you sure?" end,
+    },
+    [67] = {
+        [1] = function() return "投 降" end,
+        [2] = function() return "Surrender" end,
+    },
+    [68] = {
+        [1] = function() return "您将输掉本战局，且无法反悔！\n是否确定投降？"              end,
+        [2] = function() return "You will lose the game by surrendering!\nAre you sure?" end,
+    },
+    [69] = {
+        [1] = function() return "结 束 回 合" end,
+        [2] = function() return "End Turn" end,
+    },
+    [70] = {
+        [1] = function(emptyProducersCount, idleUnitsCount)
+            return string.format("空闲工厂机场海港数量：%d\n空闲部队数量：%d\n您是否确定结束回合？", emptyProducersCount, idleUnitsCount)
+        end,
+        [2] = function(emptyProducersCount, idleUnitsCount)
+            return string.format("Idle factories count: %d\n Idle units count: %d\nAre you sure to end turn?", emptyProducersCount, idleUnitsCount)
+        end,
+    },
+    [71] = {
+        [1] = function() return "当前是您对手的回合，请耐心等候。"           end,
+        [2] = function() return "It's your opponent's turn. Please wait." end,
+    },
+    [72] = {
+        [1] = function(turnIndex, nickname)
+            return string.format("回合：%d\n玩家：%s\n战斗开始！", turnIndex, nickname)
+        end,
+        [2] = function(turnIndex, nickname)
+            return string.format("Turn:     %d\nPlayer:  %s\nFight!", turnIndex, nickname)
+        end,
+    },
+    [73] = {
+        [1] = function() return "您 已 投 降 …"     end,
+        [2] = function() return "You surrender..." end,
+    },
+    [74] = {
+        [1] = function() return "您 已 获 胜 ！" end,
+        [2] = function() return "You win!"      end,
+    },
+    [75] = {
+        [1] = function() return "您 已 战 败 …" end,
+        [2] = function() return "You lose..."  end,
+    },
+    [76] = {
+        [1] = function(nickname) return "玩家【" .. nickname .. "】已战败！"        end,
+        [2] = function(nickname) return "Player [" .. nickname .. "] is defeated!" end,
+    },
+    [77] = {
+        [1] = function(nickname) return "玩家【" .. nickname .. "】已投降！"        end,
+        [2] = function(nickname) return "Player [" .. nickname .. "] surrendered!" end,
+    },
+    [78] = {
+        [1] = function() return "攻 击"  end,
+        [2] = function() return "Attack" end,
+    },
+    [79] = {
+        [1] = function() return "占 领"   end,
+        [2] = function() return "Capture" end,
+    },
+    [80] = {
+        [1] = function() return "待 机" end,
+        [2] = function() return "Wait" end,
+    },
+    [81] = {
+        [1] = function() return "合 流" end,
+        [2] = function() return "Join" end,
+    },
+    [82] = {
+        [1] = function() return "装 载" end,
+        [2] = function() return "Load"  end,
+    },
+    [83] = {
+        [1] = function() return "卸 载"  end,
+        [2] = function() return "Unload" end,
+    },
+    [84] = {
+        [1] = function() return "发 射"  end,
+        [2] = function() return "Launch" end,
+    },
+    [85] = {
+        [1] = function() return "建 造"  end,
+        [2] = function() return "Build" end,
+    },
+    [86] = {
+        [1] = function() return "生 产"   end,
+        [2] = function() return "Produce" end,
+    },
+    [87] = {
+        [1] = function() return "补 给"  end,
+        [2] = function() return "Supply" end,
+    },
+    [88] = {
+        [1] = function() return "下 潜" end,
+        [2] = function() return "Dive" end,
+    },
+    [89] = {
+        [1] = function() return "上 浮"   end,
+        [2] = function() return "Surface" end,
+    },
+    [90] = {
+        [1] = function(attack, counter) return string.format("攻：    %d%%\n防：    %s%%", attack, counter or "--") end,
+        [2] = function(attack, counter) return string.format("Atk:   %d%%\nDef:   %s%%", attack, counter or "--") end,
+    },
 }
 
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
-function LocalizationFunctions.setLanguage(languageCode)
-    assert((languageCode == 1) or (languageCode == 2), "LocalizationFunctions.setLanguage() the param is invalid.")
+function LocalizationFunctions.setLanguageCode(languageCode)
+    assert((languageCode == 1) or (languageCode == 2), "LocalizationFunctions.setLanguageCode() the param is invalid.")
     s_LanguageCode = languageCode
 
     return LocalizationFunctions
+end
+
+function LocalizationFunctions.getLanguageCode()
+    return s_LanguageCode
 end
 
 function LocalizationFunctions.getLocalizedText(textCode, ...)

@@ -12,9 +12,10 @@
 
 local UnitProducer = require("babyWars.src.global.functions.class")("UnitProducer")
 
+local ModelUnit             = require("babyWars.src.app.models.sceneWar.modelUnit")
 local TypeChecker           = require("babyWars.src.app.utilities.TypeChecker")
-local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
 local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
+local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
 
 local EXPORTED_METHODS = {
     "getProductionCostWithTiledId",
@@ -82,14 +83,16 @@ function UnitProducer:getProductionList(modelPlayer)
     local playerIndex = self.m_Target:getPlayerIndex()
 
     for i, unitName in ipairs(self.m_Template.productionList) do
-        list[i]            = {}
-        local tiledID      = GameConstantFunctions.getTiledIdWithTileOrUnitName(unitName, playerIndex)
-        local cost         = self:getProductionCostWithTiledId(tiledID, modelPlayer)
+        local tiledID = GameConstantFunctions.getTiledIdWithTileOrUnitName(unitName, playerIndex)
+        local cost    = self:getProductionCostWithTiledId(tiledID, modelPlayer)
 
-        list[i].fullName    = GameConstantFunctions.getTemplateModelUnitWithTiledId(tiledID).fullName
-        list[i].cost        = cost
-        list[i].isAvaliable = cost <= fund
-        list[i].tiledID     = tiledID
+        list[i] = {
+            modelUnit   = ModelUnit:create({tiledID = tiledID}),
+            fullName    = GameConstantFunctions.getTemplateModelUnitWithTiledId(tiledID).fullName,
+            cost        = cost,
+            isAvaliable = cost <= fund,
+            tiledID     = tiledID,
+        }
     end
 
     return list

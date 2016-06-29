@@ -18,8 +18,10 @@
 --]]--------------------------------------------------------------------------------
 
 local ModelTurnManager = require("babyWars.src.global.functions.class")("ModelTurnManager")
-local WebSocketManager = nil
-local TableFunctions   = require("babyWars.src.app.utilities.TableFunctions")
+
+local WebSocketManager      = nil
+local TableFunctions        = require("babyWars.src.app.utilities.TableFunctions")
+local LocalizationFunctions = require("babyWars.src.app.utilities.LocalizationFunctions")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -317,7 +319,7 @@ function ModelTurnManager:runTurn()
         if (isLoggedInPlayerInTurn(self)) then
             self.m_ModelMessageIndicator:hidePersistentMessage()
         else
-            self.m_ModelMessageIndicator:showPersistentMessage("It's your opponent's turn. Please wait.")
+            self.m_ModelMessageIndicator:showPersistentMessage(LocalizationFunctions.getLocalizedText(71))
         end
     end
 
