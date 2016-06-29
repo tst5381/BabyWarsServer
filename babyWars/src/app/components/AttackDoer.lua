@@ -16,9 +16,10 @@
 local AttackDoer = require("babyWars.src.global.functions.class")("AttackDoer")
 
 local TypeChecker           = require("babyWars.src.app.utilities.TypeChecker")
-local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
 local GridIndexFunctions    = require("babyWars.src.app.utilities.GridIndexFunctions")
 local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
+local LocalizationFunctions = require("babyWars.src.app.utilities.LocalizationFunctions")
+local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
 
 local EXPORTED_METHODS = {
     "hasPrimaryWeapon",
@@ -263,7 +264,7 @@ end
 
 function AttackDoer:getPrimaryWeaponName()
     assert(self:hasPrimaryWeapon(), "AttackDoer:getPrimaryWeaponName() the attack doer has no primary weapon.")
-    return self.m_Template.primaryWeapon.name
+    return self.m_Template.primaryWeapon.name[LocalizationFunctions.getLanguageCode()]
 end
 
 function AttackDoer:getPrimaryWeaponFatalList()
@@ -282,7 +283,7 @@ end
 
 function AttackDoer:getSecondaryWeaponName()
     assert(self:hasSecondaryWeapon(), "AttackDoer:getSecondaryWeaponName() the attack doer has no secondary weapon.")
-    return self.m_Template.secondaryWeapon.name
+    return self.m_Template.secondaryWeapon.name[LocalizationFunctions.getLanguageCode()]
 end
 
 function AttackDoer:getSecondaryWeaponFatalList()
