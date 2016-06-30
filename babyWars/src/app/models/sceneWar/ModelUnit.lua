@@ -13,8 +13,9 @@
 local ModelUnit = require("babyWars.src.global.functions.class")("ModelUnit")
 
 local TypeChecker           = require("babyWars.src.app.utilities.TypeChecker")
-local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
 local TableFunctions        = require("babyWars.src.app.utilities.TableFunctions")
+local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
+local LocalizationFunctions = require("babyWars.src.app.utilities.LocalizationFunctions")
 local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
 
 --------------------------------------------------------------------------------
@@ -357,12 +358,16 @@ function ModelUnit:showMovingAnimation()
     return self
 end
 
+function ModelUnit:getTypeName()
+    return GameConstantFunctions.getUnitTypeNameWithTiledId(self:getTiledID())
+end
+
 function ModelUnit:getDescription()
-    return self.m_Template.description[LocalizationFunctions.getLanguageCode()]
+    return LocalizationFunctions.getLocalizedText(114, self:getTypeName())
 end
 
 function ModelUnit:getFullName()
-    return self.m_Template.fullName[LocalizationFunctions.getLanguageCode()]
+    return LocalizationFunctions.getLocalizedText(113, self:getTypeName())
 end
 
 function ModelUnit:getVision()
