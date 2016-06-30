@@ -18,8 +18,9 @@
 local RepairDoer = require("babyWars.src.global.functions.class")("RepairDoer")
 
 local TypeChecker           = require("babyWars.src.app.utilities.TypeChecker")
-local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
 local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
+local LocalizationFunctions = require("babyWars.src.app.utilities.LocalizationFunctions")
+local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
 
 local EXPORTED_METHODS = {
     "getRepairTargetCatagory",
@@ -78,7 +79,7 @@ end
 -- Exported methods.
 --------------------------------------------------------------------------------
 function RepairDoer:getRepairTargetCatagory()
-    return self.m_Template.targetCatagory
+    return self.m_Template.targetCatagory[LocalizationFunctions.getLanguageCode()]
 end
 
 function RepairDoer:getRepairTargetList()

@@ -51,10 +51,11 @@
 
 local ModelTile = require("babyWars.src.global.functions.class")("ModelTile")
 
-local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
 local TypeChecker           = require("babyWars.src.app.utilities.TypeChecker")
-local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
 local TableFunctions        = require("babyWars.src.app.utilities.TableFunctions")
+local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
+local LocalizationFunctions = require("babyWars.src.app.utilities.LocalizationFunctions")
+local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -310,7 +311,7 @@ function ModelTile:getPlayerIndex()
 end
 
 function ModelTile:getDescription()
-    return self.m_Template.description
+    return self.m_Template.description[LocalizationFunctions.getLanguageCode()]
 end
 
 function ModelTile:destroyModelTileObject()
