@@ -12,10 +12,11 @@
 
 local ModelUnit = require("babyWars.src.global.functions.class")("ModelUnit")
 
-local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
 local TypeChecker           = require("babyWars.src.app.utilities.TypeChecker")
-local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
 local TableFunctions        = require("babyWars.src.app.utilities.TableFunctions")
+local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
+local LocalizationFunctions = require("babyWars.src.app.utilities.LocalizationFunctions")
+local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
 
 --------------------------------------------------------------------------------
 -- The set state functions.
@@ -357,8 +358,16 @@ function ModelUnit:showMovingAnimation()
     return self
 end
 
+function ModelUnit:getUnitType()
+    return GameConstantFunctions.getUnitTypeWithTiledId(self:getTiledID())
+end
+
 function ModelUnit:getDescription()
-    return self.m_Template.description
+    return LocalizationFunctions.getLocalizedText(114, self:getUnitType())
+end
+
+function ModelUnit:getUnitTypeFullName()
+    return LocalizationFunctions.getLocalizedText(113, self:getUnitType())
 end
 
 function ModelUnit:getVision()
