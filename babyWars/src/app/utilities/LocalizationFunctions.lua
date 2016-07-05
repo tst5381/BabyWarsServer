@@ -82,8 +82,18 @@ local s_Texts = {
         [2] = function(...) return "Help" end,
     },
     [8] = {
-        [1] = function(...) return "返 回" end,
-        [2] = function(...) return "Back" end,
+        [1] = function(commandType)
+            if     (commandType == "Back") then return "返 回"
+            elseif (commandType == "Exit") then return "退 出"
+            else                                return "未识别"
+            end
+        end,
+        [2] = function(commandType)
+            if     (commandType == "Back") then return "Back"
+            elseif (commandType == "Exit") then return "Exit"
+            else                                return "Unrecognized"
+            end
+        end,
     },
     [9] = {
         [1] = function(...) return "游 戏 流 程" end,
@@ -318,8 +328,18 @@ local s_Texts = {
         [2] = function() return "Quit" end,
     },
     [66] = {
-        [1] = function() return "您将回到主界面（可以随时再回到本战局）。\n是否确定退出？" end,
-        [2] = function() return "You are quitting the war (you may reenter it later).\nAre you sure?" end,
+        [1] = function(confirmType)
+            if     (confirmType == "QuitWar")  then return "您将回到主界面（可以随时再回到本战局）。\n是否确定退出？"
+            elseif (confirmType == "ExitGame") then return "是否确定退出游戏？"
+            else                                    return "未识别：[66]" .. confirmType
+            end
+        end,
+        [2] = function(confirmType)
+            if     (confirmType == "QuitWar")  then return "You are quitting the war (you may reenter it later).\nAre you sure?"
+            elseif (confirmType == "ExitGame") then return "Are you sure to exit the game?"
+            else                                    return "Unrecognized:[66]" .. confirmType
+            end
+        end,
     },
     [67] = {
         [1] = function() return "投 降" end,
@@ -374,13 +394,28 @@ local s_Texts = {
         [2] = function(nickname) return "Player [" .. nickname .. "] surrendered!" end,
     },
     [78] = {
-        [1] = function() return "攻 击"  end,
-        [2] = function() return "Attack" end,
+        [1] = function(actionType)
+            if     (actionType == "Wait")          then return "待 机"
+            elseif (actionType == "Attack")        then return "攻 击"
+            elseif (actionType == "Capture")       then return "占 领"
+            elseif (actionType == "LoadModelUnit") then return "装 载"
+            elseif (actionType == "JoinModelUnit") then return "合 流"
+            end
+        end,
+        [2] = function(actionType)
+            if     (actionType == "Wait")          then return "Wait"
+            elseif (actionType == "Attack")        then return "Attack"
+            elseif (actionType == "Capture")       then return "Capture"
+            elseif (actionType == "LoadModelUnit") then return "Load"
+            elseif (actionType == "JoinModelUnit") then return "Join"
+            end
+        end,
     },
     [79] = {
-        [1] = function() return "占 领"   end,
-        [2] = function() return "Capture" end,
+        [1] = function() return "生 产"   end,
+        [2] = function() return "Produce" end,
     },
+    --[[
     [80] = {
         [1] = function() return "待 机" end,
         [2] = function() return "Wait" end,
@@ -421,6 +456,7 @@ local s_Texts = {
         [1] = function() return "上 浮"   end,
         [2] = function() return "Surface" end,
     },
+    --]]
     [90] = {
         [1] = function(attack, counter) return string.format("攻：    %d%%\n防：    %s%%", attack, counter or "--") end,
         [2] = function(attack, counter) return string.format("Atk:   %d%%\nDef:   %s%%", attack, counter or "--") end,
@@ -558,7 +594,7 @@ local s_Texts = {
         [1] = function(unitType)
             if     (unitType == "Infantry")        then return "步兵"
             elseif (unitType == "Mech")            then return "炮兵"
-            elseif (unitType == "Bike")            then return "轮胎兵"
+            elseif (unitType == "Bike")            then return "摩托兵"
             elseif (unitType == "Recon")           then return "侦察车"
             elseif (unitType == "Flare")           then return "照明车"
             elseif (unitType == "AntiAir")         then return "对空战车"
@@ -781,14 +817,14 @@ local s_Texts = {
     [117] = {
         [1] = function(tileType)
             if     (tileType == "Plain")         then return "平原：允许空军和陆军通过。"
-            elseif (tileType == "River")         then return "河流：只允许空军、步兵和炮兵通过。"
-            elseif (tileType == "Sea")           then return "海洋：允许空军和海军快速通过。"
+            elseif (tileType == "River")         then return "河流：允许空军、步兵和炮兵通过。"
+            elseif (tileType == "Sea")           then return "海洋：允许空军和海军通过。"
             elseif (tileType == "Beach")         then return "海滩：登陆舰和炮艇可以在这里装载和卸载部队。允许大多数部队通过。"
-            elseif (tileType == "Road")          then return "道路：允许空军和陆军快速通过。"
-            elseif (tileType == "BridgeOnRiver") then return "桥梁：河流及陆地上的桥梁允许空军和陆军快速通过。"
-            elseif (tileType == "BridgeOnSea")   then return "桥梁：海洋上的桥梁允许空军和陆军快速通过，海军也能经过和停留。"
+            elseif (tileType == "Road")          then return "道路：允许空军和陆军通过。"
+            elseif (tileType == "BridgeOnRiver") then return "桥梁：河流及陆地上的桥梁允许空军和陆军通过。"
+            elseif (tileType == "BridgeOnSea")   then return "桥梁：海洋上的桥梁允许空军和陆军通过，海军也能在桥下经过和停留。"
             elseif (tileType == "Wood")          then return "森林：允许空军和陆军通过。在雾战时，为陆军提供隐蔽场所。"
-            elseif (tileType == "Mountain")      then return "山地：允许空军、步兵和炮兵。在雾战时，为步兵和炮兵提供额外视野。"
+            elseif (tileType == "Mountain")      then return "山地：允许空军、步兵和炮兵通过。在雾战时，为步兵和炮兵提供额外视野。"
             elseif (tileType == "Wasteland")     then return "荒野：允许空军和陆军通过，但会减缓步兵和炮兵以外的陆军的移动。"
             elseif (tileType == "Ruins")         then return "废墟：允许空军和陆军通过。雾战时，为陆军提供隐蔽场所。"
             elseif (tileType == "Fire")          then return "火焰：不允许任何部队通过。在雾战时无条件照明周围5格内的区域。"
