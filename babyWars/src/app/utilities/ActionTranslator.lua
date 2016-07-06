@@ -467,6 +467,49 @@ local function translateCapture(action, modelScene)
     return actionCapture, actionsForPublish
 end
 
+local function translateLoadModelUnit(action, modelScene)
+    local translatedPath, translateMsg = translatePath(action.path, modelScene)
+    if (not translatedPath) then
+        return {
+            actionName = "Message",
+            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+        }
+    end
+
+    local sceneWarFileName   = modelScene:getFileName()
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    if (translatedPath.isBlocked) then
+        local actionWait = {
+            actionName = "Wait",
+            fileName   = sceneWarFileName,
+            path       = translatedPath,
+        }
+        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+    end
+
+    local modelUnitMap    = modelScene:getModelWarField():getModelUnitMap()
+    local focusModelUnit  = modelUnitMap:getModelUnit(translatedPath[1])
+    local loaderModelUnit = modelUnitMap:getModelUnit(translatedPath[#translatedPath])
+    if ((#translatedPath == 1) or
+        (not loaderModelUnit) or
+        (not loaderModelUnit.canLoadModelUnit) or
+        (not loaderModelUnit:canLoadModelUnit(focusModelUnit))) then
+        return {
+            actionName = "Message",
+            message    = "Failed because the loader doesn't exist or can't load the focus unit."
+        }
+    end
+
+    local actionLoadModelUnit = {
+        actionName = "LoadModelUnit",
+        fileName   = sceneWarFileName,
+        path       = translatedPath,
+    }
+    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionLoadModelUnit)
+    return actionLoadModelUnit, generateActionsForPublish(actionLoadModelUnit, modelScene:getModelPlayerManager(), action.playerAccount)
+end
+
 local function translateProduceOnTile(action, modelScene)
     local playerIndex        = modelScene:getModelTurnManager():getPlayerIndex()
     local modelPlayerManager = modelScene:getModelPlayerManager()
@@ -578,6 +621,8 @@ function ActionTranslator.translate(action, session)
         return translateAttack(       action, modelSceneWar)
     elseif (actionName == "Capture") then
         return translateCapture(      action, modelSceneWar)
+    elseif (actionName == "LoadModelUnit") then
+        return translateLoadModelUnit(action, modelSceneWar)
     elseif (actionName == "ProduceOnTile") then
         return translateProduceOnTile(action, modelSceneWar)
     end
