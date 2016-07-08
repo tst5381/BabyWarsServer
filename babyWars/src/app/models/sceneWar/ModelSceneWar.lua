@@ -142,6 +142,10 @@ local function doActionLoadModelUnit(self, action)
     self:getModelWarField():doActionLoadModelUnit(action)
 end
 
+local function doActionDropModelUnit(self, action)
+    self:getModelWarField():doActionDropModelUnit(action)
+end
+
 local function doActionProduceOnTile(self, action)
     action.playerIndex = self:getModelTurnManager():getPlayerIndex()
 
@@ -161,6 +165,7 @@ local function onEvtSystemRequestDoAction(self, event)
     elseif (actionName == "Attack")        then doActionAttack(       self, event)
     elseif (actionName == "Capture")       then doActionCapture(      self, event)
     elseif (actionName == "LoadModelUnit") then doActionLoadModelUnit(self, event)
+    elseif (actionName == "DropModelUnit") then doActionDropModelUnit(self, event)
     elseif (actionName == "ProduceOnTile") then doActionProduceOnTile(self, event)
     else                                        print("ModelSceneWar-onEvtSystemRequestDoAction() unrecognized action.")
     end

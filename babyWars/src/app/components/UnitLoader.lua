@@ -77,6 +77,27 @@ function UnitLoader:doActionLoadModelUnit(action, unitID)
     return self.m_Owner
 end
 
+function UnitLoader:doActionDropModelUnit(action)
+    local remainingUnitIds = {}
+    for _, unitID in ipairs(self:getLoadUnitIdList()) do
+        local isUnitIdRemaining = true
+        for _, dropDestination in pairs(action.dropDestinations) do
+            if (unitID == dropDestination.unitID) then
+                isUnitIdRemaining = false
+                break
+            end
+        end
+
+        if (isUnitIdRemaining) then
+            remainingUnitIds[#remainingUnitIds + 1] = unitID
+        end
+    end
+
+    self.m_LoadedUnitIds = remainingUnitIds
+
+    return self
+end
+
 --------------------------------------------------------------------------------
 -- The exported functions.
 --------------------------------------------------------------------------------
