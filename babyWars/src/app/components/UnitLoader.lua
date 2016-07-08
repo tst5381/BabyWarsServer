@@ -8,6 +8,7 @@ local EXPORTED_METHODS = {
     "getMaxLoadCount",
     "getCurrentLoadCount",
     "getLoadUnitIdList",
+    "hasLoadUnitId",
     "canLoadModelUnit",
     "canDropModelUnit",
     "canLaunchModelUnit",
@@ -90,6 +91,16 @@ end
 
 function UnitLoader:getLoadUnitIdList()
     return self.m_LoadedUnitIds
+end
+
+function UnitLoader:hasLoadUnitId(unitID)
+    for i, loadedUnitID in ipairs(self:getLoadUnitIdList()) do
+        if (loadedUnitID == unitID) then
+            return true, i
+        end
+    end
+
+    return false
 end
 
 function UnitLoader:canLoadModelUnit(modelUnit)
