@@ -379,11 +379,10 @@ function ModelUnit:doActionDropModelUnit(action, droppingActorUnits)
             for _, dropActorUnit in ipairs(droppingActorUnits) do
                 local dropModelUnit = dropActorUnit:getModel()
                 local dropViewUnit  = dropActorUnit:getView()
-                dropViewUnit:setVisible(true)
-                    :moveAlongPath({loaderEndingGridIndex, dropModelUnit:getGridIndex()}, function()
-                        dropViewUnit:updateWithModelUnit(dropModelUnit)
-                            :showNormalAnimation()
-                    end)
+                dropViewUnit:moveAlongPath({loaderEndingGridIndex, dropModelUnit:getGridIndex()}, function()
+                    dropViewUnit:updateWithModelUnit(dropModelUnit)
+                        :showNormalAnimation()
+                end)
             end
         end)
     end
