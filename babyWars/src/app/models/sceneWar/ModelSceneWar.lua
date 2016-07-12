@@ -53,13 +53,6 @@ local function clearPlayerForce(self, playerIndex)
 end
 
 --------------------------------------------------------------------------------
--- The private functions for serialization.
---------------------------------------------------------------------------------
-local function serializeFileNameToStringList(self, spaces)
-    return {string.format("%sfileName = %q", spaces or "", self.m_FileName)}
-end
-
---------------------------------------------------------------------------------
 -- The functions that do the actions the system requested.
 --------------------------------------------------------------------------------
 local function doActionBeginTurn(self, action)
@@ -233,21 +226,6 @@ end
 --------------------------------------------------------------------------------
 -- The functions for serialization.
 --------------------------------------------------------------------------------
-function ModelSceneWar:toStringList(spaces)
-    spaces = spaces or ""
-    local subSpaces  = spaces .. "    "
-    local strList    = {spaces .. "return {\n"}
-
-    local appendList = TableFunctions.appendList
-    appendList(strList, serializeFileNameToStringList(self, subSpaces),        ",\n")
-    appendList(strList, self:getModelWarField()      :toStringList(subSpaces), ",\n")
-    appendList(strList, self:getModelTurnManager()   :toStringList(subSpaces), ",\n")
-    appendList(strList, self:getModelPlayerManager() :toStringList(subSpaces), ",\n")
-    appendList(strList, self:getModelWeatherManager():toStringList(subSpaces), "\n" .. spaces .. "}")
-
-    return strList
-end
-
 function ModelSceneWar:toSerializableTable()
     return {
         fileName    = self.m_FileName,
