@@ -53,13 +53,6 @@ local function clearPlayerForce(self, playerIndex)
 end
 
 --------------------------------------------------------------------------------
--- The private functions for serialization.
---------------------------------------------------------------------------------
-local function serializeFileNameToStringList(self, spaces)
-    return {string.format("%sfileName = %q", spaces or "", self.m_FileName)}
-end
-
---------------------------------------------------------------------------------
 -- The functions that do the actions the system requested.
 --------------------------------------------------------------------------------
 local function doActionBeginTurn(self, action)
@@ -138,6 +131,14 @@ local function doActionCapture(self, action)
     end
 end
 
+local function doActionLoadModelUnit(self, action)
+    self:getModelWarField():doActionLoadModelUnit(action)
+end
+
+local function doActionDropModelUnit(self, action)
+    self:getModelWarField():doActionDropModelUnit(action)
+end
+
 local function doActionProduceOnTile(self, action)
     action.playerIndex = self:getModelTurnManager():getPlayerIndex()
 
@@ -150,22 +151,16 @@ end
 --------------------------------------------------------------------------------
 local function onEvtSystemRequestDoAction(self, event)
     local actionName = event.actionName
-    if (actionName == "BeginTurn") then
-        doActionBeginTurn(self, event)
-    elseif (actionName == "EndTurn") then
-        doActionEndTurn(self, event)
-    elseif (actionName == "Surrender") then
-        doActionSurrender(self, event)
-    elseif (actionName == "Wait") then
-        doActionWait(self, event)
-    elseif (actionName == "Attack") then
-        doActionAttack(self, event)
-    elseif (actionName == "Capture") then
-        doActionCapture(self, event)
-    elseif (actionName == "ProduceOnTile") then
-        doActionProduceOnTile(self, event)
-    else
-        print("ModelSceneWar-onEvtSystemRequestDoAction() unrecognized action.")
+    if     (actionName == "BeginTurn")     then doActionBeginTurn(    self, event)
+    elseif (actionName == "EndTurn")       then doActionEndTurn(      self, event)
+    elseif (actionName == "Surrender")     then doActionSurrender(    self, event)
+    elseif (actionName == "Wait")          then doActionWait(         self, event)
+    elseif (actionName == "Attack")        then doActionAttack(       self, event)
+    elseif (actionName == "Capture")       then doActionCapture(      self, event)
+    elseif (actionName == "LoadModelUnit") then doActionLoadModelUnit(self, event)
+    elseif (actionName == "DropModelUnit") then doActionDropModelUnit(self, event)
+    elseif (actionName == "ProduceOnTile") then doActionProduceOnTile(self, event)
+    else                                        print("ModelSceneWar-onEvtSystemRequestDoAction() unrecognized action.")
     end
 end
 
@@ -231,21 +226,6 @@ end
 --------------------------------------------------------------------------------
 -- The functions for serialization.
 --------------------------------------------------------------------------------
-function ModelSceneWar:toStringList(spaces)
-    spaces = spaces or ""
-    local subSpaces  = spaces .. "    "
-    local strList    = {spaces .. "return {\n"}
-
-    local appendList = TableFunctions.appendList
-    appendList(strList, serializeFileNameToStringList(self, subSpaces),        ",\n")
-    appendList(strList, self:getModelWarField()      :toStringList(subSpaces), ",\n")
-    appendList(strList, self:getModelTurnManager()   :toStringList(subSpaces), ",\n")
-    appendList(strList, self:getModelPlayerManager() :toStringList(subSpaces), ",\n")
-    appendList(strList, self:getModelWeatherManager():toStringList(subSpaces), "\n" .. spaces .. "}")
-
-    return strList
-end
-
 function ModelSceneWar:toSerializableTable()
     return {
         fileName    = self.m_FileName,
