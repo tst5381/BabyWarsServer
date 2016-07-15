@@ -61,21 +61,12 @@ local function getLoadedModelUnits(self, loaderModelUnit)
     end
 end
 
-local function setActorUnit(self, actor, gridIndex)
-    self.m_UnitActorsMap[gridIndex.x][gridIndex.y] = actor
-    if (actor) then
-        actor:getModel():setGridIndex(gridIndex, false)
-    end
-end
-
 local function setActorUnitLoaded(self, gridIndex)
     local focusActorUnit = self:getActorUnit(gridIndex)
-    local focusModelUnit = focusActorUnit:getModel()
-    local focusUnitID    = focusModelUnit:getUnitId()
+    local focusUnitID    = focusActorUnit:getModel():getUnitId()
 
-    self.m_LoadedActorUnits[focusUnitID] = focusActorUnit
-    focusModelUnit:setGridIndex(GRID_INDEX_FOR_LOADED_MODEL_UNIT, false)
-    setActorUnit(self, nil, gridIndex)
+    self.m_LoadedActorUnits[focusUnitID]           = focusActorUnit
+    self.m_UnitActorsMap[gridIndex.x][gridIndex.y] = nil
 
     if (self.m_View) then
         self.m_View:setViewUnitLoaded(gridIndex, focusUnitID)
@@ -83,9 +74,8 @@ local function setActorUnitLoaded(self, gridIndex)
 end
 
 local function setActorUnitUnloaded(self, unitID, gridIndex)
-    local actorUnit = getLoadedActorUnitWithUnitId(self, unitID)
-    self.m_LoadedActorUnits[unitID] = nil
-    setActorUnit(self, actorUnit, gridIndex)
+    self.m_UnitActorsMap[gridIndex.x][gridIndex.y] = self.m_LoadedActorUnits[unitID]
+    self.m_LoadedActorUnits[unitID]                = nil
 
     if (self.m_View) then
         self.m_View:setViewUnitUnloaded(gridIndex, unitID)
@@ -97,9 +87,9 @@ local function swapActorUnit(self, gridIndex1, gridIndex2)
         return
     end
 
-    local actorUnit1, actorUnit2 = self:getActorUnit(gridIndex1), self:getActorUnit(gridIndex2)
-    setActorUnit(self, actorUnit1, gridIndex2)
-    setActorUnit(self, actorUnit2, gridIndex1)
+    local tempActorUnit = self.m_UnitActorsMap[gridIndex1.x][gridIndex1.y]
+    self.m_UnitActorsMap[gridIndex1.x][gridIndex1.y] = self.m_UnitActorsMap[gridIndex2.x][gridIndex2.y]
+    self.m_UnitActorsMap[gridIndex2.x][gridIndex2.y] = tempActorUnit
 
     if (self.m_View) then
         self.m_View:swapViewUnit(gridIndex1, gridIndex2)
@@ -183,7 +173,7 @@ local function onEvtDestroyModelUnit(self, event)
         end
     end
 
-    setActorUnit(self, nil, gridIndex)
+    self.m_UnitActorsMap[gridIndex.x][gridIndex.y] = nil
     modelUnit:unsetRootScriptEventDispatcher()
 end
 
@@ -291,7 +281,6 @@ function ModelUnitMap:initView()
 
     local mapSize = self.m_MapSize
     view:setMapSize(mapSize)
-        :removeAllViewUnits()
 
     local unitActors = self.m_UnitActorsMap
     for y = mapSize.height, 1, -1 do
@@ -421,7 +410,7 @@ function ModelUnitMap:doActionWait(action)
     end
 
     local focusModelUnit = self:getModelUnit(endingGridIndex)
-    focusModelUnit:doActionMoveModelUnit(action)
+    focusModelUnit:doActionMoveModelUnit(action, getLoadedModelUnits(self, focusModelUnit))
         :doActionWait(action)
     dispatchEvtModelUnitUpdated(self, focusModelUnit, beginningGridIndex)
 
@@ -440,7 +429,7 @@ function ModelUnitMap:doActionAttack(action, attacker, target)
         swapActorUnit(self, beginningGridIndex, endingGridIndex)
     end
 
-    attacker:doActionMoveModelUnit(action)
+    attacker:doActionMoveModelUnit(action, getLoadedModelUnits(self, attacker))
         :doActionAttack(action, attacker, target)
     dispatchEvtModelUnitUpdated(self, attacker, beginningGridIndex)
 
@@ -464,7 +453,7 @@ function ModelUnitMap:doActionCapture(action, capturer, target)
         swapActorUnit(self, beginningGridIndex, endingGridIndex)
     end
 
-    capturer:doActionMoveModelUnit(action)
+    capturer:doActionMoveModelUnit(action, getLoadedModelUnits(self, capturer))
         :doActionCapture(action, capturer, target)
     dispatchEvtModelUnitUpdated(self, capturer, beginningGridIndex)
 
@@ -487,7 +476,7 @@ function ModelUnitMap:doActionLoadModelUnit(action)
 
     local focusUnitID     = focusModelUnit:getUnitId()
     local loaderModelUnit = self:getModelUnit(endingGridIndex)
-    focusModelUnit:doActionMoveModelUnit(action)
+    focusModelUnit:doActionMoveModelUnit(action, getLoadedModelUnits(self, focusModelUnit))
         :doActionLoadModelUnit(action, focusUnitID, loaderModelUnit)
     loaderModelUnit:doActionLoadModelUnit(action, focusUnitID, loaderModelUnit)
 
@@ -512,21 +501,20 @@ function ModelUnitMap:doActionDropModelUnit(action)
         swapActorUnit(self, beginningGridIndex, endingGridIndex)
     end
 
-    local droppingActorUnits = {}
+    local dropActorUnits = {}
     for _, dropDestination in ipairs(action.dropDestinations) do
         local unitID    = dropDestination.unitID
         local gridIndex = dropDestination.gridIndex
         local actorUnit = getLoadedActorUnitWithUnitId(self, unitID)
         local modelUnit = actorUnit:getModel()
 
-        droppingActorUnits[#droppingActorUnits + 1] = actorUnit
+        dropActorUnits[#dropActorUnits + 1] = actorUnit
         setActorUnitUnloaded(self, unitID, gridIndex)
-        modelUnit:doActionDropModelUnit(action)
         dispatchEvtModelUnitUpdated(self, modelUnit, gridIndex)
     end
 
-    focusModelUnit:doActionMoveModelUnit(action)
-        :doActionDropModelUnit(action, droppingActorUnits)
+    focusModelUnit:doActionMoveModelUnit(action, getLoadedModelUnits(self, focusModelUnit))
+        :doActionDropModelUnit(action, dropActorUnits)
     dispatchEvtModelUnitUpdated(self, focusModelUnit, beginningGridIndex)
 
     return self
@@ -595,6 +583,22 @@ end
 function ModelUnitMap:forEachModelUnitLoaded(func)
     for _, actorUnit in pairs(self.m_LoadedActorUnits) do
         func(actorUnit:getModel())
+    end
+
+    return self
+end
+
+function ModelUnitMap:setPreviewLaunchUnit(modelUnit, gridIndex)
+    if (self.m_View) then
+        self.m_View:setPreviewLaunchUnit(modelUnit, gridIndex)
+    end
+
+    return self
+end
+
+function ModelUnitMap:setPreviewLaunchUnitVisible(visible)
+    if (self.m_View) then
+        self.m_View:setPreviewLaunchUnitVisible(visible)
     end
 
     return self
