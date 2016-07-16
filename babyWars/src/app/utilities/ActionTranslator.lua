@@ -46,8 +46,8 @@ local function validateDropDestinations(action, modelSceneWar)
     local modelTileMap             = modelWarField:getModelTileMap()
     local destinations             = action.dropDestinations
     local mapSize                  = modelTileMap:getMapSize()
-    local loaderBeginningGridIndex = action.path[1].gridIndex
-    local loaderEndingGridIndex    = action.path[#action.path].gridIndex
+    local loaderBeginningGridIndex = action.path[1]
+    local loaderEndingGridIndex    = action.path[#action.path]
     local loaderModelUnit          = modelUnitMap:getModelUnit(loaderBeginningGridIndex)
     local loaderEndingModelTile    = modelTileMap:getModelTile(loaderEndingGridIndex)
     local loadedUnitIdList         = loaderModelUnit:getLoadUnitIdList()
@@ -251,7 +251,7 @@ local function translatePath(path, modelSceneWar)
     local modelTileMap     = modelWarField:getModelTileMap()
 
     local playerIndexInTurn = modelTurnManager:getPlayerIndex()
-    local focusModelUnit    = modelUnitMap:getModelUnit(path[1].gridIndex)
+    local focusModelUnit    = modelUnitMap:getModelUnit(path[1])
     if (not focusModelUnit) then
         return nil, "ActionTranslator-translatePath() there is no unit on the starting grid of the path."
     elseif (focusModelUnit:getPlayerIndex() ~= playerIndexInTurn) then
@@ -263,11 +263,11 @@ local function translatePath(path, modelSceneWar)
     local modelWeatherManager  = modelSceneWar:getModelWeatherManager()
     local moveType             = focusModelUnit:getMoveType()
     local totalFuelConsumption = 0
-    local translatedPath       = {GridIndexFunctions.clone(path[1].gridIndex)}
+    local translatedPath       = {GridIndexFunctions.clone(path[1])}
 
     for i = 2, #path do
-        local gridIndex = GridIndexFunctions.clone(path[i].gridIndex)
-        if (not GridIndexFunctions.isAdjacent(path[i - 1].gridIndex, gridIndex)) then
+        local gridIndex = GridIndexFunctions.clone(path[i])
+        if (not GridIndexFunctions.isAdjacent(path[i - 1], gridIndex)) then
             return nil, "ActionTranslator-translatePath() the path is invalid because some grids are not adjacent to previous ones."
         end
 
@@ -589,7 +589,7 @@ local function translateDropModelUnit(action, modelScene)
     local sceneWarFileName   = modelScene:getFileName()
     local modelPlayerManager = modelScene:getModelPlayerManager()
     local modelUnitMap       = modelScene:getModelWarField():getModelUnitMap()
-    local loaderModelUnit    = modelUnitMap:getModelUnit(action.path[1].gridIndex)
+    local loaderModelUnit    = modelUnitMap:getModelUnit(action.path[1])
     local dropDestinations   = action.dropDestinations
     translatedPath.isBlocked = (translatedPath.isBlocked) or (isDropBlocked(dropDestinations[1], modelUnitMap, loaderModelUnit))
     if (translatedPath.isBlocked) then
