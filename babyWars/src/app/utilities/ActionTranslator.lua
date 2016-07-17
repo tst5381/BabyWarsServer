@@ -433,20 +433,26 @@ local function translateAttack(action, modelScene)
         }
     end
 
-    local modelTileMap    = modelWarField:getModelTileMap()
-    local targetGridIndex = action.targetGridIndex
-    local attacker        = getFocusModelUnit(modelUnitMap, translatedPath[1], launchUnitID)
-    local attackTarget    = modelUnitMap:getModelUnit(targetGridIndex) or modelTileMap:getModelTile(targetGridIndex)
-    if ((not attacker.canAttackTarget) or
-        (not attacker:canAttackTarget(attackerGridIndex, attackTarget, targetGridIndex))) then
+    local attacker = getFocusModelUnit(modelUnitMap, translatedPath[1], launchUnitID)
+    if ((not attacker) or (not attacker.getUltimateBattleDamage)) then
         return {
             actionName = "Message",
             message    = "The attacker can't attack the target. Please reenter the war.",
         }
     end
 
-    local modelWeatherManager = modelScene:getModelWeatherManager()
+    local modelTileMap                = modelWarField:getModelTileMap()
+    local targetGridIndex             = action.targetGridIndex
+    local attackTarget                = modelUnitMap:getModelUnit(targetGridIndex) or modelTileMap:getModelTile(targetGridIndex)
+    local modelWeatherManager         = modelScene:getModelWeatherManager()
     local attackDamage, counterDamage = attacker:getUltimateBattleDamage(modelTileMap:getModelTile(attackerGridIndex), attackTarget, modelTileMap:getModelTile(targetGridIndex), modelPlayerManager, modelWeatherManager:getCurrentWeather())
+    if (not attackDamage) then
+        return {
+            actionName = "Message",
+            message    = "The attacker can't attack the target. Please reenter the war.",
+        }
+    end
+
     local actionAttack = {
         actionName      = "Attack",
         fileName        = sceneWarFileName,
