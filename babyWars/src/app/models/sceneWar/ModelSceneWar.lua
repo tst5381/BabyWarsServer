@@ -26,12 +26,12 @@
 --    这本不应该是ModelSceneWar的工作，等以后实现了网络模块，就应该把相关代码移除。
 --]]--------------------------------------------------------------------------------
 
-local ModelSceneWar = require("babyWars.src.global.functions.class")("ModelSceneWar")
+local ModelSceneWar = require("src.global.functions.class")("ModelSceneWar")
 
-local Actor            = require("babyWars.src.global.actors.Actor")
-local ActionTranslator = require("babyWars.src.app.utilities.ActionTranslator")
-local EventDispatcher  = require("babyWars.src.global.events.EventDispatcher")
-local TableFunctions   = require("babyWars.src.app.utilities.TableFunctions")
+local Actor            = require("src.global.actors.Actor")
+local ActionTranslator = require("src.app.utilities.ActionTranslator")
+local EventDispatcher  = require("src.global.events.EventDispatcher")
+local TableFunctions   = require("src.app.utilities.TableFunctions")
 
 --------------------------------------------------------------------------------
 -- The util functions.

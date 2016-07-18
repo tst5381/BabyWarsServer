@@ -19,12 +19,12 @@
 
 local ActionTranslator = {}
 
-local GridIndexFunctions     = require("babyWars.src.app.utilities.GridIndexFunctions")
-local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
-local SceneWarManager        = require("babyWars.src.app.utilities.SceneWarManager")
-local SessionManager         = require("babyWars.src.app.utilities.SessionManager")
-local PlayerProfileManager   = require("babyWars.src.app.utilities.PlayerProfileManager")
-local LocalizationFunctions  = require("babyWars.src.app.utilities.LocalizationFunctions")
+local GridIndexFunctions     = require("src.app.utilities.GridIndexFunctions")
+local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
+local SceneWarManager        = require("src.app.utilities.SceneWarManager")
+local SessionManager         = require("src.app.utilities.SessionManager")
+local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
+local LocalizationFunctions  = require("src.app.utilities.LocalizationFunctions")
 
 --------------------------------------------------------------------------------
 -- The util functions.

@@ -26,7 +26,7 @@
 
 local ComponentManager = {}
 
-local COMPONENT_PATH = "babyWars.src.app.components."
+local COMPONENT_PATH = "src.app.components."
 
 --------------------------------------------------------------------------------
 -- The util functions.

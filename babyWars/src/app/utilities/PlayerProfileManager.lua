@@ -1,7 +1,7 @@
 
 local PlayerProfileManager = {}
 
-local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
+local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
 
 local PLAYER_PROFILE_PATH = "babyWars/res/data/playerProfile/"
 

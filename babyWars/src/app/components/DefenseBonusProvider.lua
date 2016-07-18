@@ -10,12 +10,12 @@
 --   虽然不是所有ModelTile都提供防御加成，但目前设计是所有ModelTile都要绑定本组件
 --]]--------------------------------------------------------------------------------
 
-local DefenseBonusProvider = require("babyWars.src.global.functions.class")("DefenseBonusProvider")
+local DefenseBonusProvider = require("src.global.functions.class")("DefenseBonusProvider")
 
-local TypeChecker           = require("babyWars.src.app.utilities.TypeChecker")
-local LocalizationFunctions = require("babyWars.src.app.utilities.LocalizationFunctions")
-local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
-local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
+local TypeChecker           = require("src.app.utilities.TypeChecker")
+local LocalizationFunctions = require("src.app.utilities.LocalizationFunctions")
+local GameConstantFunctions = require("src.app.utilities.GameConstantFunctions")
+local ComponentManager      = require("src.global.components.ComponentManager")
 
 local EXPORTED_METHODS = {
     "getDefenseBonusAmount",

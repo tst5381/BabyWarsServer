@@ -1,10 +1,10 @@
 
 local SceneWarManager = {}
 
-local Actor                  = require("babyWars.src.global.actors.Actor")
-local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
-local PlayerProfileManager   = require("babyWars.src.app.utilities.PlayerProfileManager")
-local LocalizationFunctions  = require("babyWars.src.app.utilities.LocalizationFunctions")
+local Actor                  = require("src.global.actors.Actor")
+local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
+local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
+local LocalizationFunctions  = require("src.app.utilities.LocalizationFunctions")
 
 local SCENE_WAR_PATH               = "babyWars/res/data/sceneWar/"
 local SCENE_WAR_NEXT_NAME_PATH     = SCENE_WAR_PATH .. "NextName.lua"
@@ -21,7 +21,7 @@ local s_OngoingWarList  = {}
 -- The util functions.
 --------------------------------------------------------------------------------
 local function getPlayersCount(warFieldFileName)
-    return require("babyWars.res.data.templateWarField." .. warFieldFileName).playersCount
+    return require("res.data.templateWarField." .. warFieldFileName).playersCount
 end
 
 local function serialize(fullFileName, data)

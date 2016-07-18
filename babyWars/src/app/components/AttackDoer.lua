@@ -13,13 +13,13 @@
 --    伤害值受防御类型、hp、地形、等级、co技能、天气等影响
 --]]--------------------------------------------------------------------------------
 
-local AttackDoer = require("babyWars.src.global.functions.class")("AttackDoer")
+local AttackDoer = require("src.global.functions.class")("AttackDoer")
 
-local TypeChecker           = require("babyWars.src.app.utilities.TypeChecker")
-local GridIndexFunctions    = require("babyWars.src.app.utilities.GridIndexFunctions")
-local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
-local LocalizationFunctions = require("babyWars.src.app.utilities.LocalizationFunctions")
-local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
+local TypeChecker           = require("src.app.utilities.TypeChecker")
+local GridIndexFunctions    = require("src.app.utilities.GridIndexFunctions")
+local GameConstantFunctions = require("src.app.utilities.GameConstantFunctions")
+local LocalizationFunctions = require("src.app.utilities.LocalizationFunctions")
+local ComponentManager      = require("src.global.components.ComponentManager")
 
 local EXPORTED_METHODS = {
     "hasPrimaryWeapon",

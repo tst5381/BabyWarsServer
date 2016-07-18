@@ -20,9 +20,9 @@
 --  - 本类目前没有对应的view，因为暂时还不用显示。
 --]]--------------------------------------------------------------------------------
 
-local ModelPlayer = require("babyWars.src.global.functions.class")("ModelPlayer")
+local ModelPlayer = require("src.global.functions.class")("ModelPlayer")
 
-local TableFunctions = require("babyWars.src.app.utilities.TableFunctions")
+local TableFunctions = require("src.app.utilities.TableFunctions")
 
 --------------------------------------------------------------------------------
 -- The constructor.
