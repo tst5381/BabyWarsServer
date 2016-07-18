@@ -1,15 +1,16 @@
 
-local Session = require("babyWars.src.global.functions.class")("Session")
+-- TODO: move the code that initializes the server to somewhere else (like main()).
+package.path = package.path .. ";./babyWars/?.lua"
+require("src.app.utilities.GameConstantFunctions").init(true)
+require("src.app.utilities.SceneWarManager").init()
+
+local Session = require("src.global.functions.class")("Session")
 
 local WebSocketServer        = require("resty.websocket.server")
 local Redis                  = require("resty.redis")
-local ActionTranslator       = require("babyWars.src.app.utilities.ActionTranslator")
-local SerializationFunctions = require("babyWars.src.app.utilities.SerializationFunctions")
-local SessionManager         = require("babyWars.src.app.utilities.SessionManager")
-
--- TODO: move the code that initializes the server to somewhere else (like main()).
-require("babyWars.src.app.utilities.GameConstantFunctions").init()
-require("babyWars.src.app.utilities.SceneWarManager").init()
+local ActionTranslator       = require("src.app.utilities.ActionTranslator")
+local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
+local SessionManager         = require("src.app.utilities.SessionManager")
 
 --------------------------------------------------------------------------------
 -- The util functions.

@@ -10,11 +10,11 @@
 --   占领能力受hp、co技能影响
 --]]--------------------------------------------------------------------------------
 
-local CaptureDoer = require("babyWars.src.global.functions.class")("CaptureDoer")
+local CaptureDoer = require("src.global.functions.class")("CaptureDoer")
 
-local TypeChecker        = require("babyWars.src.app.utilities.TypeChecker")
-local ComponentManager   = require("babyWars.src.global.components.ComponentManager")
-local GridIndexFunctions = require("babyWars.src.app.utilities.GridIndexFunctions")
+local TypeChecker        = require("src.app.utilities.TypeChecker")
+local ComponentManager   = require("src.global.components.ComponentManager")
+local GridIndexFunctions = require("src.app.utilities.GridIndexFunctions")
 
 local EXPORTED_METHODS = {
     "isCapturing",

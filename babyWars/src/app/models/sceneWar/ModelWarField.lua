@@ -14,14 +14,14 @@
 --     - GridExplosion（server不含）
 --]]--------------------------------------------------------------------------------
 
-local ModelWarField = require("babyWars.src.global.functions.class")("ModelWarField")
+local ModelWarField = require("src.global.functions.class")("ModelWarField")
 
-local Actor              = require("babyWars.src.global.actors.Actor")
-local TypeChecker        = require("babyWars.src.app.utilities.TypeChecker")
-local GridIndexFunctions = require("babyWars.src.app.utilities.GridIndexFunctions")
-local TableFunctions     = require("babyWars.src.app.utilities.TableFunctions")
+local Actor              = require("src.global.actors.Actor")
+local TypeChecker        = require("src.app.utilities.TypeChecker")
+local GridIndexFunctions = require("src.app.utilities.GridIndexFunctions")
+local TableFunctions     = require("src.app.utilities.TableFunctions")
 
-local IS_SERVER = true
+local IS_SERVER = require("src.app.utilities.GameConstantFunctions").isServer()
 
 --------------------------------------------------------------------------------
 -- The util functions.

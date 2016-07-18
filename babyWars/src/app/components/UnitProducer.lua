@@ -10,12 +10,12 @@
 --   生产价格受co技能影响（但目前未完成）
 --]]--------------------------------------------------------------------------------
 
-local UnitProducer = require("babyWars.src.global.functions.class")("UnitProducer")
+local UnitProducer = require("src.global.functions.class")("UnitProducer")
 
-local ModelUnit             = require("babyWars.src.app.models.sceneWar.modelUnit")
-local TypeChecker           = require("babyWars.src.app.utilities.TypeChecker")
-local GameConstantFunctions = require("babyWars.src.app.utilities.GameConstantFunctions")
-local ComponentManager      = require("babyWars.src.global.components.ComponentManager")
+local TypeChecker           = require("src.app.utilities.TypeChecker")
+local GameConstantFunctions = require("src.app.utilities.GameConstantFunctions")
+local Actor                 = require("src.global.actors.Actor")
+local ComponentManager      = require("src.global.components.ComponentManager")
 
 local EXPORTED_METHODS = {
     "getProductionCostWithTiledId",
@@ -87,7 +87,7 @@ function UnitProducer:getProductionList(modelPlayer)
         local cost    = self:getProductionCostWithTiledId(tiledID, modelPlayer)
 
         list[i] = {
-            modelUnit   = ModelUnit:create({tiledID = tiledID}),
+            modelUnit   = Actor.createModel("sceneWar.ModelUnit", {tiledID = tiledID}),
             fullName    = GameConstantFunctions.getTemplateModelUnitWithTiledId(tiledID).fullName,
             cost        = cost,
             isAvaliable = cost <= fund,
