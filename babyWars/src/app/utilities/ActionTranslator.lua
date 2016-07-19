@@ -49,7 +49,9 @@ local function canDoActionSupplyModelUnit(focusModelUnit, destination, modelUnit
     if (focusModelUnit.canSupplyModelUnit) then
         for _, gridIndex in pairs(GridIndexFunctions.getAdjacentGrids(destination, modelUnitMap:getMapSize())) do
             local modelUnit = modelUnitMap:getModelUnit(gridIndex)
-            if ((modelUnit) and (focusModelUnit:canSupplyModelUnit(modelUnit))) then
+            if ((modelUnit)                                     and
+                (modelUnit ~= focusModelUnit)                   and
+                (focusModelUnit:canSupplyModelUnit(modelUnit))) then
                 return true
             end
         end
