@@ -80,7 +80,7 @@ function GridIndexFunctions.getAdjacentGrids(index, mapSize)
     for _, offset in ipairs(ADJACENT_GRIDS_OFFSET) do
         local adjacentGridIndex = GridIndexFunctions.add(index, offset)
         if ((not mapSize)                                                    or
-            (GameConstantFunctions.isWithinMap(adjacentGridIndex, mapSize))) then
+            (GridIndexFunctions.isWithinMap(adjacentGridIndex, mapSize))) then
             grids[#grids + 1] = GridIndexFunctions.add(index, offset)
         end
     end
