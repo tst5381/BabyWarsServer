@@ -45,6 +45,21 @@ local function getFocusModelUnit(modelUnitMap, gridIndex, launchUnitID)
         (modelUnitMap:getModelUnit(gridIndex))
 end
 
+local function canDoActionSupplyModelUnit(focusModelUnit, destination, modelUnitMap)
+    if (focusModelUnit.canSupplyModelUnit) then
+        for _, gridIndex in pairs(GridIndexFunctions.getAdjacentGrids(destination, modelUnitMap:getMapSize())) do
+            local modelUnit = modelUnitMap:getModelUnit(gridIndex)
+            if ((modelUnit)                                     and
+                (modelUnit ~= focusModelUnit)                   and
+                (focusModelUnit:canSupplyModelUnit(modelUnit))) then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
 local function validateDropDestinations(action, modelSceneWar)
     local isEqual                  = GridIndexFunctions.isEqual
     local modelWarField            = modelSceneWar:getModelWarField()
@@ -545,6 +560,47 @@ local function translateCapture(action, modelScene)
     return actionCapture, actionsForPublish
 end
 
+local function translateSupplyModelUnit(action, modelScene)
+    local launchUnitID                 = action.launchUnitID
+    local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
+    if (not translatedPath) then
+        return {
+            actionName = "Message",
+            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+        }
+    end
+
+    local sceneWarFileName   = modelScene:getFileName()
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    if (translatedPath.isBlocked) then
+        local actionWait = {
+            actionName = "Wait",
+            fileName   = sceneWarFileName,
+            path       = translatedPath,
+        }
+        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+    end
+
+    local modelUnitMap    = modelScene:getModelWarField():getModelUnitMap()
+    local focusModelUnit  = getFocusModelUnit(modelUnitMap, translatedPath[1], launchUnitID)
+    if (not canDoActionSupplyModelUnit(focusModelUnit, translatedPath[#translatedPath], modelUnitMap)) then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
+        }
+    end
+
+    local actionSupplyModelUnit = {
+        actionName   = "SupplyModelUnit",
+        fileName     = sceneWarFileName,
+        path         = translatedPath,
+        launchUnitID = launchUnitID,
+    }
+    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionSupplyModelUnit)
+    return actionSupplyModelUnit, generateActionsForPublish(actionSupplyModelUnit, modelScene:getModelPlayerManager(), action.playerAccount)
+end
+
 local function translateLoadModelUnit(action, modelScene)
     local launchUnitID                 = action.launchUnitID
     local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
@@ -698,10 +754,8 @@ function ActionTranslator.translate(action, session)
     end
 
     local actionName = action.actionName
-    if (actionName == "Login") then
-        return translateLogin(action, session)
-    elseif (actionName == "Register") then
-        return translateRegister(action)
+    if     (actionName == "Login")    then return translateLogin(   action, session)
+    elseif (actionName == "Register") then return translateRegister(action)
     end
 
     local playerAccount = action.playerAccount
@@ -714,16 +768,11 @@ function ActionTranslator.translate(action, session)
         }
     end
 
-    if (actionName == "NewWar") then
-        return translateNewWar(action)
-    elseif (actionName == "GetOngoingWarList") then
-        return translateGetOngoingWarList(action)
-    elseif (actionName == "GetSceneWarData") then
-        return translateGetSceneWarData(action)
-    elseif (actionName == "GetJoinableWarList") then
-        return translateGetJoinableWarList(action)
-    elseif (actionName == "JoinWar") then
-        return translateJoinWar(action)
+    if     (actionName == "NewWar")             then return translateNewWar(            action)
+    elseif (actionName == "GetOngoingWarList")  then return translateGetOngoingWarList( action)
+    elseif (actionName == "GetSceneWarData")    then return translateGetSceneWarData(   action)
+    elseif (actionName == "GetJoinableWarList") then return translateGetJoinableWarList(action)
+    elseif (actionName == "JoinWar")            then return translateJoinWar(           action)
     end
 
     local sceneWarFileName = action.sceneWarFileName
@@ -742,24 +791,16 @@ function ActionTranslator.translate(action, session)
         }
     end
 
-    if (actionName == "BeginTurn") then
-        return translateBeginTurn(    action, modelSceneWar)
-    elseif (actionName == "EndTurn") then
-        return translateEndTurn(      action, modelSceneWar)
-    elseif (actionName == "Surrender") then
-        return translateSurrender(    action, modelSceneWar)
-    elseif (actionName == "Wait") then
-        return translateWait(         action, modelSceneWar)
-    elseif (actionName == "Attack") then
-        return translateAttack(       action, modelSceneWar)
-    elseif (actionName == "Capture") then
-        return translateCapture(      action, modelSceneWar)
-    elseif (actionName == "LoadModelUnit") then
-        return translateLoadModelUnit(action, modelSceneWar)
-    elseif (actionName == "DropModelUnit") then
-        return translateDropModelUnit(action, modelSceneWar)
-    elseif (actionName == "ProduceOnTile") then
-        return translateProduceOnTile(action, modelSceneWar)
+    if     (actionName == "BeginTurn")       then return translateBeginTurn(      action, modelSceneWar)
+    elseif (actionName == "EndTurn")         then return translateEndTurn(        action, modelSceneWar)
+    elseif (actionName == "Surrender")       then return translateSurrender(      action, modelSceneWar)
+    elseif (actionName == "Wait")            then return translateWait(           action, modelSceneWar)
+    elseif (actionName == "Attack")          then return translateAttack(         action, modelSceneWar)
+    elseif (actionName == "Capture")         then return translateCapture(        action, modelSceneWar)
+    elseif (actionName == "SupplyModelUnit") then return translateSupplyModelUnit(action, modelSceneWar)
+    elseif (actionName == "LoadModelUnit")   then return translateLoadModelUnit(  action, modelSceneWar)
+    elseif (actionName == "DropModelUnit")   then return translateDropModelUnit(  action, modelSceneWar)
+    elseif (actionName == "ProduceOnTile")   then return translateProduceOnTile(  action, modelSceneWar)
     end
 
     return {
