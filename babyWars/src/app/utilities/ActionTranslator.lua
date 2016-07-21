@@ -626,12 +626,13 @@ local function translateProduceModelUnitOnUnit(action, modelScene)
     local focusModelUnit     = getFocusModelUnit(modelScene:getModelWarField():getModelUnitMap(), translatedPath[1], launchUnitID)
     local modelPlayerManager = modelScene:getModelPlayerManager()
     local modelPlayer        = modelPlayerManager:getModelPlayer(modelScene:getModelTurnManager():getPlayerIndex())
+    local cost               = (focusModelUnit.getMovableProductionCost) and (focusModelUnit:getMovableProductionCost()) or (nil)
     if ((launchUnitID)                                                              or
         (#translatedPath ~= 1)                                                      or
         (not focusModelUnit.getCurrentMaterial)                                     or
         (focusModelUnit:getCurrentMaterial() < 1)                                   or
-        (not focusModelUnit.getMovableProductionCost)                               or
-        (focusModelUnit:getMovableProductionCost() > modelPlayer:getFund())         or
+        (not cost)                                                                  or
+        (cost > modelPlayer:getFund())                                              or
         (not focusModelUnit.getCurrentLoadCount)                                    or
         (focusModelUnit:getCurrentLoadCount() >= focusModelUnit:getMaxLoadCount())) then
         return {
@@ -645,6 +646,7 @@ local function translateProduceModelUnitOnUnit(action, modelScene)
         actionName  = "ProduceModelUnitOnUnit",
         fileName    = sceneWarFileName,
         path        = translatedPath,
+        cost        = cost,
     }
     SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionProduceModelUnitOnUnit)
     return actionProduceModelUnitOnUnit, generateActionsForPublish(actionProduceModelUnitOnUnit, modelPlayerManager, action.playerAccount)
