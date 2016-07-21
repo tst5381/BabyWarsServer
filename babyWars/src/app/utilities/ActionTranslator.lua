@@ -264,65 +264,6 @@ local function translateJoinWar(action)
     end
 end
 
--- This translation ignores the existing unit of the same player at the end of the path, so that the actions of Join/Attack/Wait can reuse this function.
-local function translatePath(path, launchUnitID, modelSceneWar)
-    local modelWarField    = modelSceneWar:getModelWarField()
-    local modelTurnManager = modelSceneWar:getModelTurnManager()
-    local modelUnitMap     = modelWarField:getModelUnitMap()
-    local modelTileMap     = modelWarField:getModelTileMap()
-
-    local playerIndexInTurn = modelTurnManager:getPlayerIndex()
-    local focusModelUnit    = getFocusModelUnit(modelUnitMap, path[1], launchUnitID)
-    if (not focusModelUnit) then
-        return nil, "ActionTranslator-translatePath() there is no unit on the starting grid of the path."
-    elseif (focusModelUnit:getPlayerIndex() ~= playerIndexInTurn) then
-        return nil, "ActionTranslator-translatePath() the owner player of the moving unit is not in his turn."
-    elseif (focusModelUnit:getState() ~= "idle") then
-        return nil, "ActionTranslator-translatePath() the moving unit is not in idle state."
-    end
-
-    local modelWeatherManager  = modelSceneWar:getModelWeatherManager()
-    local moveType             = focusModelUnit:getMoveType()
-    local totalFuelConsumption = 0
-    local translatedPath       = {GridIndexFunctions.clone(path[1])}
-
-    for i = 2, #path do
-        local gridIndex = GridIndexFunctions.clone(path[i])
-        if (not GridIndexFunctions.isAdjacent(path[i - 1], gridIndex)) then
-            return nil, "ActionTranslator-translatePath() the path is invalid because some grids are not adjacent to previous ones."
-        end
-
-        local existingModelUnit = modelUnitMap:getModelUnit(gridIndex)
-        if ((existingModelUnit) and (existingModelUnit:getPlayerIndex() ~= playerIndexInTurn)) then
-            if (isModelUnitVisible(existingModelUnit, modelSceneWar)) then
-                return nil, "ActionTranslator-translatePath() the path is invalid because it is blocked by a visible enemy unit."
-            else
-                translatedPath.isBlocked = true
-                break
-            end
-        end
-
-        local fuelConsumption = modelTileMap:getModelTile(gridIndex):getMoveCost(moveType)
-        if (not fuelConsumption) then
-            return nil, "ActionTranslator-translatePath() the path is invalid because some tiles on it is impassable."
-        end
-
-        totalFuelConsumption = totalFuelConsumption + fuelConsumption
-        translatedPath[#translatedPath + 1] = gridIndex
-    end
-
-    local modelPlayerManager = modelSceneWar:getModelPlayerManager()
-    local modelPlayerInTurn  = modelPlayerManager:getModelPlayer(playerIndexInTurn)
-    local modelWeather       = modelWeatherManager:getCurrentWeather()
-    if ((totalFuelConsumption > focusModelUnit:getCurrentFuel()) or
-        (totalFuelConsumption > focusModelUnit:getMoveRange(modelPlayerInTurn, modelWeather))) then
-        return nil, "ActionTranslator-translatePath() the path is invalid because the fuel consumption is too high."
-    else
-        translatedPath.fuelConsumption = totalFuelConsumption
-        return translatedPath
-    end
-end
-
 local function translateBeginTurn(action, modelScene)
     local modelTurnManager = modelScene:getModelTurnManager()
     local playerIndex      = modelTurnManager:getPlayerIndex()
@@ -384,6 +325,65 @@ local function translateSurrender(action, modelScene)
 
     SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionSurrender)
     return actionSurrender, generateActionsForPublish(actionSurrender, modelPlayerManager, action.playerAccount)
+end
+
+-- This translation ignores the existing unit of the same player at the end of the path, so that the actions of Join/Attack/Wait can reuse this function.
+local function translatePath(path, launchUnitID, modelSceneWar)
+    local modelWarField    = modelSceneWar:getModelWarField()
+    local modelTurnManager = modelSceneWar:getModelTurnManager()
+    local modelUnitMap     = modelWarField:getModelUnitMap()
+    local modelTileMap     = modelWarField:getModelTileMap()
+
+    local playerIndexInTurn = modelTurnManager:getPlayerIndex()
+    local focusModelUnit    = getFocusModelUnit(modelUnitMap, path[1], launchUnitID)
+    if (not focusModelUnit) then
+        return nil, "ActionTranslator-translatePath() there is no unit on the starting grid of the path."
+    elseif (focusModelUnit:getPlayerIndex() ~= playerIndexInTurn) then
+        return nil, "ActionTranslator-translatePath() the owner player of the moving unit is not in his turn."
+    elseif (focusModelUnit:getState() ~= "idle") then
+        return nil, "ActionTranslator-translatePath() the moving unit is not in idle state."
+    end
+
+    local modelWeatherManager  = modelSceneWar:getModelWeatherManager()
+    local moveType             = focusModelUnit:getMoveType()
+    local totalFuelConsumption = 0
+    local translatedPath       = {GridIndexFunctions.clone(path[1])}
+
+    for i = 2, #path do
+        local gridIndex = GridIndexFunctions.clone(path[i])
+        if (not GridIndexFunctions.isAdjacent(path[i - 1], gridIndex)) then
+            return nil, "ActionTranslator-translatePath() the path is invalid because some grids are not adjacent to previous ones."
+        end
+
+        local existingModelUnit = modelUnitMap:getModelUnit(gridIndex)
+        if ((existingModelUnit) and (existingModelUnit:getPlayerIndex() ~= playerIndexInTurn)) then
+            if (isModelUnitVisible(existingModelUnit, modelSceneWar)) then
+                return nil, "ActionTranslator-translatePath() the path is invalid because it is blocked by a visible enemy unit."
+            else
+                translatedPath.isBlocked = true
+                break
+            end
+        end
+
+        local fuelConsumption = modelTileMap:getModelTile(gridIndex):getMoveCost(moveType)
+        if (not fuelConsumption) then
+            return nil, "ActionTranslator-translatePath() the path is invalid because some tiles on it is impassable."
+        end
+
+        totalFuelConsumption = totalFuelConsumption + fuelConsumption
+        translatedPath[#translatedPath + 1] = gridIndex
+    end
+
+    local modelPlayerManager = modelSceneWar:getModelPlayerManager()
+    local modelPlayerInTurn  = modelPlayerManager:getModelPlayer(playerIndexInTurn)
+    local modelWeather       = modelWeatherManager:getCurrentWeather()
+    if ((totalFuelConsumption > focusModelUnit:getCurrentFuel()) or
+        (totalFuelConsumption > focusModelUnit:getMoveRange(modelPlayerInTurn, modelWeather))) then
+        return nil, "ActionTranslator-translatePath() the path is invalid because the fuel consumption is too high."
+    else
+        translatedPath.fuelConsumption = totalFuelConsumption
+        return translatedPath
+    end
 end
 
 local function translateWait(action, modelScene)
@@ -560,6 +560,59 @@ local function translateCapture(action, modelScene)
     return actionCapture, actionsForPublish
 end
 
+local function translateBuildModelTile(action, modelScene)
+    local launchUnitID                 = action.launchUnitID
+    local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
+    if (not translatedPath) then
+        return {
+            actionName = "Message",
+            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+        }
+    end
+
+    local sceneWarFileName   = modelScene:getFileName()
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    if (translatedPath.isBlocked) then
+        local actionWait = {
+            actionName = "Wait",
+            fileName   = sceneWarFileName,
+            path       = translatedPath,
+        }
+        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+    end
+
+    local modelWarField = modelScene:getModelWarField()
+    local modelUnitMap  = modelWarField:getModelUnitMap()
+    if ((#translatedPath ~= 1) and (modelUnitMap:getModelUnit(translatedPath[#translatedPath]))) then
+        return {
+            actionName = "Message",
+            message    = "There is another unit on the destination grid. Please reenter the war.",
+        }
+    end
+
+    local modelTile      = modelWarField:getModelTileMap():getModelTile(translatedPath[#translatedPath])
+    local focusModelUnit = getFocusModelUnit(modelUnitMap, translatedPath[1], launchUnitID)
+    if ((not focusModelUnit.canBuildOnTileType)                          or
+        (not focusModelUnit:canBuildOnTileType(modelTile:getTileType())) or
+        (not focusModelUnit.getCurrentMaterial)                          or
+        (not (focusModelUnit:getCurrentMaterial() > 0)))                 then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
+        }
+    end
+
+    local actionBuildModelTile = {
+        actionName   = "BuildModelTile",
+        fileName     = sceneWarFileName,
+        path         = translatedPath,
+        launchUnitID = launchUnitID,
+    }
+    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionBuildModelTile)
+    return actionBuildModelTile, generateActionsForPublish(actionBuildModelTile, modelScene:getModelPlayerManager(), action.playerAccount)
+end
+
 local function translateSupplyModelUnit(action, modelScene)
     local launchUnitID                 = action.launchUnitID
     local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
@@ -582,8 +635,15 @@ local function translateSupplyModelUnit(action, modelScene)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
-    local modelUnitMap    = modelScene:getModelWarField():getModelUnitMap()
-    local focusModelUnit  = getFocusModelUnit(modelUnitMap, translatedPath[1], launchUnitID)
+    local modelUnitMap = modelScene:getModelWarField():getModelUnitMap()
+    if ((#translatedPath ~= 1) and (modelUnitMap:getModelUnit(translatedPath[#translatedPath]))) then
+        return {
+            actionName = "Message",
+            message    = "There is another unit on the destination grid. Please reenter the war.",
+        }
+    end
+
+    local focusModelUnit = getFocusModelUnit(modelUnitMap, translatedPath[1], launchUnitID)
     if (not canDoActionSupplyModelUnit(focusModelUnit, translatedPath[#translatedPath], modelUnitMap)) then
         return {
             actionName = "Message",
@@ -655,12 +715,6 @@ local function translateDropModelUnit(action, modelScene)
             message    = "Failed to translate the move path: " .. (translateMsg or ""),
         }
     end
-    if (not validateDropDestinations(action, modelScene)) then
-        return {
-            actionName = "Message",
-            message    = LocalizationFunctions.getLocalizedText(80),
-        }
-    end
 
     local sceneWarFileName   = modelScene:getFileName()
     local modelPlayerManager = modelScene:getModelPlayerManager()
@@ -677,6 +731,19 @@ local function translateDropModelUnit(action, modelScene)
 
         SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+    end
+
+    if (not validateDropDestinations(action, modelScene)) then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
+        }
+    end
+    if ((#translatedPath ~= 1) and (modelUnitMap:getModelUnit(translatedPath[#translatedPath]))) then
+        return {
+            actionName = "Message",
+            message    = "There is another unit on the destination grid. Please reenter the war.",
+        }
     end
 
     local actionDropModelUnit = {
@@ -797,6 +864,7 @@ function ActionTranslator.translate(action, session)
     elseif (actionName == "Wait")            then return translateWait(           action, modelSceneWar)
     elseif (actionName == "Attack")          then return translateAttack(         action, modelSceneWar)
     elseif (actionName == "Capture")         then return translateCapture(        action, modelSceneWar)
+    elseif (actionName == "BuildModelTile")  then return translateBuildModelTile( action, modelSceneWar)
     elseif (actionName == "SupplyModelUnit") then return translateSupplyModelUnit(action, modelSceneWar)
     elseif (actionName == "LoadModelUnit")   then return translateLoadModelUnit(  action, modelSceneWar)
     elseif (actionName == "DropModelUnit")   then return translateDropModelUnit(  action, modelSceneWar)
