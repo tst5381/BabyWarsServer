@@ -613,6 +613,43 @@ local function translateBuildModelTile(action, modelScene)
     return actionBuildModelTile, generateActionsForPublish(actionBuildModelTile, modelScene:getModelPlayerManager(), action.playerAccount)
 end
 
+local function translateProduceModelUnitOnUnit(action, modelScene)
+    local launchUnitID                 = action.launchUnitID
+    local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
+    if (not translatedPath) then
+        return {
+            actionName = "Message",
+            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+        }
+    end
+
+    local focusModelUnit     = getFocusModelUnit(modelScene:getModelWarField():getModelUnitMap(), translatedPath[1], launchUnitID)
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    local modelPlayer        = modelPlayerManager:getModelPlayer(modelScene:getModelTurnManager():getPlayerIndex())
+    if ((launchUnitID)                                                              or
+        (#translatedPath ~= 1)                                                      or
+        (not focusModelUnit.getCurrentMaterial)                                     or
+        (focusModelUnit:getCurrentMaterial() < 1)                                   or
+        (not focusModelUnit.getMovableProductionCost)                               or
+        (focusModelUnit:getMovableProductionCost() > modelPlayer:getFund())         or
+        (not focusModelUnit.getCurrentLoadCount)                                    or
+        (focusModelUnit:getCurrentLoadCount() >= focusModelUnit:getMaxLoadCount())) then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
+        }
+    end
+
+    local sceneWarFileName             = modelScene:getFileName()
+    local actionProduceModelUnitOnUnit = {
+        actionName  = "ProduceModelUnitOnUnit",
+        fileName    = sceneWarFileName,
+        path        = translatedPath,
+    }
+    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionProduceModelUnitOnUnit)
+    return actionProduceModelUnitOnUnit, generateActionsForPublish(actionProduceModelUnitOnUnit, modelPlayerManager, action.playerAccount)
+end
+
 local function translateSupplyModelUnit(action, modelScene)
     local launchUnitID                 = action.launchUnitID
     local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
@@ -858,23 +895,24 @@ function ActionTranslator.translate(action, session)
         }
     end
 
-    if     (actionName == "BeginTurn")       then return translateBeginTurn(      action, modelSceneWar)
-    elseif (actionName == "EndTurn")         then return translateEndTurn(        action, modelSceneWar)
-    elseif (actionName == "Surrender")       then return translateSurrender(      action, modelSceneWar)
-    elseif (actionName == "Wait")            then return translateWait(           action, modelSceneWar)
-    elseif (actionName == "Attack")          then return translateAttack(         action, modelSceneWar)
-    elseif (actionName == "Capture")         then return translateCapture(        action, modelSceneWar)
-    elseif (actionName == "BuildModelTile")  then return translateBuildModelTile( action, modelSceneWar)
-    elseif (actionName == "SupplyModelUnit") then return translateSupplyModelUnit(action, modelSceneWar)
-    elseif (actionName == "LoadModelUnit")   then return translateLoadModelUnit(  action, modelSceneWar)
-    elseif (actionName == "DropModelUnit")   then return translateDropModelUnit(  action, modelSceneWar)
-    elseif (actionName == "ProduceOnTile")   then return translateProduceOnTile(  action, modelSceneWar)
+    if     (actionName == "BeginTurn")              then return translateBeginTurn(             action, modelSceneWar)
+    elseif (actionName == "EndTurn")                then return translateEndTurn(               action, modelSceneWar)
+    elseif (actionName == "Surrender")              then return translateSurrender(             action, modelSceneWar)
+    elseif (actionName == "Wait")                   then return translateWait(                  action, modelSceneWar)
+    elseif (actionName == "Attack")                 then return translateAttack(                action, modelSceneWar)
+    elseif (actionName == "Capture")                then return translateCapture(               action, modelSceneWar)
+    elseif (actionName == "BuildModelTile")         then return translateBuildModelTile(        action, modelSceneWar)
+    elseif (actionName == "ProduceModelUnitOnUnit") then return translateProduceModelUnitOnUnit(action, modelSceneWar)
+    elseif (actionName == "SupplyModelUnit")        then return translateSupplyModelUnit(       action, modelSceneWar)
+    elseif (actionName == "LoadModelUnit")          then return translateLoadModelUnit(         action, modelSceneWar)
+    elseif (actionName == "DropModelUnit")          then return translateDropModelUnit(         action, modelSceneWar)
+    elseif (actionName == "ProduceOnTile")          then return translateProduceOnTile(         action, modelSceneWar)
+    else
+        return {
+            actionName = "Error",
+            error      = "Server: unrecognized action name from the client: " .. actionName,
+        }
     end
-
-    return {
-        actionName = "Error",
-        error      = "Server: unrecognized action name from the client: " .. actionName,
-    }
 end
 
 return ActionTranslator
