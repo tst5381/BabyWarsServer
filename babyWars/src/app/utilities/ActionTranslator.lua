@@ -596,7 +596,7 @@ local function translateBuildModelTile(action, modelScene)
     if ((not focusModelUnit.canBuildOnTileType)                          or
         (not focusModelUnit:canBuildOnTileType(modelTile:getTileType())) or
         (not focusModelUnit.getCurrentMaterial)                          or
-        (not focusModelUnit:getCurrentMaterial() > 0))                   then
+        (not (focusModelUnit:getCurrentMaterial() > 0)))                 then
         return {
             actionName = "Message",
             message    = LocalizationFunctions.getLocalizedText(80),
