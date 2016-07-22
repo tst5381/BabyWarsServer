@@ -496,6 +496,50 @@ local function translateAttack(action, modelScene)
     return actionAttack, actionsForPublish
 end
 
+local function translateJoinModelUnit(action, modelScene)
+    local launchUnitID                 = action.launchUnitID
+    local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
+    if (not translatedPath) then
+        return {
+            actionName = "Message",
+            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+        }
+    end
+
+    local sceneWarFileName   = modelScene:getFileName()
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    if (translatedPath.isBlocked) then
+        local actionWait = {
+            actionName = "Wait",
+            fileName   = sceneWarFileName,
+            path       = translatedPath,
+        }
+        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+    end
+
+    local modelUnitMap      = modelScene:getModelWarField():getModelUnitMap()
+    local existingModelUnit = modelUnitMap:getModelUnit(translatedPath[#translatedPath])
+    local focusModelUnit    = getFocusModelUnit(modelUnitMap, translatedPath[1], launchUnitID)
+    if ((#translatedPath == 1)                                    or
+        (not existingModelUnit)                                   or
+        (not focusModelUnit:canJoinModelUnit(existingModelUnit))) then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
+        }
+    end
+
+    local actionJoinModelUnit = {
+        actionName   = "JoinModelUnit",
+        fileName     = sceneWarFileName,
+        path         = translatedPath,
+        launchUnitID = launchUnitID,
+    }
+    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionJoinModelUnit)
+    return actionJoinModelUnit, generateActionsForPublish(actionJoinModelUnit, modelPlayerManager, action.playerAccount)
+end
+
 local function translateCapture(action, modelScene)
     local launchUnitID                 = action.launchUnitID
     local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
@@ -956,6 +1000,7 @@ function ActionTranslator.translate(action, session)
     elseif (actionName == "Surrender")              then return translateSurrender(             action, modelSceneWar)
     elseif (actionName == "Wait")                   then return translateWait(                  action, modelSceneWar)
     elseif (actionName == "Attack")                 then return translateAttack(                action, modelSceneWar)
+    elseif (actionName == "JoinModelUnit")          then return translateJoinModelUnit(         action, modelSceneWar)
     elseif (actionName == "Capture")                then return translateCapture(               action, modelSceneWar)
     elseif (actionName == "LaunchSilo")             then return translateLaunchSilo(            action, modelSceneWar)
     elseif (actionName == "BuildModelTile")         then return translateBuildModelTile(        action, modelSceneWar)
