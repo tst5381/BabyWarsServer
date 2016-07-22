@@ -560,6 +560,60 @@ local function translateCapture(action, modelScene)
     return actionCapture, actionsForPublish
 end
 
+local function translateLaunchSilo(action, modelScene)
+    local launchUnitID                 = action.launchUnitID
+    local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
+    if (not translatedPath) then
+        return {
+            actionName = "Message",
+            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+        }
+    end
+
+    local sceneWarFileName   = modelScene:getFileName()
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    if (translatedPath.isBlocked) then
+        local actionWait = {
+            actionName = "Wait",
+            fileName   = sceneWarFileName,
+            path       = translatedPath,
+        }
+        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+    end
+
+    local modelWarField = modelScene:getModelWarField()
+    local modelUnitMap  = modelWarField:getModelUnitMap()
+    if ((#translatedPath ~= 1) and (modelUnitMap:getModelUnit(translatedPath[#translatedPath]))) then
+        return {
+            actionName = "Message",
+            message    = "There is another unit on the destination grid. Please reenter the war.",
+        }
+    end
+
+    local focusModelUnit  = getFocusModelUnit(modelUnitMap, translatedPath[1], launchUnitID)
+    local modelTile       = modelWarField:getModelTileMap():getModelTile(translatedPath[#translatedPath])
+    local targetGridIndex = action.targetGridIndex
+    if ((not focusModelUnit.canLaunchSiloOnTileType)                                      or
+        (not focusModelUnit:canLaunchSiloOnTileType(modelTile:getTileType()))             or
+        (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))) then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
+        }
+    end
+
+    local actionLaunchSilo = {
+        actionName      = "LaunchSilo",
+        fileName        = sceneWarFileName,
+        path            = translatedPath,
+        targetGridIndex = targetGridIndex,
+        launchUnitID    = launchUnitID,
+    }
+    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionLaunchSilo)
+    return actionLaunchSilo, generateActionsForPublish(actionLaunchSilo, modelPlayerManager, action.playerAccount)
+end
+
 local function translateBuildModelTile(action, modelScene)
     local launchUnitID                 = action.launchUnitID
     local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
@@ -610,7 +664,7 @@ local function translateBuildModelTile(action, modelScene)
         launchUnitID = launchUnitID,
     }
     SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionBuildModelTile)
-    return actionBuildModelTile, generateActionsForPublish(actionBuildModelTile, modelScene:getModelPlayerManager(), action.playerAccount)
+    return actionBuildModelTile, generateActionsForPublish(actionBuildModelTile, modelPlayerManager, action.playerAccount)
 end
 
 local function translateProduceModelUnitOnUnit(action, modelScene)
@@ -903,6 +957,7 @@ function ActionTranslator.translate(action, session)
     elseif (actionName == "Wait")                   then return translateWait(                  action, modelSceneWar)
     elseif (actionName == "Attack")                 then return translateAttack(                action, modelSceneWar)
     elseif (actionName == "Capture")                then return translateCapture(               action, modelSceneWar)
+    elseif (actionName == "LaunchSilo")             then return translateLaunchSilo(            action, modelSceneWar)
     elseif (actionName == "BuildModelTile")         then return translateBuildModelTile(        action, modelSceneWar)
     elseif (actionName == "ProduceModelUnitOnUnit") then return translateProduceModelUnitOnUnit(action, modelSceneWar)
     elseif (actionName == "SupplyModelUnit")        then return translateSupplyModelUnit(       action, modelSceneWar)
