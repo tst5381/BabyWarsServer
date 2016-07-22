@@ -131,6 +131,10 @@ local function doActionCapture(self, action)
     end
 end
 
+local function doActionLaunchSilo(self, action)
+    self:getModelWarField():doActionLaunchSilo(action)
+end
+
 local function doActionBuildModelTile(self, action)
     self:getModelWarField():doActionBuildModelTile(action)
 end
@@ -168,6 +172,7 @@ local function onEvtSystemRequestDoAction(self, event)
     elseif (actionName == "Wait")                   then doActionWait(                  self, event)
     elseif (actionName == "Attack")                 then doActionAttack(                self, event)
     elseif (actionName == "Capture")                then doActionCapture(               self, event)
+    elseif (actionName == "LaunchSilo")             then doActionLaunchSilo(            self, event)
     elseif (actionName == "BuildModelTile")         then doActionBuildModelTile(        self, event)
     elseif (actionName == "ProduceModelUnitOnUnit") then doActionProduceModelUnitOnUnit(self, event)
     elseif (actionName == "SupplyModelUnit")        then doActionSupplyModelUnit(       self, event)
