@@ -115,6 +115,10 @@ local function doActionAttack(self, action)
     end
 end
 
+local function doActionJoinModelUnit(self, action)
+    self:getModelWarField():doActionJoinModelUnit(action, self:getModelPlayerManager())
+end
+
 local function doActionCapture(self, action)
     local modelWarField     = self:getModelWarField()
     local targetModelTile   = modelWarField:getModelTileMap():getModelTile(action.path[#action.path])
@@ -171,6 +175,7 @@ local function onEvtSystemRequestDoAction(self, event)
     elseif (actionName == "Surrender")              then doActionSurrender(             self, event)
     elseif (actionName == "Wait")                   then doActionWait(                  self, event)
     elseif (actionName == "Attack")                 then doActionAttack(                self, event)
+    elseif (actionName == "JoinModelUnit")          then doActionJoinModelUnit(         self, event)
     elseif (actionName == "Capture")                then doActionCapture(               self, event)
     elseif (actionName == "LaunchSilo")             then doActionLaunchSilo(            self, event)
     elseif (actionName == "BuildModelTile")         then doActionBuildModelTile(        self, event)
