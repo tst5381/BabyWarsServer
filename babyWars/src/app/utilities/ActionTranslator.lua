@@ -19,6 +19,7 @@
 
 local ActionTranslator = {}
 
+local Producible             = require("src.app.components.Producible")
 local GridIndexFunctions     = require("src.app.utilities.GridIndexFunctions")
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
 local SceneWarManager        = require("src.app.utilities.SceneWarManager")
@@ -919,14 +920,15 @@ local function translateProduceOnTile(action, modelScene)
     end
 
     local modelTile = modelWarField:getModelTileMap():getModelTile(action.gridIndex)
-    if (not modelTile.getProductionCostWithTiledId) then
+    if ((not modelTile.canProduceUnitWithTiledId) or
+        (not modelTile:canProduceUnitWithTiledId(tiledID))) then
         return {
             actionName = "Message",
             message    = "Server: translateProduceOnTile() failed because the tile can't produce units. Please reenter the war.",
         }
     end
 
-    local cost = modelTile:getProductionCostWithTiledId(tiledID, modelPlayer)
+    local cost = Producible.getProductionCostWithTiledId(tiledID, modelPlayerManager)
     if ((not cost) or (cost > modelPlayer:getFund())) then
         return {
             actionName = "Message",
@@ -940,7 +942,7 @@ local function translateProduceOnTile(action, modelScene)
         fileName   = fileName,
         gridIndex  = GridIndexFunctions.clone(gridIndex),
         tiledID    = tiledID,
-        cost       = cost, -- the cost can be calculated by the clients, but that calculations can be saved by sending the cost to clients.
+        cost       = cost, -- the cost can be calculated by the clients, but that calculations can be eliminated by sending the cost to clients.
     }
     SceneWarManager.updateModelSceneWarWithAction(fileName, actionProduceOnTile)
     return actionProduceOnTile, generateActionsForPublish(actionProduceOnTile, modelPlayerManager, action.playerAccount)
