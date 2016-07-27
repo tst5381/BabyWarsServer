@@ -1,6 +1,6 @@
 
 --[[--------------------------------------------------------------------------------
--- LevelOwner是ModelUnit可用的组件。只有绑定了本组件，宿主才具有“等级”的属性、以及可升级。
+-- Promotable是ModelUnit可用的组件。只有绑定了本组件，宿主才具有“等级”的属性、以及可升级。
 -- 主要职责：
 --   维护相关数值（包括当前等级，以及等级所带来的攻防加成），并提供必要接口给外界访问
 -- 使用场景举例：
@@ -11,38 +11,36 @@
 --   不能进行攻击的单位无法升级，因此无需绑定本组件
 --]]--------------------------------------------------------------------------------
 
-local LevelOwner = require("src.global.functions.class")("LevelOwner")
+local Promotable = require("src.global.functions.class")("Promotable")
 
-local ComponentManager      = require("src.global.components.ComponentManager")
-local GridIndexFunctions    = require("src.app.utilities.GridIndexFunctions")
 local GameConstantFunctions = require("src.app.utilities.GameConstantFunctions")
 
-local MAX_LEVEL   = GameConstantFunctions.getMaxLevel()
-local LEVEL_BONUS = GameConstantFunctions.getLevelBonus()
+local MAX_PROMOTION   = GameConstantFunctions.getMaxPromotion()
+local PROMOTION_BONUS = GameConstantFunctions.getPromotionBonus()
 
-LevelOwner.EXPORTED_METHODS = {
-    "getLevel",
-    "getLevelAttackBonus",
-    "getLevelDefenseBonus",
+Promotable.EXPORTED_METHODS = {
+    "getCurrentPromotion",
+    "getPromotionAttackBonus",
+    "getPromotionDefenseBonus",
 
-    "setLevel",
+    "setCurrentPromotion",
 }
 
 --------------------------------------------------------------------------------
 -- The constructor and initializers.
 --------------------------------------------------------------------------------
-function LevelOwner:ctor(param)
+function Promotable:ctor(param)
     self:loadInstantialData(param.instantialData)
 
     return self
 end
 
-function LevelOwner:loadTemplate(template)
+function Promotable:loadTemplate(template)
     return self
 end
 
-function LevelOwner:loadInstantialData(data)
-    self:setLevel(data.level)
+function Promotable:loadInstantialData(data)
+    self:setCurrentPromotion(data.current)
 
     return self
 end
@@ -50,13 +48,13 @@ end
 --------------------------------------------------------------------------------
 -- The function for serialization.
 --------------------------------------------------------------------------------
-function LevelOwner:toSerializableTable()
-    local level = self:getLevel()
-    if (level == 0) then
+function Promotable:toSerializableTable()
+    local promotion = self:getCurrentPromotion()
+    if (promotion == 0) then
         return nil
     else
         return {
-            level = level,
+            current = promotion,
         }
     end
 end
@@ -64,17 +62,17 @@ end
 --------------------------------------------------------------------------------
 -- The functions for doing the actions.
 --------------------------------------------------------------------------------
-function LevelOwner:doActionPromoteModelUnit(action)
-    local currentLevel = self:getLevel()
-    if (currentLevel < MAX_LEVEL) then
-        self:setLevel(currentLevel + 1)
+function Promotable:doActionPromoteModelUnit(action)
+    local currentPromotion = self:getCurrentPromotion()
+    if (currentPromotion < MAX_PROMOTION) then
+        self:setCurrentPromotion(currentPromotion + 1)
     end
 
     return owner
 end
 
-function LevelOwner:doActionJoinModelUnit(action, modelPlayerManager, target)
-    target:setLevel(math.max(self:getLevel(), target:getLevel()))
+function Promotable:doActionJoinModelUnit(action, modelPlayerManager, target)
+    target:setCurrentPromotion(math.max(self:getCurrentPromotion(), target:getCurrentPromotion()))
 
     return self
 end
@@ -82,31 +80,31 @@ end
 --------------------------------------------------------------------------------
 -- The exported functions.
 --------------------------------------------------------------------------------
-function LevelOwner:getLevel()
-    return self.m_Level
+function Promotable:getCurrentPromotion()
+    return self.m_CurrentPromotion
 end
 
-function LevelOwner:getLevelAttackBonus()
-    if (self.m_Level == 0) then
+function Promotable:getPromotionAttackBonus()
+    if (self.m_CurrentPromotion == 0) then
         return 0
     else
-        return LEVEL_BONUS[self.m_Level].attack
+        return PROMOTION_BONUS[self.m_CurrentPromotion].attack
     end
 end
 
-function LevelOwner:getLevelDefenseBonus()
-    if (self.m_Level == 0) then
+function Promotable:getPromotionDefenseBonus()
+    if (self.m_CurrentPromotion == 0) then
         return 0
     else
-        return LEVEL_BONUS[self.m_Level].defense
+        return PROMOTION_BONUS[self.m_CurrentPromotion].defense
     end
 end
 
-function LevelOwner:setLevel(level)
-    assert((level >= 0) and (level <= MAX_LEVEL), "LevelOwner:setLevel() the param level is invalid." )
-    self.m_Level = level
+function Promotable:setCurrentPromotion(promotion)
+    assert((promotion >= 0) and (promotion <= MAX_PROMOTION), "Promotable:setCurrentPromotion() the param promotion is invalid." )
+    self.m_CurrentPromotion = promotion
 
     return self.m_Owner
 end
 
-return LevelOwner
+return Promotable
