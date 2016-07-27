@@ -35,6 +35,16 @@ local function isModelUnitVisible(modelUnit, modelSceneWar)
     return true
 end
 
+local function isGridInPath(gridIndex, path)
+    for _, node in ipairs(path) do
+        if (GridIndexFunctions.isEqual(gridIndex, node)) then
+            return true
+        end
+    end
+
+    return false
+end
+
 local function isDropBlocked(destination, modelUnitMap, loaderModelUnit)
     local existingModelUnit = modelUnitMap:getModelUnit(destination.gridIndex)
     return (existingModelUnit) and (existingModelUnit ~= loaderModelUnit)
@@ -341,13 +351,17 @@ local function translatePath(path, launchUnitID, modelSceneWar)
 
     local modelWeatherManager  = modelSceneWar:getModelWeatherManager()
     local moveType             = focusModelUnit:getMoveType()
-    local totalFuelConsumption = 0
     local translatedPath       = {GridIndexFunctions.clone(path[1])}
+    local totalFuelConsumption = 0
+    local maxFuelConsumption   = math.min(focusModelUnit:getCurrentFuel(), focusModelUnit:getMoveRange())
 
     for i = 2, #path do
         local gridIndex = GridIndexFunctions.clone(path[i])
         if (not GridIndexFunctions.isAdjacent(path[i - 1], gridIndex)) then
             return nil, "ActionTranslator-translatePath() the path is invalid because some grids are not adjacent to previous ones."
+        end
+        if (isGridInPath(gridIndex, translatedPath)) then
+            return nil, "ActionTranslator-translatePath() some grids in the path are the same."
         end
 
         local existingModelUnit = modelUnitMap:getModelUnit(gridIndex)
@@ -366,19 +380,15 @@ local function translatePath(path, launchUnitID, modelSceneWar)
         end
 
         totalFuelConsumption = totalFuelConsumption + fuelConsumption
+        if (totalFuelConsumption > maxFuelConsumption) then
+            return nil, "ActionTranslator-translatePath() the path is invalid because the fuel consumption is too high."
+        end
+
         translatedPath[#translatedPath + 1] = gridIndex
     end
 
-    local modelPlayerManager = modelSceneWar:getModelPlayerManager()
-    local modelPlayerInTurn  = modelPlayerManager:getModelPlayer(playerIndexInTurn)
-    local modelWeather       = modelWeatherManager:getCurrentWeather()
-    if ((totalFuelConsumption > focusModelUnit:getCurrentFuel()) or
-        (totalFuelConsumption > focusModelUnit:getMoveRange(modelPlayerInTurn, modelWeather))) then
-        return nil, "ActionTranslator-translatePath() the path is invalid because the fuel consumption is too high."
-    else
-        translatedPath.fuelConsumption = totalFuelConsumption
-        return translatedPath
-    end
+    translatedPath.fuelConsumption = totalFuelConsumption
+    return translatedPath
 end
 
 local function translateWait(action, modelScene)
