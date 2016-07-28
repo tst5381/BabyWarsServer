@@ -377,7 +377,6 @@ local function translatePath(path, launchUnitID, modelSceneWar)
                 return nil, "ActionTranslator-translatePath() the path is invalid because it is blocked by a visible enemy unit."
             else
                 translatedPath.isBlocked = true
-                break
             end
         end
 
@@ -391,7 +390,9 @@ local function translatePath(path, launchUnitID, modelSceneWar)
             return nil, "ActionTranslator-translatePath() the path is invalid because the fuel consumption is too high."
         end
 
-        translatedPath[#translatedPath + 1] = gridIndex
+        if (not translatedPath.isBlocked) then
+            translatedPath[#translatedPath + 1] = gridIndex
+        end
     end
 
     translatedPath.fuelConsumption = totalFuelConsumption
@@ -552,12 +553,27 @@ local function translateJoinModelUnit(action, modelScene)
 end
 
 local function translateCapture(action, modelScene)
-    local launchUnitID                 = action.launchUnitID
-    local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
+    local rawPath,        launchUnitID = action.path, action.launchUnitID
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
     if (not translatedPath) then
         return {
             actionName = "Message",
-            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+            message    = LocalizationFunctions.getLocalizedText(80, translateMsg),
+        }
+    end
+
+    local modelWarField     = modelScene:getModelWarField()
+    local modelUnitMap      = modelWarField:getModelUnitMap()
+    local targetGridIndex   = rawPath[#rawPath]
+    local existingModelUnit = modelUnitMap:getModelUnit(targetGridIndex)
+    local capturer          = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
+    local captureTarget     = modelWarField:getModelTileMap():getModelTile(targetGridIndex)
+    if ((not capturer.canCaptureModelTile)                                                                 or
+        (not capturer:canCaptureModelTile(captureTarget))                                                  or
+        ((#rawPath ~= 1) and (existingModelUnit) and (isModelUnitVisible(existingModelUnit, modelScene)))) then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
         }
     end
 
@@ -571,26 +587,6 @@ local function translateCapture(action, modelScene)
         }
         SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
-    end
-
-    local modelWarField   = modelScene:getModelWarField()
-    local modelUnitMap    = modelWarField:getModelUnitMap()
-    local targetGridIndex = translatedPath[#translatedPath]
-    if ((#translatedPath ~= 1) and (modelUnitMap:getModelUnit(targetGridIndex))) then
-        return {
-            actionName = "Message",
-            message    = "Failed because there's another unit on the target grid. Please reenter the war.",
-        }
-    end
-
-    local capturer      = modelUnitMap:getFocusModelUnit(translatedPath[1], launchUnitID)
-    local captureTarget = modelWarField:getModelTileMap():getModelTile(targetGridIndex)
-    if ((not capturer.canCapture) or
-        (not capturer:canCapture(captureTarget))) then
-        return {
-            actionName = "Message",
-            message    = "Failed because the focus unit can't capture the target tile. Please reenter the war."
-        }
     end
 
     local targetPlayerIndex = captureTarget:getPlayerIndex()
