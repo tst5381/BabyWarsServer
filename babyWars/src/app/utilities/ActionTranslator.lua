@@ -591,7 +591,7 @@ local function translateCapture(action, modelScene)
 
     local targetPlayerIndex = captureTarget:getPlayerIndex()
     local actionCapture     = {
-        actionName   = "Capture",
+        actionName   = "CaptureModelTile",
         fileName     = sceneWarFileName,
         path         = translatedPath,
         launchUnitID = launchUnitID,
@@ -1009,7 +1009,7 @@ function ActionTranslator.translate(action, session)
     elseif (actionName == "Wait")                   then return translateWait(                  action, modelSceneWar)
     elseif (actionName == "Attack")                 then return translateAttack(                action, modelSceneWar)
     elseif (actionName == "JoinModelUnit")          then return translateJoinModelUnit(         action, modelSceneWar)
-    elseif (actionName == "Capture")                then return translateCapture(               action, modelSceneWar)
+    elseif (actionName == "CaptureModelTile")       then return translateCapture(               action, modelSceneWar)
     elseif (actionName == "LaunchSilo")             then return translateLaunchSilo(            action, modelSceneWar)
     elseif (actionName == "BuildModelTile")         then return translateBuildModelTile(        action, modelSceneWar)
     elseif (actionName == "ProduceModelUnitOnUnit") then return translateProduceModelUnitOnUnit(action, modelSceneWar)

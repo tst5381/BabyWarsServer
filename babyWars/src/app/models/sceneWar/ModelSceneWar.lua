@@ -118,13 +118,13 @@ local function doActionJoinModelUnit(self, action)
     self:getModelWarField():doActionJoinModelUnit(action)
 end
 
-local function doActionCapture(self, action)
+local function doActionCaptureModelTile(self, action)
     local modelWarField     = self:getModelWarField()
     local targetModelTile   = modelWarField:getModelTileMap():getModelTile(action.path[#action.path])
     local targetPlayerIndex = targetModelTile:getPlayerIndex()
     local isDefeatOnCapture = targetModelTile:isDefeatOnCapture()
 
-    modelWarField:doActionCapture(action)
+    modelWarField:doActionCaptureModelTile(action)
 
     if ((isDefeatOnCapture) and (targetModelTile:getPlayerIndex() ~= targetPlayerIndex)) then
         clearPlayerForce(self, targetPlayerIndex)
@@ -273,7 +273,7 @@ function ModelSceneWar:doSystemAction(action)
     elseif (actionName == "Wait")                   then doActionWait(                  self, action)
     elseif (actionName == "Attack")                 then doActionAttack(                self, action)
     elseif (actionName == "JoinModelUnit")          then doActionJoinModelUnit(         self, action)
-    elseif (actionName == "Capture")                then doActionCapture(               self, action)
+    elseif (actionName == "CaptureModelTile")       then doActionCaptureModelTile(      self, action)
     elseif (actionName == "LaunchSilo")             then doActionLaunchSilo(            self, action)
     elseif (actionName == "BuildModelTile")         then doActionBuildModelTile(        self, action)
     elseif (actionName == "ProduceModelUnitOnUnit") then doActionProduceModelUnitOnUnit(self, action)
