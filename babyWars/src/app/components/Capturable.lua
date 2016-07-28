@@ -1,6 +1,6 @@
 
 --[[--------------------------------------------------------------------------------
--- CaptureTaker是ModelTile可用的组件。只有绑定了本组件，才能被可实施占领的对象（即绑定了CaptureDoer的ModelUnit）实施占领。
+-- Capturable是ModelTile可用的组件。只有绑定了本组件，才能被可实施占领的对象（即绑定了CaptureDoer的ModelUnit）实施占领。
 -- 主要职责：
 --   维护有关占领的各种数值（目前只要维护当前占领点数），并提供必要接口给外界访问
 -- 使用场景举例：
@@ -8,50 +8,35 @@
 --   占领点数降为0后，若满足占领即失败的条件（如HQ），则派发相应事件（未完成）。
 --]]--------------------------------------------------------------------------------
 
-local CaptureTaker = require("src.global.functions.class")("CaptureTaker")
+local Capturable = require("src.global.functions.class")("Capturable")
 
-local TypeChecker        = require("src.app.utilities.TypeChecker")
-local ComponentManager   = require("src.global.components.ComponentManager")
 local GridIndexFunctions = require("src.app.utilities.GridIndexFunctions")
 
-CaptureTaker.EXPORTED_METHODS = {
+Capturable.EXPORTED_METHODS = {
     "getCurrentCapturePoint",
     "getMaxCapturePoint",
     "isDefeatOnCapture",
 }
 
 --------------------------------------------------------------------------------
--- The util functions.
---------------------------------------------------------------------------------
-local function isCapturerMovedAway(selfGridIndex, beginningGridIndex, endingGridIndex)
-    return ((GridIndexFunctions.isEqual(selfGridIndex, beginningGridIndex)) and
-            (not GridIndexFunctions.isEqual(beginningGridIndex, endingGridIndex)))
-end
-
-local function isCapturerDestroyed(selfGridIndex, capturer)
-    return ((GridIndexFunctions.isEqual(selfGridIndex, capturer:getGridIndex())) and
-            (capturer:getCurrentHP() <= 0))
-end
-
---------------------------------------------------------------------------------
 -- The constructor and initializers.
 --------------------------------------------------------------------------------
-function CaptureTaker:ctor(param)
+function Capturable:ctor(param)
     self:loadTemplate(param.template)
         :loadInstantialData(param.instantialData)
 
     return self
 end
 
-function CaptureTaker:loadTemplate(template)
-    assert(template.maxCapturePoint, "CaptureTaker:loadTemplate() the param template.maxCapturePoint is invalid.")
+function Capturable:loadTemplate(template)
+    assert(template.maxCapturePoint, "Capturable:loadTemplate() the param template.maxCapturePoint is invalid.")
     self.m_Template = template
 
     return self
 end
 
-function CaptureTaker:loadInstantialData(data)
-    assert(data.currentCapturePoint, "CaptureTaker:loadInstantialData() the param data.currentCapturePoint is invalid.")
+function Capturable:loadInstantialData(data)
+    assert(data.currentCapturePoint, "Capturable:loadInstantialData() the param data.currentCapturePoint is invalid.")
     self.m_CurrentCapturePoint = data.currentCapturePoint
 
     return self
@@ -60,7 +45,7 @@ end
 --------------------------------------------------------------------------------
 -- The function for serialization.
 --------------------------------------------------------------------------------
-function CaptureTaker:toSerializableTable()
+function Capturable:toSerializableTable()
     local currentCapturePoint = self:getCurrentCapturePoint()
     if (currentCapturePoint == self:getMaxCapturePoint()) then
         return nil
@@ -74,19 +59,19 @@ end
 --------------------------------------------------------------------------------
 -- The functions for doing the actions.
 --------------------------------------------------------------------------------
-function CaptureTaker:doActionDestroyModelUnit(action)
+function Capturable:doActionDestroyModelUnit(action)
     self.m_CurrentCapturePoint = self:getMaxCapturePoint()
 
     return self.m_Owner
 end
 
-function CaptureTaker:doActionSurrender(action)
+function Capturable:doActionSurrender(action)
     self.m_CurrentCapturePoint = self:getMaxCapturePoint()
 
     return self
 end
 
-function CaptureTaker:doActionMoveModelUnit(action)
+function Capturable:doActionMoveModelUnit(action)
     if ((not action.launchUnitID)                                                   and
         (#action.path > 1)                                                          and
         (GridIndexFunctions.isEqual(action.path[1], self.m_Owner:getGridIndex()))) then
@@ -96,7 +81,7 @@ function CaptureTaker:doActionMoveModelUnit(action)
     return self
 end
 
-function CaptureTaker:doActionCapture(action, capturer, target)
+function Capturable:doActionCapture(action, capturer, target)
     self.m_CurrentCapturePoint = math.max(self.m_CurrentCapturePoint - capturer:getCaptureAmount(), 0)
     if (self.m_CurrentCapturePoint <= 0) then
         self.m_CurrentCapturePoint = self:getMaxCapturePoint()
@@ -109,16 +94,16 @@ end
 --------------------------------------------------------------------------------
 -- The exported functions.
 --------------------------------------------------------------------------------
-function CaptureTaker:getCurrentCapturePoint()
+function Capturable:getCurrentCapturePoint()
     return self.m_CurrentCapturePoint
 end
 
-function CaptureTaker:getMaxCapturePoint()
+function Capturable:getMaxCapturePoint()
     return self.m_Template.maxCapturePoint
 end
 
-function CaptureTaker:isDefeatOnCapture()
+function Capturable:isDefeatOnCapture()
     return self.m_Template.defeatOnCapture
 end
 
-return CaptureTaker
+return Capturable
