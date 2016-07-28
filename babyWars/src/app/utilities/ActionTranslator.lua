@@ -334,14 +334,18 @@ end
 
 -- This translation ignores the existing unit of the same player at the end of the path, so that the actions of Join/Attack/Wait can reuse this function.
 local function translatePath(path, launchUnitID, modelSceneWar)
-    local modelWarField     = modelSceneWar:getModelWarField()
-    local modelTurnManager  = modelSceneWar:getModelTurnManager()
-    local modelUnitMap      = modelWarField:getModelUnitMap()
-    local modelTileMap      = modelWarField:getModelTileMap()
-    local playerIndexInTurn = modelTurnManager:getPlayerIndex()
-    local focusModelUnit    = modelUnitMap:getFocusModelUnit(path[1], launchUnitID)
+    local modelWarField      = modelSceneWar:getModelWarField()
+    local modelTurnManager   = modelSceneWar:getModelTurnManager()
+    local modelUnitMap       = modelWarField:getModelUnitMap()
+    local playerIndexInTurn  = modelTurnManager:getPlayerIndex()
+    local beginningGridIndex = path[1]
+    local mapSize            = modelUnitMap:getMapSize()
+    local focusModelUnit     = modelUnitMap:getFocusModelUnit(beginningGridIndex, launchUnitID)
+    local isWithinMap        = GridIndexFunctions.isWithinMap
 
-    if (not focusModelUnit) then
+    if (not isWithinMap(beginningGridIndex, mapSize)) then
+        return nil, "ActionTranslator-translatePath() a node in the path is not within the map."
+    elseif (not focusModelUnit) then
         return nil, "ActionTranslator-translatePath() there is no unit on the starting grid of the path."
     elseif (focusModelUnit:getPlayerIndex() ~= playerIndexInTurn) then
         return nil, "ActionTranslator-translatePath() the owner player of the moving unit is not in his turn."
@@ -349,19 +353,22 @@ local function translatePath(path, launchUnitID, modelSceneWar)
         return nil, "ActionTranslator-translatePath() the moving unit is not in idle state."
     end
 
-    local modelWeatherManager  = modelSceneWar:getModelWeatherManager()
+    local clone                = GridIndexFunctions.clone
+    local isAdjacent           = GridIndexFunctions.isAdjacent
+    local modelTileMap         = modelWarField:getModelTileMap()
     local moveType             = focusModelUnit:getMoveType()
-    local translatedPath       = {GridIndexFunctions.clone(path[1])}
+    local translatedPath       = {clone(beginningGridIndex)}
     local totalFuelConsumption = 0
     local maxFuelConsumption   = math.min(focusModelUnit:getCurrentFuel(), focusModelUnit:getMoveRange())
 
     for i = 2, #path do
-        local gridIndex = GridIndexFunctions.clone(path[i])
-        if (not GridIndexFunctions.isAdjacent(path[i - 1], gridIndex)) then
+        local gridIndex = clone(path[i])
+        if (not isAdjacent(path[i - 1], gridIndex)) then
             return nil, "ActionTranslator-translatePath() the path is invalid because some grids are not adjacent to previous ones."
-        end
-        if (isGridInPath(gridIndex, translatedPath)) then
+        elseif (isGridInPath(gridIndex, translatedPath)) then
             return nil, "ActionTranslator-translatePath() some grids in the path are the same."
+        elseif (not isWithinMap(gridIndex, mapSize)) then
+            return nil, "ActionTranslator-translatePath() a node in the path is not within the map."
         end
 
         local existingModelUnit = modelUnitMap:getModelUnit(gridIndex)
@@ -397,7 +404,7 @@ local function translateWait(action, modelScene)
     if (not translatedPath) then
         return {
             actionName = "Message",
-            message    = "Failed to translate the move path. Please reenter the war.\n" .. (translateMsg or ""),
+            message    = LocalizationFunctions.getLocalizedText(80, translateMsg),
         }
     end
 
@@ -405,7 +412,7 @@ local function translateWait(action, modelScene)
     if ((#translatedPath ~= 1) and (modelUnitMap:getModelUnit(translatedPath[#translatedPath]))) then
         return {
             actionName = "Message",
-            message    = "There is another unit on the destination grid. Please reenter the war.",
+            message    = LocalizationFunctions.getLocalizedText(80),
         }
     end
 
@@ -421,12 +428,40 @@ local function translateWait(action, modelScene)
 end
 
 local function translateAttack(action, modelScene)
-    local launchUnitID                 = action.launchUnitID
-    local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
+    local rawPath,        launchUnitID = action.path, action.launchUnitID
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
     if (not translatedPath) then
         return {
             actionName = "Message",
-            message    = "Failed to translate the move path. Please reenter the war.\n" .. (translateMsg or ""),
+            message    = LocalizationFunctions.getLocalizedText(80, translateMsg),
+        }
+    end
+
+    local modelWarField     = modelScene:getModelWarField()
+    local modelUnitMap      = modelWarField:getModelUnitMap()
+    local endingGridIndex   = rawPath[#rawPath]
+    local attacker          = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
+    local targetGridIndex   = action.targetGridIndex
+    local existingModelUnit = modelUnitMap:getModelUnit(endingGridIndex)
+    if ((not attacker.getUltimateBattleDamage)                                                             or
+        (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))                   or
+        ((#rawPath ~= 1) and (existingModelUnit) and (isModelUnitVisible(existingModelUnit, modelScene)))) then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
+        }
+    end
+
+    local modelTileMap                = modelWarField:getModelTileMap()
+    local attackerTile                = modelTileMap:getModelTile(endingGridIndex)
+    local targetTile                  = modelTileMap:getModelTile(targetGridIndex)
+    local attackTarget                = modelUnitMap:getModelUnit(targetGridIndex) or targetTile
+    local weatherType                 = modelScene:getModelWeatherManager():getCurrentWeather()
+    local attackDamage, counterDamage = attacker:getUltimateBattleDamage(attackerTile, attackTarget, targetTile, weatherType)
+    if (not attackDamage) then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
         }
     end
 
@@ -440,38 +475,6 @@ local function translateAttack(action, modelScene)
         }
         SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
-    end
-
-    local modelWarField     = modelScene:getModelWarField()
-    local modelUnitMap      = modelWarField:getModelUnitMap()
-    local attackerGridIndex = translatedPath[#translatedPath]
-    if ((#translatedPath ~= 1) and (modelUnitMap:getModelUnit(attackerGridIndex))) then
-        return {
-            actionName = "Message",
-            message    = "There is another unit on the destination grid. Please reenter the war."
-        }
-    end
-
-    local attacker = modelUnitMap:getFocusModelUnit(translatedPath[1], launchUnitID)
-    if (not attacker.getUltimateBattleDamage) then
-        return {
-            actionName = "Message",
-            message    = "The attacker can't attack. Please reenter the war.",
-        }
-    end
-
-    local modelTileMap                = modelWarField:getModelTileMap()
-    local attackerTile                = modelTileMap:getModelTile(attackerGridIndex)
-    local targetGridIndex             = action.targetGridIndex
-    local targetTile                  = modelTileMap:getModelTile(targetGridIndex)
-    local attackTarget                = modelUnitMap:getModelUnit(targetGridIndex) or targetTile
-    local weatherType                 = modelScene:getModelWeatherManager():getCurrentWeather()
-    local attackDamage, counterDamage = attacker:getUltimateBattleDamage(attackerTile, attackTarget, targetTile, weatherType)
-    if (not attackDamage) then
-        return {
-            actionName = "Message",
-            message    = "The attacker can't attack the target. Please reenter the war.",
-        }
     end
 
     local actionAttack = {
