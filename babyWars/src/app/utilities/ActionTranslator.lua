@@ -439,12 +439,16 @@ local function translateAttack(action, modelScene)
 
     local modelWarField     = modelScene:getModelWarField()
     local modelUnitMap      = modelWarField:getModelUnitMap()
+    local modelTileMap      = modelWarField:getModelTileMap()
     local endingGridIndex   = rawPath[#rawPath]
     local attacker          = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
     local targetGridIndex   = action.targetGridIndex
     local existingModelUnit = modelUnitMap:getModelUnit(endingGridIndex)
+    local targetTile        = modelTileMap:getModelTile(targetGridIndex)
+    local attackTarget      = modelUnitMap:getModelUnit(targetGridIndex) or targetTile
     if ((not attacker.getUltimateBattleDamage)                                                             or
         (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))                   or
+        ((attackTarget.getUnitType) and (not isModelUnitVisible(attackTarget, modelScene)))                or
         ((#rawPath ~= 1) and (existingModelUnit) and (isModelUnitVisible(existingModelUnit, modelScene)))) then
         return {
             actionName = "Message",
@@ -452,10 +456,7 @@ local function translateAttack(action, modelScene)
         }
     end
 
-    local modelTileMap                = modelWarField:getModelTileMap()
     local attackerTile                = modelTileMap:getModelTile(endingGridIndex)
-    local targetTile                  = modelTileMap:getModelTile(targetGridIndex)
-    local attackTarget                = modelUnitMap:getModelUnit(targetGridIndex) or targetTile
     local weatherType                 = modelScene:getModelWeatherManager():getCurrentWeather()
     local attackDamage, counterDamage = attacker:getUltimateBattleDamage(attackerTile, attackTarget, targetTile, weatherType)
     if (not attackDamage) then
@@ -506,12 +507,25 @@ local function translateAttack(action, modelScene)
 end
 
 local function translateJoinModelUnit(action, modelScene)
-    local launchUnitID                 = action.launchUnitID
-    local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
+    local rawPath,        launchUnitID = action.path, action.launchUnitID
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
     if (not translatedPath) then
         return {
             actionName = "Message",
-            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+            message    = LocalizationFunctions.getLocalizedText(80, translateMsg),
+        }
+    end
+
+    local modelUnitMap      = modelScene:getModelWarField():getModelUnitMap()
+    local existingModelUnit = modelUnitMap:getModelUnit(rawPath[#rawPath])
+    local focusModelUnit    = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
+    if ((#rawPath == 1)                                           or
+        (not existingModelUnit)                                   or
+        (not focusModelUnit.canJoinModelUnit)                     or
+        (not focusModelUnit:canJoinModelUnit(existingModelUnit))) then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
         }
     end
 
@@ -527,23 +541,13 @@ local function translateJoinModelUnit(action, modelScene)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
-    local modelUnitMap      = modelScene:getModelWarField():getModelUnitMap()
-    local existingModelUnit = modelUnitMap:getModelUnit(translatedPath[#translatedPath])
-    local focusModelUnit    = modelUnitMap:getFocusModelUnit(translatedPath[1], launchUnitID)
-    if ((#translatedPath == 1)                                    or
-        (not existingModelUnit)                                   or
-        (not focusModelUnit:canJoinModelUnit(existingModelUnit))) then
-        return {
-            actionName = "Message",
-            message    = LocalizationFunctions.getLocalizedText(80),
-        }
-    end
-
+    local joinIncome = focusModelUnit:getJoinIncome(existingModelUnit)
     local actionJoinModelUnit = {
         actionName   = "JoinModelUnit",
         fileName     = sceneWarFileName,
         path         = translatedPath,
         launchUnitID = launchUnitID,
+        joinIncome   = (joinIncome ~= 0) and (joinIncome) or (nil),
     }
     SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionJoinModelUnit)
     return actionJoinModelUnit, generateActionsForPublish(actionJoinModelUnit, modelPlayerManager, action.playerAccount)
