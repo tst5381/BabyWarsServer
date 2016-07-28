@@ -116,7 +116,6 @@ end
 
 local function doActionJoinModelUnit(self, action)
     self:getModelWarField():doActionJoinModelUnit(action)
-    self:getModelPlayerManager():doActionJoinModelUnit(action, self:getModelTurnManager():getPlayerIndex())
 end
 
 local function doActionCapture(self, action)

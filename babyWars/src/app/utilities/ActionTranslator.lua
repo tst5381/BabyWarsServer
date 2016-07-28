@@ -541,13 +541,11 @@ local function translateJoinModelUnit(action, modelScene)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
-    local joinIncome = focusModelUnit:getJoinIncome(existingModelUnit)
     local actionJoinModelUnit = {
         actionName   = "JoinModelUnit",
         fileName     = sceneWarFileName,
         path         = translatedPath,
         launchUnitID = launchUnitID,
-        joinIncome   = (joinIncome ~= 0) and (joinIncome) or (nil),
     }
     SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionJoinModelUnit)
     return actionJoinModelUnit, generateActionsForPublish(actionJoinModelUnit, modelPlayerManager, action.playerAccount)
