@@ -711,21 +711,21 @@ local function translateBuildModelTile(action, modelScene)
 end
 
 local function translateProduceModelUnitOnUnit(action, modelScene)
-    local launchUnitID                 = action.launchUnitID
-    local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
+    local rawPath,        launchUnitID = action.path, action.launchUnitID
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
     if (not translatedPath) then
         return {
             actionName = "Message",
-            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+            message    = LocalizationFunctions.getLocalizedText(80, translateMsg),
         }
     end
 
-    local focusModelUnit     = modelScene:getModelWarField():getModelUnitMap():getFocusModelUnit(translatedPath[1], launchUnitID)
+    local focusModelUnit     = modelScene:getModelWarField():getModelUnitMap():getFocusModelUnit(rawPath[1], launchUnitID)
     local modelPlayerManager = modelScene:getModelPlayerManager()
     local modelPlayer        = modelPlayerManager:getModelPlayer(modelScene:getModelTurnManager():getPlayerIndex())
     local cost               = (focusModelUnit.getMovableProductionCost) and (focusModelUnit:getMovableProductionCost()) or (nil)
     if ((launchUnitID)                                                              or
-        (#translatedPath ~= 1)                                                      or
+        (#rawPath ~= 1)                                                             or
         (not focusModelUnit.getCurrentMaterial)                                     or
         (focusModelUnit:getCurrentMaterial() < 1)                                   or
         (not cost)                                                                  or
