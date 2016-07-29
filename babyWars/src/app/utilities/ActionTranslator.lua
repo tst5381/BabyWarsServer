@@ -750,12 +750,23 @@ local function translateProduceModelUnitOnUnit(action, modelScene)
 end
 
 local function translateSupplyModelUnit(action, modelScene)
-    local launchUnitID                 = action.launchUnitID
-    local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
+    local rawPath,        launchUnitID = action.path, action.launchUnitID
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
     if (not translatedPath) then
         return {
             actionName = "Message",
-            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+            message    = LocalizationFunctions.getLocalizedText(80, translateMsg),
+        }
+    end
+
+    local modelUnitMap      = modelScene:getModelWarField():getModelUnitMap()
+    local focusModelUnit    = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
+    local existingModelUnit = modelUnitMap:getModelUnit(rawPath[#rawPath])
+    if (((#rawPath ~= 1) and (existingModelUnit) and (isModelUnitVisible(existingModelUnit, modelScene))) or
+        (not canDoActionSupplyModelUnit(focusModelUnit, rawPath[#rawPath], modelUnitMap)))                then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
         }
     end
 
@@ -769,22 +780,6 @@ local function translateSupplyModelUnit(action, modelScene)
         }
         SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
-    end
-
-    local modelUnitMap = modelScene:getModelWarField():getModelUnitMap()
-    if ((#translatedPath ~= 1) and (modelUnitMap:getModelUnit(translatedPath[#translatedPath]))) then
-        return {
-            actionName = "Message",
-            message    = "There is another unit on the destination grid. Please reenter the war.",
-        }
-    end
-
-    local focusModelUnit = modelUnitMap:getFocusModelUnit(translatedPath[1], launchUnitID)
-    if (not canDoActionSupplyModelUnit(focusModelUnit, translatedPath[#translatedPath], modelUnitMap)) then
-        return {
-            actionName = "Message",
-            message    = LocalizationFunctions.getLocalizedText(80),
-        }
     end
 
     local actionSupplyModelUnit = {
