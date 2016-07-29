@@ -362,7 +362,7 @@ local function translatePath(path, launchUnitID, modelSceneWar)
     local maxFuelConsumption   = math.min(focusModelUnit:getCurrentFuel(), focusModelUnit:getMoveRange())
 
     for i = 2, #path do
-        local gridIndex = clone(path[i])
+        local gridIndex = path[i]
         if (not isAdjacent(path[i - 1], gridIndex)) then
             return nil, "ActionTranslator-translatePath() the path is invalid because some grids are not adjacent to previous ones."
         elseif (isGridInPath(gridIndex, translatedPath)) then
@@ -391,7 +391,7 @@ local function translatePath(path, launchUnitID, modelSceneWar)
         end
 
         if (not translatedPath.isBlocked) then
-            translatedPath[#translatedPath + 1] = gridIndex
+            translatedPath[#translatedPath + 1] = clone(gridIndex)
         end
     end
 
@@ -793,12 +793,25 @@ local function translateSupplyModelUnit(action, modelScene)
 end
 
 local function translateLoadModelUnit(action, modelScene)
-    local launchUnitID                 = action.launchUnitID
-    local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
+    local rawPath,        launchUnitID = action.path, action.launchUnitID
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
     if (not translatedPath) then
         return {
             actionName = "Message",
-            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+            message    = LocalizationFunctions.getLocalizedText(80, translateMsg),
+        }
+    end
+
+    local modelUnitMap    = modelScene:getModelWarField():getModelUnitMap()
+    local focusModelUnit  = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
+    local loaderModelUnit = modelUnitMap:getModelUnit(rawPath[#rawPath])
+    if ((#rawPath == 1)                                         or
+        (not loaderModelUnit)                                   or
+        (not loaderModelUnit.canLoadModelUnit)                  or
+        (not loaderModelUnit:canLoadModelUnit(focusModelUnit))) then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
         }
     end
 
@@ -812,19 +825,6 @@ local function translateLoadModelUnit(action, modelScene)
         }
         SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
-    end
-
-    local modelUnitMap    = modelScene:getModelWarField():getModelUnitMap()
-    local focusModelUnit  = modelUnitMap:getFocusModelUnit(translatedPath[1], launchUnitID)
-    local loaderModelUnit = modelUnitMap:getModelUnit(translatedPath[#translatedPath])
-    if ((#translatedPath == 1) or
-        (not loaderModelUnit) or
-        (not loaderModelUnit.canLoadModelUnit) or
-        (not loaderModelUnit:canLoadModelUnit(focusModelUnit))) then
-        return {
-            actionName = "Message",
-            message    = "Failed because the loader doesn't exist or can't load the focus unit."
-        }
     end
 
     local actionLoadModelUnit = {
