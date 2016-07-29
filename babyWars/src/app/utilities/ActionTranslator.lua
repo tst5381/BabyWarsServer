@@ -662,12 +662,29 @@ local function translateLaunchSilo(action, modelScene)
 end
 
 local function translateBuildModelTile(action, modelScene)
-    local launchUnitID                 = action.launchUnitID
-    local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
+    local rawPath,        launchUnitID = action.path, action.launchUnitID
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
     if (not translatedPath) then
         return {
             actionName = "Message",
-            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+            message    = LocalizationFunctions.getLocalizedText(80, translateMsg),
+        }
+    end
+
+    local modelWarField     = modelScene:getModelWarField()
+    local modelUnitMap      = modelWarField:getModelUnitMap()
+    local endingGridIndex   = rawPath[#rawPath]
+    local focusModelUnit    = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
+    local existingModelUnit = modelUnitMap:getModelUnit(endingGridIndex)
+    local modelTile         = modelWarField:getModelTileMap():getModelTile(endingGridIndex)
+    if ((not focusModelUnit.canBuildOnTileType)                                                            or
+        (not focusModelUnit:canBuildOnTileType(modelTile:getTileType()))                                   or
+        (not focusModelUnit.getCurrentMaterial)                                                            or
+        (focusModelUnit:getCurrentMaterial() < 1)                                                          or
+        ((#rawPath ~= 1) and (existingModelUnit) and (isModelUnitVisible(existingModelUnit, modelScene)))) then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
         }
     end
 
@@ -681,27 +698,6 @@ local function translateBuildModelTile(action, modelScene)
         }
         SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
-    end
-
-    local modelWarField = modelScene:getModelWarField()
-    local modelUnitMap  = modelWarField:getModelUnitMap()
-    if ((#translatedPath ~= 1) and (modelUnitMap:getModelUnit(translatedPath[#translatedPath]))) then
-        return {
-            actionName = "Message",
-            message    = "There is another unit on the destination grid. Please reenter the war.",
-        }
-    end
-
-    local modelTile      = modelWarField:getModelTileMap():getModelTile(translatedPath[#translatedPath])
-    local focusModelUnit = modelUnitMap:getFocusModelUnit(translatedPath[1], launchUnitID)
-    if ((not focusModelUnit.canBuildOnTileType)                          or
-        (not focusModelUnit:canBuildOnTileType(modelTile:getTileType())) or
-        (not focusModelUnit.getCurrentMaterial)                          or
-        (not (focusModelUnit:getCurrentMaterial() > 0)))                 then
-        return {
-            actionName = "Message",
-            message    = LocalizationFunctions.getLocalizedText(80),
-        }
     end
 
     local actionBuildModelTile = {
