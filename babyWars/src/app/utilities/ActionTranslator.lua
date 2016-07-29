@@ -552,7 +552,7 @@ local function translateJoinModelUnit(action, modelScene)
     return actionJoinModelUnit, generateActionsForPublish(actionJoinModelUnit, modelPlayerManager, action.playerAccount)
 end
 
-local function translateCapture(action, modelScene)
+local function translateCaptureModelTile(action, modelScene)
     local rawPath,        launchUnitID = action.path, action.launchUnitID
     local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
     if (not translatedPath) then
@@ -612,12 +612,29 @@ local function translateCapture(action, modelScene)
 end
 
 local function translateLaunchSilo(action, modelScene)
-    local launchUnitID                 = action.launchUnitID
-    local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
+    local rawPath,        launchUnitID = action.path, action.launchUnitID
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
     if (not translatedPath) then
         return {
             actionName = "Message",
-            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+            message    = LocalizationFunctions.getLocalizedText(80, translateMsg),
+        }
+    end
+
+    local modelWarField     = modelScene:getModelWarField()
+    local modelUnitMap      = modelWarField:getModelUnitMap()
+    local endingGridIndex   = rawPath[#rawPath]
+    local targetGridIndex   = action.targetGridIndex
+    local focusModelUnit    = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
+    local existingModelUnit = modelUnitMap:getModelUnit(endingGridIndex)
+    local modelTile         = modelWarField:getModelTileMap():getModelTile(endingGridIndex)
+    if ((not focusModelUnit.canLaunchSiloOnTileType)                                                       or
+        (not focusModelUnit:canLaunchSiloOnTileType(modelTile:getTileType()))                              or
+        (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))                   or
+        ((#rawPath ~= 1) and (existingModelUnit) and (isModelUnitVisible(existingModelUnit, modelScene)))) then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
         }
     end
 
@@ -631,27 +648,6 @@ local function translateLaunchSilo(action, modelScene)
         }
         SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
-    end
-
-    local modelWarField = modelScene:getModelWarField()
-    local modelUnitMap  = modelWarField:getModelUnitMap()
-    if ((#translatedPath ~= 1) and (modelUnitMap:getModelUnit(translatedPath[#translatedPath]))) then
-        return {
-            actionName = "Message",
-            message    = "There is another unit on the destination grid. Please reenter the war.",
-        }
-    end
-
-    local focusModelUnit  = modelUnitMap:getFocusModelUnit(translatedPath[1], launchUnitID)
-    local modelTile       = modelWarField:getModelTileMap():getModelTile(translatedPath[#translatedPath])
-    local targetGridIndex = action.targetGridIndex
-    if ((not focusModelUnit.canLaunchSiloOnTileType)                                      or
-        (not focusModelUnit:canLaunchSiloOnTileType(modelTile:getTileType()))             or
-        (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))) then
-        return {
-            actionName = "Message",
-            message    = LocalizationFunctions.getLocalizedText(80),
-        }
     end
 
     local actionLaunchSilo = {
@@ -1009,7 +1005,7 @@ function ActionTranslator.translate(action, session)
     elseif (actionName == "Wait")                   then return translateWait(                  action, modelSceneWar)
     elseif (actionName == "Attack")                 then return translateAttack(                action, modelSceneWar)
     elseif (actionName == "JoinModelUnit")          then return translateJoinModelUnit(         action, modelSceneWar)
-    elseif (actionName == "CaptureModelTile")       then return translateCapture(               action, modelSceneWar)
+    elseif (actionName == "CaptureModelTile")       then return translateCaptureModelTile(      action, modelSceneWar)
     elseif (actionName == "LaunchSilo")             then return translateLaunchSilo(            action, modelSceneWar)
     elseif (actionName == "BuildModelTile")         then return translateBuildModelTile(        action, modelSceneWar)
     elseif (actionName == "ProduceModelUnitOnUnit") then return translateProduceModelUnitOnUnit(action, modelSceneWar)
