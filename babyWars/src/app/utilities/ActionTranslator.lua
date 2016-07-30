@@ -901,40 +901,35 @@ end
 local function translateProduceOnTile(action, modelScene)
     local playerIndex        = modelScene:getModelTurnManager():getPlayerIndex()
     local modelPlayerManager = modelScene:getModelPlayerManager()
-    local modelPlayer        = modelPlayerManager:getModelPlayer(playerIndex)
     local modelWarField      = modelScene:getModelWarField()
+    local modelTileMap       = modelWarField:getModelTileMap()
     local gridIndex          = action.gridIndex
     local tiledID            = action.tiledID
+    local actionMessage      = {
+        actionName = "Message",
+        message    = LocalizationFunctions.getLocalizedText(80),
+    }
 
-    if (modelWarField:getModelUnitMap():getModelUnit(gridIndex)) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateProduceOnTile() failed because there's a unit on the tile. Please reenter the war.",
-        }
+    if (not GridIndexFunctions.isWithinMap(gridIndex, modelTileMap:getMapSize())) then
+        return actionMessage
     end
 
-    local modelTile = modelWarField:getModelTileMap():getModelTile(action.gridIndex)
-    if ((not modelTile.canProduceUnitWithTiledId) or
-        (not modelTile:canProduceUnitWithTiledId(tiledID))) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateProduceOnTile() failed because the tile can't produce units. Please reenter the war.",
-        }
-    end
-
-    local cost = Producible.getProductionCostWithTiledId(tiledID, modelPlayerManager)
-    if ((not cost) or (cost > modelPlayer:getFund())) then
-        return {
-            actionName = "Message",
-            message    = "Server: translateProduceOnTile() failed because the player has not enough fund. Please reenter the war.",
-        }
+    local modelTile = modelTileMap:getModelTile(gridIndex)
+    local cost      = Producible.getProductionCostWithTiledId(tiledID, modelPlayerManager)
+    if ((not cost)                                                        or
+        (cost > modelPlayerManager:getModelPlayer(playerIndex):getFund()) or
+        (modelTile:getPlayerIndex() ~= playerIndex)                       or
+        (modelWarField:getModelUnitMap():getModelUnit(gridIndex))         or
+        (not modelTile.canProduceUnitWithTiledId)                         or
+        (not modelTile:canProduceUnitWithTiledId(tiledID)))               then
+        return actionMessage
     end
 
     local fileName = modelScene:getFileName()
     local actionProduceOnTile = {
         actionName = "ProduceOnTile",
         fileName   = fileName,
-        gridIndex  = GridIndexFunctions.clone(gridIndex),
+        gridIndex  = gridIndex,
         tiledID    = tiledID,
         cost       = cost, -- the cost can be calculated by the clients, but that calculations can be eliminated by sending the cost to clients.
     }
