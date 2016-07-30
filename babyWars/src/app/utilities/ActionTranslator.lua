@@ -67,6 +67,8 @@ end
 
 local function validateDropDestinations(action, modelSceneWar)
     local isEqual                  = GridIndexFunctions.isEqual
+    local isAdjacent               = GridIndexFunctions.isAdjacent
+    local isWithinMap              = GridIndexFunctions.isWithinMap
     local modelWarField            = modelSceneWar:getModelWarField()
     local modelUnitMap             = modelWarField:getModelUnitMap()
     local modelTileMap             = modelWarField:getModelTileMap()
@@ -90,9 +92,9 @@ local function validateDropDestinations(action, modelSceneWar)
 
         local droppingGridIndex = destinations[i].gridIndex
         local droppingModelUnit = modelUnitMap:getLoadedModelUnitWithUnitId(droppingUnitID)
-        if ((not droppingModelUnit)                                          or
-            (not GridIndexFunctions.isWithinMap(droppingGridIndex, mapSize)) or
-            (isEqual(droppingGridIndex, loaderEndingGridIndex)))             then
+        if ((not droppingModelUnit)                                     or
+            (not isWithinMap(droppingGridIndex, mapSize))               or
+            (not isAdjacent(droppingGridIndex, loaderEndingGridIndex))) then
             return false
         else
             local moveType = droppingModelUnit:getMoveType()
@@ -112,13 +114,27 @@ local function validateDropDestinations(action, modelSceneWar)
         for j = i + 1, #destinations do
             local additionalDestination = destinations[j]
             if ((isEqual(droppingGridIndex, additionalDestination.gridIndex)) or
-                (droppingUnitID == additionalDestination.unitID)) then
+                (droppingUnitID == additionalDestination.unitID))             then
                 return false
             end
         end
     end
 
     return true
+end
+
+local function translateDropDestinations(rawDestinations, modelUnitMap, loaderModelUnit)
+    local translatedDestinations = {}
+    for i = 1, #rawDestinations do
+        if (isDropBlocked(rawDestinations[i], modelUnitMap, loaderModelUnit)) then
+            translatedDestinations.isBlocked = true
+            break
+        else
+            translatedDestinations[#translatedDestinations + 1] = rawDestinations[i]
+        end
+    end
+
+    return translatedDestinations
 end
 
 local function generateActionsForPublish(action, modelPlayerManager, currentPlayerAccount)
@@ -838,60 +854,45 @@ local function translateLoadModelUnit(action, modelScene)
 end
 
 local function translateDropModelUnit(action, modelScene)
-    local launchUnitID                 = action.launchUnitID
-    local translatedPath, translateMsg = translatePath(action.path, launchUnitID, modelScene)
+    local rawPath,        launchUnitID = action.path, action.launchUnitID
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
     if (not translatedPath) then
         return {
             actionName = "Message",
-            message    = "Failed to translate the move path: " .. (translateMsg or ""),
+            message    = LocalizationFunctions.getLocalizedText(80, translateMsg),
+        }
+    end
+
+    local modelUnitMap      = modelScene:getModelWarField():getModelUnitMap()
+    local existingModelUnit = modelUnitMap:getModelUnit(rawPath[#rawPath])
+    if (((#rawPath ~= 1) and (existingModelUnit) and (isModelUnitVisible(existingModelUnit, modelScene)))) or
+        (not validateDropDestinations(action, modelScene))                                                 then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(80),
         }
     end
 
     local sceneWarFileName   = modelScene:getFileName()
     local modelPlayerManager = modelScene:getModelPlayerManager()
-    local modelUnitMap       = modelScene:getModelWarField():getModelUnitMap()
-    local loaderModelUnit    = modelUnitMap:getFocusModelUnit(translatedPath[1], launchUnitID)
-    local dropDestinations   = action.dropDestinations
-    translatedPath.isBlocked = (translatedPath.isBlocked) or (isDropBlocked(dropDestinations[1], modelUnitMap, loaderModelUnit))
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName = "Wait",
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-
         SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
-    if (not validateDropDestinations(action, modelScene)) then
-        return {
-            actionName = "Message",
-            message    = LocalizationFunctions.getLocalizedText(80),
-        }
-    end
-    if ((#translatedPath ~= 1) and (modelUnitMap:getModelUnit(translatedPath[#translatedPath]))) then
-        return {
-            actionName = "Message",
-            message    = "There is another unit on the destination grid. Please reenter the war.",
-        }
-    end
-
+    local loaderModelUnit     = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
     local actionDropModelUnit = {
         actionName       = "DropModelUnit",
         fileName         = sceneWarFileName,
         path             = translatedPath,
-        dropDestinations = {dropDestinations[1]},
+        dropDestinations = translateDropDestinations(action.dropDestinations, modelUnitMap, loaderModelUnit),
         launchUnitID     = launchUnitID,
     }
-    for i = 2, #dropDestinations do
-        if (isDropBlocked(dropDestinations[i], modelUnitMap, loaderModelUnit)) then
-            actionDropModelUnit.isBlocked = true
-            break
-        else
-            actionDropModelUnit.dropDestinations[#actionDropModelUnit.dropDestinations + 1] = dropDestinations[i]
-        end
-    end
 
     SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionDropModelUnit)
     return actionDropModelUnit, generateActionsForPublish(actionDropModelUnit, modelPlayerManager, action.playerAccount)
