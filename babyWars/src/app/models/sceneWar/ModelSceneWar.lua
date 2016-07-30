@@ -31,7 +31,6 @@ local ModelSceneWar = require("src.global.functions.class")("ModelSceneWar")
 local Actor            = require("src.global.actors.Actor")
 local ActionTranslator = require("src.app.utilities.ActionTranslator")
 local EventDispatcher  = require("src.global.events.EventDispatcher")
-local TableFunctions   = require("src.app.utilities.TableFunctions")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -116,16 +115,16 @@ local function doActionAttack(self, action)
 end
 
 local function doActionJoinModelUnit(self, action)
-    self:getModelWarField():doActionJoinModelUnit(action, self:getModelPlayerManager())
+    self:getModelWarField():doActionJoinModelUnit(action)
 end
 
-local function doActionCapture(self, action)
+local function doActionCaptureModelTile(self, action)
     local modelWarField     = self:getModelWarField()
     local targetModelTile   = modelWarField:getModelTileMap():getModelTile(action.path[#action.path])
     local targetPlayerIndex = targetModelTile:getPlayerIndex()
     local isDefeatOnCapture = targetModelTile:isDefeatOnCapture()
 
-    modelWarField:doActionCapture(action)
+    modelWarField:doActionCaptureModelTile(action)
 
     if ((isDefeatOnCapture) and (targetModelTile:getPlayerIndex() ~= targetPlayerIndex)) then
         clearPlayerForce(self, targetPlayerIndex)
@@ -166,61 +165,19 @@ local function doActionProduceOnTile(self, action)
 end
 
 --------------------------------------------------------------------------------
--- The private callback functions on script events.
---------------------------------------------------------------------------------
-local function onEvtSystemRequestDoAction(self, event)
-    local actionName = event.actionName
-    if     (actionName == "BeginTurn")              then doActionBeginTurn(             self, event)
-    elseif (actionName == "EndTurn")                then doActionEndTurn(               self, event)
-    elseif (actionName == "Surrender")              then doActionSurrender(             self, event)
-    elseif (actionName == "Wait")                   then doActionWait(                  self, event)
-    elseif (actionName == "Attack")                 then doActionAttack(                self, event)
-    elseif (actionName == "JoinModelUnit")          then doActionJoinModelUnit(         self, event)
-    elseif (actionName == "Capture")                then doActionCapture(               self, event)
-    elseif (actionName == "LaunchSilo")             then doActionLaunchSilo(            self, event)
-    elseif (actionName == "BuildModelTile")         then doActionBuildModelTile(        self, event)
-    elseif (actionName == "ProduceModelUnitOnUnit") then doActionProduceModelUnitOnUnit(self, event)
-    elseif (actionName == "SupplyModelUnit")        then doActionSupplyModelUnit(       self, event)
-    elseif (actionName == "LoadModelUnit")          then doActionLoadModelUnit(         self, event)
-    elseif (actionName == "DropModelUnit")          then doActionDropModelUnit(         self, event)
-    elseif (actionName == "ProduceOnTile")          then doActionProduceOnTile(         self, event)
-    else
-        print("ModelSceneWar-onEvtSystemRequestDoAction() unrecognized action.")
-    end
-end
-
---------------------------------------------------------------------------------
 -- The composition elements.
 --------------------------------------------------------------------------------
 local function initScriptEventDispatcher(self)
     local dispatcher = EventDispatcher:create()
 
-    dispatcher:addEventListener("EvtPlayerRequestDoAction", self)
-        :addEventListener("EvtSystemRequestDoAction", self)
     self.m_ScriptEventDispatcher = dispatcher
 end
 
 local function initActorPlayerManager(self, playersData)
     local actor = Actor.createWithModelAndViewName("sceneWar.ModelPlayerManager", playersData)
-
     actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
+
     self.m_ActorPlayerManager = actor
-end
-
-local function initActorWarField(self, warFieldData)
-    local actor = Actor.createWithModelAndViewName("sceneWar.ModelWarField", warFieldData)
-
-    actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
-    self.m_ActorWarField = actor
-end
-
-local function initActorTurnManager(self, turnData)
-    local actor = Actor.createWithModelAndViewName("sceneWar.ModelTurnManager", turnData)
-
-    actor:getModel():setModelPlayerManager(self:getModelPlayerManager())
-        :setModelWarField(self.m_ActorWarField:getModel())
-        :setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
-    self.m_ActorTurnManager = actor
 end
 
 local function initActorWeatherManager(self, weatherData)
@@ -229,21 +186,37 @@ local function initActorWeatherManager(self, weatherData)
     self.m_ActorWeatherManager = actor
 end
 
+local function initActorWarField(self, warFieldData)
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelWarField", warFieldData)
+    actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
+        :setModelPlayerManager(self:getModelPlayerManager())
+        :setModelWeatherManager(self:getModelWeatherManager())
+
+    self.m_ActorWarField = actor
+end
+
+local function initActorTurnManager(self, turnData)
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelTurnManager", turnData)
+    actor:getModel():setRootScriptEventDispatcher(self.m_ScriptEventDispatcher)
+        :setModelPlayerManager(self:getModelPlayerManager())
+        :setModelWarField(self:getModelWarField())
+
+    self.m_ActorTurnManager = actor
+end
+
 --------------------------------------------------------------------------------
 -- The constructor and initializers.
 --------------------------------------------------------------------------------
 function ModelSceneWar:ctor(sceneData)
-    assert(type(sceneData) == "table", "ModelSceneWar:ctor() the param sceneData is invalid.")
-
     self.m_FileName    = sceneData.fileName
     self.m_WarPassword = sceneData.warPassword
     self.m_IsWarEnded  = sceneData.isEnded
 
     initScriptEventDispatcher(self)
     initActorPlayerManager(   self, sceneData.players)
+    initActorWeatherManager(  self, sceneData.weather)
     initActorWarField(        self, sceneData.warField)
     initActorTurnManager(     self, sceneData.turn)
-    initActorWeatherManager(  self, sceneData.weather)
 
     return self
 end
@@ -256,10 +229,10 @@ function ModelSceneWar:toSerializableTable()
         fileName    = self.m_FileName,
         warPassword = self.m_WarPassword,
         isEnded     = self.m_IsWarEnded,
-        warField    = self.m_ActorWarField:getModel():toSerializableTable(),
-        turn        = self.m_ActorTurnManager:getModel():toSerializableTable(),
-        players     = self.m_ActorPlayerManager:getModel():toSerializableTable(),
-        weather     = self.m_ActorWeatherManager:getModel():toSerializableTable(),
+        warField    = self:getModelWarField()      :toSerializableTable(),
+        turn        = self:getModelTurnManager()   :toSerializableTable(),
+        players     = self:getModelPlayerManager() :toSerializableTable(),
+        weather     = self:getModelWeatherManager():toSerializableTable(),
     }
 end
 
@@ -289,20 +262,27 @@ function ModelSceneWar:onStopRunning()
     return self
 end
 
-function ModelSceneWar:onEvent(event)
-    local eventName = event.name
-    if (eventName == "EvtSystemRequestDoAction") then
-        onEvtSystemRequestDoAction(self, event)
-    end
-
-    return self
-end
-
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
 function ModelSceneWar:doSystemAction(action)
-    onEvtSystemRequestDoAction(self, action)
+    local actionName = action.actionName
+    if     (actionName == "BeginTurn")              then doActionBeginTurn(             self, action)
+    elseif (actionName == "EndTurn")                then doActionEndTurn(               self, action)
+    elseif (actionName == "Surrender")              then doActionSurrender(             self, action)
+    elseif (actionName == "Wait")                   then doActionWait(                  self, action)
+    elseif (actionName == "Attack")                 then doActionAttack(                self, action)
+    elseif (actionName == "JoinModelUnit")          then doActionJoinModelUnit(         self, action)
+    elseif (actionName == "CaptureModelTile")       then doActionCaptureModelTile(      self, action)
+    elseif (actionName == "LaunchSilo")             then doActionLaunchSilo(            self, action)
+    elseif (actionName == "BuildModelTile")         then doActionBuildModelTile(        self, action)
+    elseif (actionName == "ProduceModelUnitOnUnit") then doActionProduceModelUnitOnUnit(self, action)
+    elseif (actionName == "SupplyModelUnit")        then doActionSupplyModelUnit(       self, action)
+    elseif (actionName == "LoadModelUnit")          then doActionLoadModelUnit(         self, action)
+    elseif (actionName == "DropModelUnit")          then doActionDropModelUnit(         self, action)
+    elseif (actionName == "ProduceOnTile")          then doActionProduceOnTile(         self, action)
+    else                                                 error("ModelSceneWar:doSystemAction() unrecognized action.")
+    end
 
     return self
 end
@@ -313,10 +293,6 @@ end
 
 function ModelSceneWar:isEnded()
     return self.m_IsWarEnded
-end
-
-function ModelSceneWar:getScriptEventDispatcher()
-    return self.m_ScriptEventDispatcher
 end
 
 function ModelSceneWar:getModelTurnManager()
