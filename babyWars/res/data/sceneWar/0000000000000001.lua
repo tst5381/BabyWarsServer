@@ -6,11 +6,11 @@ return {
 
     warField = {
         tileMap = {
-            template = "EqualIsland",
+            template = "DuiChenDaoYu",
         },
 
         unitMap = {
-            template = "EqualIsland",
+            template = "DuiChenDaoYu",
         },
     },
 
