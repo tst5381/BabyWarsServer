@@ -475,7 +475,7 @@ local function translateAttack(action, modelScene)
 
     local attackerTile                = modelTileMap:getModelTile(endingGridIndex)
     local weatherType                 = modelScene:getModelWeatherManager():getCurrentWeather()
-    local attackDamage, counterDamage = attacker:getUltimateBattleDamage(attackerTile, attackTarget, targetTile, weatherType)
+    local attackDamage, counterDamage = attacker:getUltimateBattleDamage(attackTarget, endingGridIndex, modelTileMap)
     if (not attackDamage) then
         return {
             actionName = "Message",
