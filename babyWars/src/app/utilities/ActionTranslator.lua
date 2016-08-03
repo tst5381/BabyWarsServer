@@ -1062,8 +1062,9 @@ function ActionTranslator.translate(action, session)
     elseif (actionName == "DropModelUnit")          then return translateDropModelUnit(         action, modelSceneWar)
     elseif (actionName == "ProduceOnTile")          then return translateProduceOnTile(         action, modelSceneWar)
     else return {
-            actionName = "Error",
-            error      = LocalizationFunctions.getLocalizedText(81, "UnknownAction", actionName),
+            actionName       = "Message",
+            additionalAction = "ReloadSceneWar",
+            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync", actionName),
         }
     end
 end
