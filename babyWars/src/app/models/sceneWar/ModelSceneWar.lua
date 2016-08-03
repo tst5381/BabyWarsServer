@@ -211,6 +211,7 @@ function ModelSceneWar:ctor(sceneData)
     self.m_FileName    = sceneData.fileName
     self.m_WarPassword = sceneData.warPassword
     self.m_IsWarEnded  = sceneData.isEnded
+    self.m_ActionID    = sceneData.actionID
 
     initScriptEventDispatcher(self)
     initActorPlayerManager(   self, sceneData.players)
@@ -229,6 +230,7 @@ function ModelSceneWar:toSerializableTable()
         fileName    = self.m_FileName,
         warPassword = self.m_WarPassword,
         isEnded     = self.m_IsWarEnded,
+        actionID    = self.m_ActionID,
         warField    = self:getModelWarField()      :toSerializableTable(),
         turn        = self:getModelTurnManager()   :toSerializableTable(),
         players     = self:getModelPlayerManager() :toSerializableTable(),
@@ -266,6 +268,9 @@ end
 -- The public functions.
 --------------------------------------------------------------------------------
 function ModelSceneWar:doSystemAction(action)
+    assert(self.m_ActionID + 1 == action.actionID)
+    self.m_ActionID = action.actionID
+
     local actionName = action.actionName
     if     (actionName == "BeginTurn")              then doActionBeginTurn(             self, action)
     elseif (actionName == "EndTurn")                then doActionEndTurn(               self, action)
@@ -293,6 +298,10 @@ end
 
 function ModelSceneWar:isEnded()
     return self.m_IsWarEnded
+end
+
+function ModelSceneWar:getActionId()
+    return self.m_ActionID
 end
 
 function ModelSceneWar:getModelTurnManager()

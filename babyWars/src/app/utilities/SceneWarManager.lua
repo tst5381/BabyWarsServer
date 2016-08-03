@@ -201,6 +201,7 @@ local function generateSceneWarData(fileName, param)
         fileName    = fileName,
         warPassword = param.warPassword,
         isEnded     = false,
+        actionID    = 0,
 
         warField    = generateWarFieldData(param.warFieldFileName),
         turn        = generateTurnData(),

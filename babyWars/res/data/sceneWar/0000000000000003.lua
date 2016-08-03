@@ -1,8 +1,9 @@
 
 return {
-    fileName = "0000000000000003",
+    fileName    = "0000000000000003",
     warPassword = "",
-    isEnded = false,
+    isEnded     = false,
+    actionID    = 0,
 
     warField = {
         tileMap = {
