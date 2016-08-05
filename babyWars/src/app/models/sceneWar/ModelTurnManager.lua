@@ -284,9 +284,9 @@ function ModelTurnManager:runTurn()
 
     if (self.m_ModelMessageIndicator) then
         if (isLoggedInPlayerInTurn(self)) then
-            self.m_ModelMessageIndicator:hidePersistentMessage()
+            self.m_ModelMessageIndicator:hidePersistentMessage(LocalizationFunctions.getLocalizedText(80, "NotInTurn"))
         else
-            self.m_ModelMessageIndicator:showPersistentMessage(LocalizationFunctions.getLocalizedText(71))
+            self.m_ModelMessageIndicator:showPersistentMessage(LocalizationFunctions.getLocalizedText(80, "NotInTurn"))
         end
     end
 

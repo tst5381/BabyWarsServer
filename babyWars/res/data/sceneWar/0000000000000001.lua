@@ -1,16 +1,17 @@
 
 return {
-    fileName = "0000000000000001",
+    fileName    = "0000000000000001",
     warPassword = "",
-    isEnded = false,
+    isEnded     = false,
+    actionID    = 0,
 
     warField = {
         tileMap = {
-            template = "EqualIsland",
+            template = "DuiChenDaoYu",
         },
 
         unitMap = {
-            template = "EqualIsland",
+            template = "DuiChenDaoYu",
         },
     },
 
