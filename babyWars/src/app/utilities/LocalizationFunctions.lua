@@ -30,7 +30,7 @@ local s_LongText2_1 = [[
 
 您可以随意拖动地图（使用单个手指滑动画面）和缩放地图（使用两个手指滑动画面）。
 
-您可以预览战斗的预估伤害值：在为部队选择攻击目标时，把光标拖拽到目标之上即可（请不要直接点击目标，这将被游戏解读为直接对该目标进行攻击，而不预览战斗伤害值）。
+您可以预览对手部队的移动/攻击范围：点击对方部队即可。可以同时预览多个部队的攻击范围。
 ]]
 local s_LongText2_2 = "Untranslated"
 
@@ -106,15 +106,37 @@ local s_Texts = {
             end
         end,
     },
-    --[[
     [3] = {
-        [1] = function(...) return "继 续"    end,
-        [2] = function(...) return "Continue" end,
+        [1] = function(textType)
+            if     (textType == "Configuration") then return "配 置"
+            elseif (textType == "SetSkillPoint") then return "设定技能点数上限"
+            elseif (textType == "PassiveSkill")  then return "日 常 技 能"
+            elseif (textType == "ActiveSkill")   then return "主 动 技 能"
+            else                                      return "未知[3]: " .. (textType or "")
+            end
+        end,
+        [2] = function(textType)
+            if     (textType == "Configuration") then return "Configuration"
+            elseif (textType == "SetSkillPoint") then return "SetSkillPoint"
+            elseif (textType == "PassiveSkill")  then return "Passive"
+            elseif (textType == "ActiveSkill")   then return "Active"
+            else                                      return "Unknown[3]: " .. (textType or "")
+            end
+        end,
     },
     [4] = {
-        [1] = function(...) return "参 战" end,
-        [2] = function(...) return "Join" end,
+        [1] = function(skillType)
+            if     (skillType == "globalAttackModifier")  then return "改变我方全体部队的攻击力。"
+            elseif (skillType == "globalDefenseModifier") then return "改变我方全体部队的防御力。"
+            elseif (skillType == "globalCostModifier")    then return "改变我方全体部队的造价。"
+            else                                               return "未知[4]: " .. (skillType or "")
+            end
+        end,
+        [2] = function(skillType)
+            return "Untranslated..."
+        end,
     },
+    --[[
     [5] = {
         [1] = function(...) return "配 置 技 能"    end,
         [2] = function(...) return "Config Skills" end,
