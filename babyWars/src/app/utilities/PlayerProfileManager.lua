@@ -5,10 +5,10 @@ local SerializationFunctions = require("src.app.utilities.SerializationFunctions
 
 local PLAYER_PROFILE_PATH          = "babyWars/res/data/playerProfile/"
 local SINGLE_SKILL_CONFIGURATION   = {
-    maxPoint = 100,
-    passive  = {},
-    active1  = {},
-    active2  = {},
+    maxPoints = 100,
+    passive   = {},
+    active1   = {},
+    active2   = {},
 }
 local SINGLE_GAME_RECORD           = {
     win  = 0,
@@ -78,6 +78,15 @@ function PlayerProfileManager.getPlayerProfile(account)
     end
 
     return s_PlayerProfileList[account].profile
+end
+
+function PlayerProfileManager.getSkillConfiguration(account, configurationID)
+    local profile = PlayerProfileManager.getPlayerProfile(account)
+    if (not profile) then
+        return nil, "PlayerProfileManager.getSkillConfiguration() the profile doesn't exist."
+    else
+        return profile.skillConfigurations[configurationID]
+    end
 end
 
 function PlayerProfileManager.isAccountAndPasswordValid(account, password)

@@ -285,6 +285,23 @@ local function translateJoinWar(action)
     end
 end
 
+local function translateGetSkillConfiguration(action)
+    local configurationID    = action.configurationID
+    local configuration, err = PlayerProfileManager.getSkillConfiguration(action.playerAccount, configurationID)
+    if (not configuration) then
+        return {
+            actionName = "Message",
+            message    = LocalizationFunctions.getLocalizedText(81, "FailToGetSkillConfiguration", err),
+        }
+    else
+        return {
+            actionName      = "GetSkillConfiguration",
+            configurationID = configurationID,
+            configuration   = configuration,
+        }
+    end
+end
+
 local function translateBeginTurn(action, modelScene)
     local modelTurnManager = modelScene:getModelTurnManager()
     if (modelTurnManager:getTurnPhase() ~= "requestToBegin") then
@@ -1023,11 +1040,12 @@ function ActionTranslator.translate(action, session)
         }
     end
 
-    if     (actionName == "NewWar")             then return translateNewWar(            action)
-    elseif (actionName == "GetOngoingWarList")  then return translateGetOngoingWarList( action)
-    elseif (actionName == "GetSceneWarData")    then return translateGetSceneWarData(   action)
-    elseif (actionName == "GetJoinableWarList") then return translateGetJoinableWarList(action)
-    elseif (actionName == "JoinWar")            then return translateJoinWar(           action)
+    if     (actionName == "NewWar")                then return translateNewWar(               action)
+    elseif (actionName == "GetOngoingWarList")     then return translateGetOngoingWarList(    action)
+    elseif (actionName == "GetSceneWarData")       then return translateGetSceneWarData(      action)
+    elseif (actionName == "GetJoinableWarList")    then return translateGetJoinableWarList(   action)
+    elseif (actionName == "JoinWar")               then return translateJoinWar(              action)
+    elseif (actionName == "GetSkillConfiguration") then return translateGetSkillConfiguration(action)
     end
 
     local sceneWarFileName   = action.sceneWarFileName
