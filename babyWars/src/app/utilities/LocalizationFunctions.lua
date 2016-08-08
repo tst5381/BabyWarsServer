@@ -108,19 +108,33 @@ local s_Texts = {
     },
     [3] = {
         [1] = function(textType)
-            if     (textType == "Configuration") then return "配 置"
-            elseif (textType == "SetSkillPoint") then return "设定技能点数上限"
-            elseif (textType == "PassiveSkill")  then return "日 常 技 能"
-            elseif (textType == "ActiveSkill")   then return "主 动 技 能"
-            else                                      return "未知[3]: " .. (textType or "")
+            if     (textType == "Configuration")        then return "配 置"
+            elseif (textType == "SetSkillPoint")        then return "设定技能点数上限"
+            elseif (textType == "PassiveSkill")         then return "日 常 技 能"
+            elseif (textType == "ActiveSkill")          then return "主 动 技 能"
+            elseif (textType == "MaxPoints")            then return "最大技能点"
+            elseif (textType == "TotalPoints")          then return "合计技能点"
+            elseif (textType == "SkillPoints")          then return "技能点"
+            elseif (textType == "Level")                then return "等级"
+            elseif (textType == "Modifier")             then return "幅度"
+            elseif (textType == "None")                 then return "无"
+            elseif (textType == "GettingConfiguration") then return "正在从服务器获取数据，请稍候。\n若长时间没有反应，请返回并重试。"
+            else                                             return "未知[3]: " .. (textType or "")
             end
         end,
         [2] = function(textType)
-            if     (textType == "Configuration") then return "Configuration"
-            elseif (textType == "SetSkillPoint") then return "SetSkillPoint"
-            elseif (textType == "PassiveSkill")  then return "Passive"
-            elseif (textType == "ActiveSkill")   then return "Active"
-            else                                      return "Unknown[3]: " .. (textType or "")
+            if     (textType == "Configuration")        then return "Configuration"
+            elseif (textType == "SetSkillPoint")        then return "SetSkillPoint"
+            elseif (textType == "PassiveSkill")         then return "Passive"
+            elseif (textType == "ActiveSkill")          then return "Active"
+            elseif (textType == "MaxPoints")            then return "Max Skill Points"
+            elseif (textType == "TotalPoints")          then return "Total Points"
+            elseif (textType == "SkillPoints")          then return "Points"
+            elseif (textType == "Level")                then return "Level"
+            elseif (textType == "Modifier")             then return "Modifier"
+            elseif (textType == "None")                 then return "None"
+            elseif (textType == "GettingConfiguration") then return "Getting data from the server. Please wait."
+            else                                             return "Unknown[3]: " .. (textType or "")
             end
         end,
     },
@@ -136,11 +150,19 @@ local s_Texts = {
             return "Untranslated..."
         end,
     },
-    --[[
     [5] = {
-        [1] = function(...) return "配 置 技 能"    end,
-        [2] = function(...) return "Config Skills" end,
+        [1] = function(skillType)
+            if     (skillType == "globalAttackModifier")  then return "全军攻击力"
+            elseif (skillType == "globalDefenseModifier") then return "全军防御力"
+            elseif (skillType == "globalCostModifier")    then return "全军造价"
+            else                                               return "未知[5]: " .. (skillType or "")
+            end
+        end,
+        [2] = function(skillType)
+            return "Untranslated..."
+        end,
     },
+    --[[
     [6] = {
         [1] = function(...) return "注 册 / 登 陆" end,
         [2] = function(...) return "Login"        end,

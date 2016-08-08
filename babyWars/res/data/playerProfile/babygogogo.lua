@@ -14,7 +14,11 @@ return {
     skillConfigurations = {
         {
             maxPoints = 100,
-            passive   = {},
+            passive   = {
+                {name = "globalAttackModifier",  level = 10,},
+                {name = "globalDefenseModifier", level = -30,},
+                {name = "globalCostModifier",    level = 15,},
+            },
             active1   = {},
             active2   = {},
         },
