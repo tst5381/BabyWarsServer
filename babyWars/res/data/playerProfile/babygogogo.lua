@@ -15,8 +15,8 @@ return {
         {
             maxPoints = 100,
             passive   = {
-                {name = "globalAttackModifier",  level = 10,},
-                {name = "globalDefenseModifier", level = -30,},
+                {name = "globalAttackModifier",  level = 5,},
+                {name = "globalDefenseModifier", level = -15,},
                 {name = "globalCostModifier",    level = 15,},
             },
             active1   = {},
@@ -24,25 +24,36 @@ return {
         },
         {
             maxPoints = 100,
-            passive   = {},
+            passive   = {
+                {name = "globalAttackModifier",  level = 20,},
+                {name = "globalDefenseModifier", level = 30,},
+                {name = "globalCostModifier",    level = -30,},
+            },
             active1   = {},
             active2   = {},
         },
         {
             maxPoints = 100,
-            passive   = {},
+            passive   = {
+                {name = "globalCostModifier",    level = 10,},
+            },
             active1   = {},
             active2   = {},
         },
         {
             maxPoints = 100,
-            passive   = {},
+            passive   = {
+                {name = "globalAttackModifier",  level = 10,},
+            },
             active1   = {},
             active2   = {},
         },
         {
             maxPoints = 100,
-            passive   = {},
+            passive   = {
+                {name = "globalAttackModifier",  level = 20,},
+                {name = "globalDefenseModifier", level = -15,},
+            },
             active1   = {},
             active2   = {},
         },
