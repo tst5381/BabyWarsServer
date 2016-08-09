@@ -691,7 +691,25 @@ GameConstant.categories = {
     ["CopterUnits"] = {
         "BattleCopter",
         "TransportCopter",
-    }
+    },
+
+    ["SkillCategories"] = {
+        "SkillCategoryAttack",
+        "SkillCategoryDefense",
+        "SkillCategoryCost",
+    },
+
+    ["SkillCategoryAttack"] = {
+        "GlobalAttackModifier",
+    },
+
+    ["SkillCategoryDefense"] = {
+        "GlobalDefenseModifier",
+    },
+
+    ["SkillCategoryCost"] = {
+        "GlobalCostModifier",
+    },
 }
 
 GameConstant.maxCapturePoint         = 20
@@ -3624,7 +3642,7 @@ GameConstant.passiveSkillSlotsCount = 4
 GameConstant.activeSkillSlotsCount  = 4
 
 GameConstant.skills = {
-    globalAttackModifier = {
+    GlobalAttackModifier = {
         levels = {
             [-30] = {modifier = -30, points = -300,},
             [-29] = {modifier = -29, points = -290,},
@@ -3690,7 +3708,7 @@ GameConstant.skills = {
         },
     },
 
-    globalDefenseModifier = {
+    GlobalDefenseModifier = {
         levels = {
             [-30] = {modifier = -30, points = -200,    },
             [-29] = {modifier = -29, points = -193.33, },
@@ -3756,7 +3774,7 @@ GameConstant.skills = {
         },
     },
 
-    globalCostModifier = {
+    GlobalCostModifier = {
         levels = {
             [-30] = {modifier = 30,  points = -300,},
             [-29] = {modifier = 29,  points = -290,},

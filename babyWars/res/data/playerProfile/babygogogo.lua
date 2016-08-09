@@ -15,9 +15,9 @@ return {
         {
             maxPoints = 100,
             passive   = {
-                {name = "globalAttackModifier",  level = 5,},
-                {name = "globalDefenseModifier", level = -15,},
-                {name = "globalCostModifier",    level = 15,},
+                {name = "GlobalAttackModifier",  level = 5,},
+                {name = "GlobalDefenseModifier", level = -15,},
+                {name = "GlobalCostModifier",    level = 15,},
             },
             active1   = {},
             active2   = {},
@@ -25,9 +25,9 @@ return {
         {
             maxPoints = 100,
             passive   = {
-                {name = "globalAttackModifier",  level = 20,},
-                {name = "globalDefenseModifier", level = 30,},
-                {name = "globalCostModifier",    level = -30,},
+                {name = "GlobalAttackModifier",  level = 20,},
+                {name = "GlobalDefenseModifier", level = 30,},
+                {name = "GlobalCostModifier",    level = -30,},
             },
             active1   = {},
             active2   = {},
@@ -35,7 +35,7 @@ return {
         {
             maxPoints = 100,
             passive   = {
-                {name = "globalCostModifier",    level = 10,},
+                {name = "GlobalCostModifier",    level = 10,},
             },
             active1   = {},
             active2   = {},
@@ -43,7 +43,7 @@ return {
         {
             maxPoints = 100,
             passive   = {
-                {name = "globalAttackModifier",  level = 10,},
+                {name = "GlobalAttackModifier",  level = 10,},
             },
             active1   = {},
             active2   = {},
@@ -51,8 +51,8 @@ return {
         {
             maxPoints = 100,
             passive   = {
-                {name = "globalAttackModifier",  level = 20,},
-                {name = "globalDefenseModifier", level = -15,},
+                {name = "GlobalAttackModifier",  level = 20,},
+                {name = "GlobalDefenseModifier", level = -15,},
             },
             active1   = {},
             active2   = {},
