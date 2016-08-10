@@ -208,10 +208,11 @@ end
 -- The constructor and initializers.
 --------------------------------------------------------------------------------
 function ModelSceneWar:ctor(sceneData)
-    self.m_FileName    = sceneData.fileName
-    self.m_WarPassword = sceneData.warPassword
-    self.m_IsWarEnded  = sceneData.isEnded
-    self.m_ActionID    = sceneData.actionID
+    self.m_FileName       = sceneData.fileName
+    self.m_WarPassword    = sceneData.warPassword
+    self.m_IsWarEnded     = sceneData.isEnded
+    self.m_ActionID       = sceneData.actionID
+    self.m_MaxSkillPoints = sceneData.maxSkillPoints
 
     initScriptEventDispatcher(self)
     initActorPlayerManager(   self, sceneData.players)
@@ -227,14 +228,15 @@ end
 --------------------------------------------------------------------------------
 function ModelSceneWar:toSerializableTable()
     return {
-        fileName    = self.m_FileName,
-        warPassword = self.m_WarPassword,
-        isEnded     = self.m_IsWarEnded,
-        actionID    = self.m_ActionID,
-        warField    = self:getModelWarField()      :toSerializableTable(),
-        turn        = self:getModelTurnManager()   :toSerializableTable(),
-        players     = self:getModelPlayerManager() :toSerializableTable(),
-        weather     = self:getModelWeatherManager():toSerializableTable(),
+        fileName       = self.m_FileName,
+        warPassword    = self.m_WarPassword,
+        isEnded        = self.m_IsWarEnded,
+        actionID       = self.m_ActionID,
+        maxSkillPoints = self.m_MaxSkillPoints,
+        warField       = self:getModelWarField()      :toSerializableTable(),
+        turn           = self:getModelTurnManager()   :toSerializableTable(),
+        players        = self:getModelPlayerManager() :toSerializableTable(),
+        weather        = self:getModelWeatherManager():toSerializableTable(),
     }
 end
 

@@ -4,6 +4,7 @@ return {
     warPassword = "",
     isEnded     = false,
     actionID    = 0,
+    maxSkillPoints = 100,
 
     warField = {
         tileMap = {
@@ -59,6 +60,6 @@ return {
     },
 
     weather = {
-        current = "clear"
+        current = "Clear"
     },
 }

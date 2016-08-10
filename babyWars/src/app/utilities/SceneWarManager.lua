@@ -60,11 +60,12 @@ local function generateWarConfiguration(warData)
     return {
         warFieldFileName = warData.warField.tileMap.template,
         warPassword      = warData.warPassword,
+        maxSkillPoints   = warData.maxSkillPoints,
         players          = players,
-        -- TODO: add code to generate the real configuration of the weather/fog/max skill points.
-        fog              = {data = false,   text = LocalizationFunctions.getLocalizedText(29),},
-        weather          = {data = "clear", text = LocalizationFunctions.getLocalizedText(40),},
-        maxSkillPoints   = {data = 100,     text = LocalizationFunctions.getLocalizedText(45),},
+
+        -- TODO: add code to generate the real configuration of the weather/fog.
+        fog              = false,
+        weather          = "Clear",
     }
 end
 
@@ -163,7 +164,7 @@ end
 local function generateWeatherData(defaultWeather, isRandom)
     -- TODO: add code to do the real job.
     return {
-        current = "clear",
+        current = "Clear",
     }
 end
 
@@ -187,17 +188,17 @@ local function generatePlayersData(playerIndex, account, skillConfigurationID)
 end
 
 local function generateSceneWarData(fileName, param)
-    -- TODO:validate the params.
     return {
-        fileName    = fileName,
-        warPassword = param.warPassword,
-        isEnded     = false,
-        actionID    = 0,
+        fileName       = fileName,
+        warPassword    = param.warPassword,
+        maxSkillPoints = param.maxSkillPoints,
+        isEnded        = false,
+        actionID       = 0,
 
-        warField    = generateWarFieldData(param.warFieldFileName),
-        turn        = DEFAULT_TURN_DATA,
-        players     = generatePlayersData(param.playerIndex, param.playerAccount, param.skillConfigurationID),
-        weather     = generateWeatherData(),
+        warField       = generateWarFieldData(param.warFieldFileName),
+        turn           = DEFAULT_TURN_DATA,
+        players        = generatePlayersData(param.playerIndex, param.playerAccount, param.skillConfigurationID),
+        weather        = generateWeatherData(),
     }, toFullFileName(fileName)
 end
 
