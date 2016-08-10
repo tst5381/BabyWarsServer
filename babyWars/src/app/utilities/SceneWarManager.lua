@@ -1,14 +1,21 @@
 
 local SceneWarManager = {}
 
-local Actor                  = require("src.global.actors.Actor")
-local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
-local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
-local LocalizationFunctions  = require("src.app.utilities.LocalizationFunctions")
+local ModelSkillConfiguration = require("src.app.models.common.ModelSkillConfiguration")
+local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
+local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
+local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions")
+local Actor                   = require("src.global.actors.Actor")
 
 local SCENE_WAR_PATH               = "babyWars/res/data/sceneWar/"
 local SCENE_WAR_NEXT_NAME_PATH     = SCENE_WAR_PATH .. "NextName.lua"
 local SCENE_WAR_JOINABLE_LIST_PATH = SCENE_WAR_PATH .. "JoinableList.lua"
+
+local DEFAULT_TURN_DATA = {
+    turnIndex   = 1,
+    playerIndex = 1,
+    phase       = "requestToBegin",
+}
 
 local s_IsInitialized = false
 
@@ -153,14 +160,6 @@ local function generateWarFieldData(warFieldFileName)
     }
 end
 
-local function generateTurnData()
-    return {
-        turnIndex   = 1,
-        playerIndex = 1,
-        phase       = "requestToBegin",
-    }
-end
-
 local function generateWeatherData(defaultWeather, isRandom)
     -- TODO: add code to do the real job.
     return {
@@ -168,30 +167,22 @@ local function generateWeatherData(defaultWeather, isRandom)
     }
 end
 
-local function generateSinglePlayerData(account, skillIndex)
-    local playerProfile = PlayerProfileManager.getPlayerProfile(account)
+local function generateSinglePlayerData(account, skillConfigurationID)
+    local playerProfile           = PlayerProfileManager.getPlayerProfile(account)
+    local modelSkillConfiguration = ModelSkillConfiguration:create(PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID))
     return {
-        account       = account,
-        nickname      = playerProfile.nickname,
-        fund          = 0,
-        isAlive       = true,
-        currentEnergy = 0,
-        -- TODO: load the skill configuration.
-        passiveSkill = {
-
-        },
-        activeSkill1 = {
-            energyRequirement = 3,
-        },
-        activeSkill2 = {
-            energyRequirement = 6,
-        },
+        account            = account,
+        nickname           = playerProfile.nickname,
+        fund               = 0,
+        isAlive            = true,
+        currentEnergy      = 0,
+        skillConfiguration = modelSkillConfiguration:toSerializableTable(),
     }
 end
 
-local function generatePlayersData(playerIndex, account, skillIndex)
+local function generatePlayersData(playerIndex, account, skillConfigurationID)
     return {
-        [playerIndex] = generateSinglePlayerData(account, skillIndex),
+        [playerIndex] = generateSinglePlayerData(account, skillConfigurationID),
     }
 end
 
@@ -204,8 +195,8 @@ local function generateSceneWarData(fileName, param)
         actionID    = 0,
 
         warField    = generateWarFieldData(param.warFieldFileName),
-        turn        = generateTurnData(),
-        players     = generatePlayersData(param.playerIndex, param.playerAccount, param.skillIndex),
+        turn        = DEFAULT_TURN_DATA,
+        players     = generatePlayersData(param.playerIndex, param.playerAccount, param.skillConfigurationID),
         weather     = generateWeatherData(),
     }, toFullFileName(fileName)
 end

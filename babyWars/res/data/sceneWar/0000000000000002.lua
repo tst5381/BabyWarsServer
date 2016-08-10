@@ -64,15 +64,12 @@ return {
             nickname      = "Red Alice",
             fund          = 0,
             isAlive       = true,
-            currentEnergy = 1,
-            passiveSkill = {
-
-            },
-            activeSkill1 = {
-                energyRequirement = 2,
-            },
-            activeSkill2 = {
-                energyRequirement = 3,
+            currentEnergy = 0,
+            skillConfiguration = {
+                maxPoints = 100,
+                passive = {},
+                active1 = {},
+                active2 = {},
             },
         },
         {
@@ -80,15 +77,12 @@ return {
             nickname      = "Blue Bob",
             fund          = 0,
             isAlive       = true,
-            currentEnergy = 2,
-            passiveSkill = {
-
-            },
-            activeSkill1 = {
-                energyRequirement = 4,
-            },
-            activeSkill2 = {
-                energyRequirement = 6,
+            currentEnergy = 0,
+            skillConfiguration = {
+                maxPoints = 100,
+                passive = {},
+                active1 = {},
+                active2 = {},
             },
         },
         {
@@ -96,15 +90,12 @@ return {
             nickname      = "Yellow Cat",
             fund          = 0,
             isAlive       = true,
-            currentEnergy = 3,
-            passiveSkill = {
-
-            },
-            activeSkill1 = {
-                energyRequirement = 6,
-            },
-            activeSkill2 = {
-                energyRequirement = 9,
+            currentEnergy = 0,
+            skillConfiguration = {
+                maxPoints = 100,
+                passive = {},
+                active1 = {},
+                active2 = {},
             },
         },
         {
@@ -112,15 +103,12 @@ return {
             nickname      = "Black Dog",
             fund          = 0,
             isAlive       = true,
-            currentEnergy = 4,
-            passiveSkill = {
-
-            },
-            activeSkill1 = {
-                energyRequirement = 8,
-            },
-            activeSkill2 = {
-                energyRequirement = 12,
+            currentEnergy = 0,
+            skillConfiguration = {
+                maxPoints = 100,
+                passive = {},
+                active1 = {},
+                active2 = {},
             },
         },
     },

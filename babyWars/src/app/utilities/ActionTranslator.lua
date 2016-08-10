@@ -211,6 +211,23 @@ local function translateRegister(action, session)
 end
 
 local function translateNewWar(action)
+    -- TODO: validate more params.
+    local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, action.skillConfigurationID)
+    if (not skillConfiguration) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "FailToGetSkillConfiguration"),
+        }
+    end
+
+    local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
+    if (modelSkillConfiguration:getMaxPoints() > action.maxSkillPoints) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "OverloadedSkillPoints"),
+        }
+    end
+
     local sceneWarFileName, err = SceneWarManager.createNewWar(action)
     if (not sceneWarFileName) then
         return {
