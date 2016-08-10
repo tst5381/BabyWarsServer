@@ -292,6 +292,30 @@ local function translateGetJoinableWarList(action)
 end
 
 local function translateJoinWar(action)
+    local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, action.skillConfigurationID)
+    if (not skillConfiguration) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "FailToGetSkillConfiguration"),
+        }
+    end
+
+    local warConfiguration, err = SceneWarManager.getJoinableSceneWarConfiguration(action.sceneWarFileName)
+    if (not warConfiguration) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "WarNotJoinable", err)
+        }
+    end
+
+    local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
+    if (modelSkillConfiguration:getMaxPoints() > warConfiguration.maxSkillPoints) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "OverloadedSkillPoints"),
+        }
+    end
+
     local msg, err = SceneWarManager.joinWar(action)
     if (not msg) then
         return {

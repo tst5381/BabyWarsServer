@@ -615,6 +615,7 @@ local s_Texts = {
             elseif (errType == "InvalidSkillConfiguration")      then return "技能配置无效，请检查后重试。" .. text
             elseif (errType == "SucceedToSetSkillConfiguration") then return "技能配置已保存。" .. text
             elseif (errType == "OverloadedSkillPoints")          then return "您选择的技能配置的点数超出了上限。请检查后重试。"
+            elseif (errType == "WarNotJoinable")                 then return "无法参战，可能因为该战局不存在，或已开战。请返回主菜单并重试。\n" .. text
             else                                                      return "未知错误类型[81] " .. text
             end
         end,
@@ -628,6 +629,7 @@ local s_Texts = {
             elseif (errType == "InvalidSkillConfiguration")      then return "The skill configuration is invalid. Please check and retry.\n" .. text
             elseif (errType == "SucceedToSetSkillConfiguration") then return "Save skill configuration successfully." .. text
             elseif (errType == "OverloadedSkillPoints")          then return "The skill points of the selected configuration is beyond the limitation."
+            elseif (errType == "WarNotJoinable")                 then return "The war is not joinable.\n" .. text
             else                                                      return "Unknown errType[81]" .. text
             end
         end,
