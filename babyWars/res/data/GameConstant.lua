@@ -3635,14 +3635,17 @@ GameConstant.templateModelUnits = {
     },
 }
 
-GameConstant.minSkillPoints         = 0
-GameConstant.maxSkillPoints         = 500
-GameConstant.skillPointsPerStep     = 25
-GameConstant.passiveSkillSlotsCount = 4
-GameConstant.activeSkillSlotsCount  = 4
+GameConstant.minSkillPoints           = 0
+GameConstant.maxSkillPoints           = 500
+GameConstant.skillPointsPerStep       = 25
+GameConstant.skillConfigurationsCount = 10
+GameConstant.passiveSkillSlotsCount   = 4
+GameConstant.activeSkillSlotsCount    = 4
 
 GameConstant.skills = {
     GlobalAttackModifier = {
+        minLevel = -30,
+        maxLevel = 30,
         levels = {
             [-30] = {modifier = -30, points = -300,},
             [-29] = {modifier = -29, points = -290,},
@@ -3709,6 +3712,8 @@ GameConstant.skills = {
     },
 
     GlobalDefenseModifier = {
+        minLevel = -30,
+        maxLevel = 30,
         levels = {
             [-30] = {modifier = -30, points = -200,    },
             [-29] = {modifier = -29, points = -193.33, },
@@ -3775,6 +3780,8 @@ GameConstant.skills = {
     },
 
     GlobalCostModifier = {
+        minLevel = -30,
+        maxLevel = 30,
         levels = {
             [-30] = {modifier = 30,  points = -300,},
             [-29] = {modifier = 29,  points = -290,},

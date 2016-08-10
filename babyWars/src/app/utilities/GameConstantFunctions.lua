@@ -189,6 +189,10 @@ function GameConstantFunctions.getPromotionBonus()
     return GAME_CONSTANT.promotionBonus
 end
 
+function GameConstantFunctions.getSkillConfigurationsCount()
+    return GAME_CONSTANT.skillConfigurationsCount
+end
+
 function GameConstantFunctions.getPassiveSkillSlotsCount()
     return GAME_CONSTANT.passiveSkillSlotsCount
 end
@@ -207,6 +211,11 @@ end
 
 function GameConstantFunctions.getSkillModifier(skillName, level)
     return GAME_CONSTANT.skills[skillName].levels[level].modifier
+end
+
+function GameConstantFunctions.getSkillLevelMinMax(skillName)
+    local skill = GAME_CONSTANT.skills[skillName]
+    return skill.minLevel, skill.maxLevel
 end
 
 function GameConstantFunctions.getTiledIdWithTileOrUnitName(name, playerIndex)

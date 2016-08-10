@@ -89,6 +89,16 @@ function PlayerProfileManager.getSkillConfiguration(account, configurationID)
     end
 end
 
+function PlayerProfileManager.setSkillConfiguration(account, configurationID, modelSkillConfiguration)
+    local profile = PlayerProfileManager.getPlayerProfile(account)
+    assert(profile, "PlayerProfileManager.setSkillConfiguration() the profile doesn't exist.")
+
+    profile.skillConfigurations[configurationID] = modelSkillConfiguration:toSerializableTable()
+    serialize(toFullFileName(account), profile)
+
+    return PlayerProfileManager
+end
+
 function PlayerProfileManager.isAccountAndPasswordValid(account, password)
     local profile = PlayerProfileManager.getPlayerProfile(account)
     return (profile) and (profile.password == password)
