@@ -119,7 +119,7 @@ function ModelSkillConfiguration:getMaxPoints()
     return self.m_MaxPoints
 end
 
-function ModelSkillConfiguration:setSkillSlot(skillID, slotIndex, skillName, level)
+function ModelSkillConfiguration:setSkill(skillID, slotIndex, skillName, level)
     getSkillWithId(self, skillID):setSkill(slotIndex, skillName, level)
 
     return self
@@ -143,6 +143,13 @@ function ModelSkillConfiguration:getDescription()
         getDescriptionForActiveSkill(self.m_Active1, 1),
         getDescriptionForActiveSkill(self.m_Active2, 2)
     )
+end
+
+function ModelSkillConfiguration:getProductionCostModifier(tiledID)
+    local modifier = self.m_ModelPassiveSkill:getProductionCostModifier(tiledID)
+    -- TODO: take the active skills into account.
+
+    return modifier
 end
 
 return ModelSkillConfiguration
