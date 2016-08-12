@@ -32,9 +32,9 @@ return {
             skillConfiguration = {
                 maxPoints = 100,
                 passive   = {
-                    {name = "GlobalAttackModifier",  level = 5,},
-                    {name = "GlobalDefenseModifier", level = -15,},
-                    {name = "GlobalCostModifier",    level = 15,},
+                    {id = 1, level = 5,},
+                    {id = 2, level = -15,},
+                    {id = 3, level = 15,},
                 },
                 active1   = {},
                 active2   = {},
@@ -49,9 +49,9 @@ return {
             skillConfiguration = {
                 maxPoints = 100,
                 passive   = {
-                    {name = "GlobalAttackModifier",  level = 20,},
-                    {name = "GlobalDefenseModifier", level = 30,},
-                    {name = "GlobalCostModifier",    level = -30,},
+                    {id = 1, level = 20,},
+                    {id = 2, level = 30,},
+                    {id = 3, level = -30,},
                 },
                 active1   = {},
                 active2   = {},
