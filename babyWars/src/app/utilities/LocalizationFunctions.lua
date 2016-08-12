@@ -120,9 +120,13 @@ local s_Texts = {
             elseif (textType == "MaxPoints")            then return "最大技能点"
             elseif (textType == "TotalPoints")          then return "合计技能点"
             elseif (textType == "SkillPoints")          then return "技能点"
+            elseif (textType == "EnergyRequirement")    then return "技能槽长度"
             elseif (textType == "Level")                then return "等级"
             elseif (textType == "Modifier")             then return "幅度"
             elseif (textType == "Clear")                then return "清 空"
+            elseif (textType == "Enable")               then return "启 用"
+            elseif (textType == "Disable")              then return "禁 用"
+            elseif (textType == "Disabled")             then return "已 禁 用"
             elseif (textType == "Selected")             then return "已 选 定"
             elseif (textType == "None")                 then return "无"
             elseif (textType == "GettingConfiguration") then return "正在从服务器获取数据，请稍候。若长时间没有反应，请返回并重试。"
@@ -139,9 +143,13 @@ local s_Texts = {
             elseif (textType == "MaxPoints")            then return "Max Skill Points"
             elseif (textType == "TotalPoints")          then return "Total Points"
             elseif (textType == "SkillPoints")          then return "Points"
+            elseif (textType == "EnergyRequirement")    then return "Energy Requirement"
             elseif (textType == "Level")                then return "Level"
             elseif (textType == "Modifier")             then return "Modifier"
             elseif (textType == "Clear")                then return "Clear"
+            elseif (textType == "Enable")               then return "Enable"
+            elseif (textType == "Disable")              then return "Disable"
+            elseif (textType == "Disabled")             then return "Disabled"
             elseif (textType == "Selected")             then return "Selected"
             elseif (textType == "None")                 then return "None"
             elseif (textType == "GettingConfiguration") then return "Getting data from the server. Please wait."
@@ -191,14 +199,18 @@ local s_Texts = {
         end,
     },
     [7] = {
-        [1] = function(errType)
+        [1] = function(errType, text)
             if     (errType == "ReduplicatedPassiveSkills")    then return "日常技能中有重复的技能。请修改后重试。"
             elseif (errType == "OverloadedPassiveSkillPoints") then return "日常技能的合计技能点超出上限。请修改后重试。"
+            elseif (errType == "InvalidActiveSkill")           then return "主动技能 " .. (text or "") .. " 无效，原因可能是有重复技能，或技能点超限。"
+            else                                                    return "未知[7]: " .. (errType or "")
             end
         end,
         [2] = function(errType)
             if     (errType == "ReduplicatedPassiveSkills")    then return "Some skills among the passive skills are duplicated."
             elseif (errType == "OverloadedPassiveSkillPoints") then return "The skill points of passive skills are overloaded."
+            elseif (errType == "InvalidActiveSkill")           then return "The active skill " .. (text or "") .. " is invalid."
+            else                                                    return "Unknown[7]: " .. (errType or "")
             end
         end,
     },
