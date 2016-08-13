@@ -67,7 +67,6 @@ return {
             isAlive                = true,
             damageCost             = 0,
             skillActivatedCount    = 0,
-            activatingSkillGroupID = 0,
             skillConfiguration = {
                 maxPoints = 100,
                 passive = {},
@@ -82,7 +81,6 @@ return {
             isAlive                = true,
             damageCost             = 0,
             skillActivatedCount    = 0,
-            activatingSkillGroupID = 0,
             skillConfiguration = {
                 maxPoints = 100,
                 passive = {},
@@ -97,7 +95,6 @@ return {
             isAlive                = true,
             damageCost             = 0,
             skillActivatedCount    = 0,
-            activatingSkillGroupID = 0,
             skillConfiguration = {
                 maxPoints = 100,
                 passive = {},
@@ -112,7 +109,6 @@ return {
             isAlive                = true,
             damageCost             = 0,
             skillActivatedCount    = 0,
-            activatingSkillGroupID = 0,
             skillConfiguration = {
                 maxPoints = 100,
                 passive = {},
