@@ -95,7 +95,7 @@ function ModelPlayer:getActivatingSkillGroupId()
 end
 
 function ModelPlayer:addDamageCost(cost)
-    if (not self.m_ActivatingSkillGroupID) then
+    if (self:getActivatingSkillGroupId() == 0) then
         local _, maxEnergyRequirement = self:getModelSkillConfiguration():getEnergyRequirement()
         self.m_DamageCost = math.min(
             self.m_DamageCost + cost,
