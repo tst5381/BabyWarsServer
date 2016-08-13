@@ -440,6 +440,22 @@ local function translateSurrender(action, modelScene)
     return actionSurrender, generateActionsForPublish(actionSurrender, modelPlayerManager, action.playerAccount)
 end
 
+local function translateActivateSkill(action, modelScene)
+    local modelPlayer        = modelScene:getModelPlayerManager():getModelPlayerWithAccount(action.playerAccount)
+    local energy, req1, req2 = modelPlayer:getEnergy()
+    local skillGroupID       = action.skillGroupID
+    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main") or
+        (not modelPlayer:canActivateSkillGroup(skillGroupID)))      then
+        return {
+            actionName       = "Message",
+            additionalAction = "ReloadSceneWar",
+            message          = getLocalizedText(81, "OutOfSync"),
+        }
+    end
+
+    local
+end
+
 -- This translation ignores the existing unit of the same player at the end of the path, so that the actions of Join/Attack/Wait can reuse this function.
 local function translatePath(path, launchUnitID, modelSceneWar)
     local modelWarField      = modelSceneWar:getModelWarField()
@@ -1134,6 +1150,7 @@ function ActionTranslator.translate(action, session)
     if     (actionName == "BeginTurn")              then return translateBeginTurn(             action, modelSceneWar)
     elseif (actionName == "EndTurn")                then return translateEndTurn(               action, modelSceneWar)
     elseif (actionName == "Surrender")              then return translateSurrender(             action, modelSceneWar)
+    elseif (actionName == "ActivateSkill")          then return translateActivateSkill(         action, modelSceneWar)
     elseif (actionName == "Wait")                   then return translateWait(                  action, modelSceneWar)
     elseif (actionName == "Attack")                 then return translateAttack(                action, modelSceneWar)
     elseif (actionName == "JoinModelUnit")          then return translateJoinModelUnit(         action, modelSceneWar)

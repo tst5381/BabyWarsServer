@@ -113,13 +113,11 @@ return {
                 },
                 active1   = {
                     {id = 1, level = 30},
-                    isEnabled         = true,
                     energyRequirement = 3,
                 },
                 active2   = {
                     {id = 1, level = 30},
                     {id = 3, level = 30},
-                    isEnabled         = true,
                     energyRequirement = 6,
                 },
             },
@@ -144,7 +142,6 @@ return {
                     {id = 1, level = 30},
                     {id = 2, level = 30},
                     {id = 3, level = 10},
-                    isEnabled         = true,
                     energyRequirement = 6,
                 },
             },
