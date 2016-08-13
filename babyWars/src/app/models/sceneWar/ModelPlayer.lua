@@ -94,7 +94,7 @@ function ModelPlayer:getActivatingSkillGroupId()
     return self.m_ActivatingSkillGroupID
 end
 
-function ModelPlayer:canActivateSkill(skillGroupID)
+function ModelPlayer:canActivateSkillGroup(skillGroupID)
     if (self:getActivatingSkillGroupId() ~= 0) then
         return false
     end

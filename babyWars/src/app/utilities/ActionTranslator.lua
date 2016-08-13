@@ -440,7 +440,7 @@ local function translateSurrender(action, modelScene)
     return actionSurrender, generateActionsForPublish(actionSurrender, modelPlayerManager, action.playerAccount)
 end
 
-local function translateActivateSkill(action, modelScene)
+local function translateActivateSKillGroup(action, modelScene)
     local modelPlayer        = modelScene:getModelPlayerManager():getModelPlayerWithAccount(action.playerAccount)
     local energy, req1, req2 = modelPlayer:getEnergy()
     local skillGroupID       = action.skillGroupID
@@ -453,7 +453,13 @@ local function translateActivateSkill(action, modelScene)
         }
     end
 
-    local
+    local sceneWarFileName    = modelScene:getFileName()
+    local actionActivateSkill = {
+        actionName   = "ActivateSkill",
+        actionID     = action.actionID,
+        fileName     = sceneWarFileName,
+        skillGroupID = skillGroupID,
+    }
 end
 
 -- This translation ignores the existing unit of the same player at the end of the path, so that the actions of Join/Attack/Wait can reuse this function.
@@ -1150,7 +1156,7 @@ function ActionTranslator.translate(action, session)
     if     (actionName == "BeginTurn")              then return translateBeginTurn(             action, modelSceneWar)
     elseif (actionName == "EndTurn")                then return translateEndTurn(               action, modelSceneWar)
     elseif (actionName == "Surrender")              then return translateSurrender(             action, modelSceneWar)
-    elseif (actionName == "ActivateSkill")          then return translateActivateSkill(         action, modelSceneWar)
+    elseif (actionName == "ActivateSkillGroup")     then return translateActivateSKillGroup(    action, modelSceneWar)
     elseif (actionName == "Wait")                   then return translateWait(                  action, modelSceneWar)
     elseif (actionName == "Attack")                 then return translateAttack(                action, modelSceneWar)
     elseif (actionName == "JoinModelUnit")          then return translateJoinModelUnit(         action, modelSceneWar)
