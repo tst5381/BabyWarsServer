@@ -172,12 +172,14 @@ local function generateSinglePlayerData(account, skillConfigurationID)
     local playerProfile           = PlayerProfileManager.getPlayerProfile(account)
     local modelSkillConfiguration = ModelSkillConfiguration:create(PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID))
     return {
-        account            = account,
-        nickname           = playerProfile.nickname,
-        fund               = 0,
-        isAlive            = true,
-        currentEnergy      = 0,
-        skillConfiguration = modelSkillConfiguration:toSerializableTable(),
+        account                = account,
+        nickname               = playerProfile.nickname,
+        fund                   = 0,
+        isAlive                = true,
+        damageCost             = 0,
+        skillActivatedCount    = 0,
+        activatingSkillGroupID = 0,
+        skillConfiguration     = modelSkillConfiguration:toSerializableTable(),
     }
 end
 

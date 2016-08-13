@@ -24,11 +24,13 @@ return {
 
     players = {
         {
-            account            = "babygogogo",
-            nickname           = "Red Alice",
-            fund               = 0,
-            isAlive            = true,
-            currentEnergy      = 0,
+            account                = "babygogogo",
+            nickname               = "Red Alice",
+            fund                   = 0,
+            isAlive                = true,
+            damageCost             = 0,
+            skillActivatedCount    = 0,
+            activatingSkillGroupID = 0,
             skillConfiguration = {
                 maxPoints = 100,
                 passive   = {},
@@ -37,11 +39,13 @@ return {
             },
         },
         {
-            account            = "tester1",
-            nickname           = "Blue Bob",
-            fund               = 0,
-            isAlive            = true,
-            currentEnergy      = 0,
+            account                = "tester1",
+            nickname               = "Blue Bob",
+            fund                   = 0,
+            isAlive                = true,
+            damageCost             = 0,
+            skillActivatedCount    = 0,
+            activatingSkillGroupID = 0,
             skillConfiguration = {
                 maxPoints = 100,
                 passive   = {},
