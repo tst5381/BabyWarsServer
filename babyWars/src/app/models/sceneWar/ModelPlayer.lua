@@ -113,7 +113,7 @@ function ModelPlayer:getActivatingSkillGroupId()
 end
 
 function ModelPlayer:canActivateSkillGroup(skillGroupID)
-    if (self:getActivatingSkillGroupId() ~= 0) then
+    if (self:getActivatingSkillGroupId()) then
         return false
     end
 
