@@ -440,8 +440,10 @@ local function translateSurrender(action, modelScene)
     return actionSurrender, generateActionsForPublish(actionSurrender, modelPlayerManager, action.playerAccount)
 end
 
-local function translateActivateSKillGroup(action, modelScene)
-    local modelPlayer        = modelScene:getModelPlayerManager():getModelPlayerWithAccount(action.playerAccount)
+local function translateActivateSkillGroup(action, modelScene)
+    local playerAccount      = action.playerAccount
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    local modelPlayer        = modelPlayerManager:getModelPlayerWithAccount(playerAccount)
     local energy, req1, req2 = modelPlayer:getEnergy()
     local skillGroupID       = action.skillGroupID
     if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main") or
@@ -453,13 +455,15 @@ local function translateActivateSKillGroup(action, modelScene)
         }
     end
 
-    local sceneWarFileName    = modelScene:getFileName()
-    local actionActivateSkill = {
-        actionName   = "ActivateSkill",
+    local sceneWarFileName         = modelScene:getFileName()
+    local actionActivateSkillGroup = {
+        actionName   = "ActivateSkillGroup",
         actionID     = action.actionID,
         fileName     = sceneWarFileName,
         skillGroupID = skillGroupID,
     }
+    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionActivateSkillGroup)
+    return actionActivateSkillGroup, generateActionsForPublish(actionActivateSkillGroup, modelPlayerManager, playerAccount)
 end
 
 -- This translation ignores the existing unit of the same player at the end of the path, so that the actions of Join/Attack/Wait can reuse this function.
@@ -1156,7 +1160,7 @@ function ActionTranslator.translate(action, session)
     if     (actionName == "BeginTurn")              then return translateBeginTurn(             action, modelSceneWar)
     elseif (actionName == "EndTurn")                then return translateEndTurn(               action, modelSceneWar)
     elseif (actionName == "Surrender")              then return translateSurrender(             action, modelSceneWar)
-    elseif (actionName == "ActivateSkillGroup")     then return translateActivateSKillGroup(    action, modelSceneWar)
+    elseif (actionName == "ActivateSkillGroup")     then return translateActivateSkillGroup(    action, modelSceneWar)
     elseif (actionName == "Wait")                   then return translateWait(                  action, modelSceneWar)
     elseif (actionName == "Attack")                 then return translateAttack(                action, modelSceneWar)
     elseif (actionName == "JoinModelUnit")          then return translateJoinModelUnit(         action, modelSceneWar)
