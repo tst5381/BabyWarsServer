@@ -177,6 +177,7 @@ local function generateSinglePlayerData(account, skillConfigurationID)
         fund                = 0,
         isAlive             = true,
         damageCost          = 0,
+        skillActivatedCount = 0,
         skillConfiguration  = modelSkillConfiguration:toSerializableTable(),
     }
 end

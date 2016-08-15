@@ -221,7 +221,7 @@ local function translateNewWar(action)
     end
 
     local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-    if (modelSkillConfiguration:getMaxPoints() > action.maxSkillPoints) then
+    if (modelSkillConfiguration:getMaxSkillPoints() > action.maxSkillPoints) then
         return {
             actionName = "Message",
             message    = getLocalizedText(81, "OverloadedSkillPoints"),
@@ -309,7 +309,7 @@ local function translateJoinWar(action)
     end
 
     local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-    if (modelSkillConfiguration:getMaxPoints() > warConfiguration.maxSkillPoints) then
+    if (modelSkillConfiguration:getMaxSkillPoints() > warConfiguration.maxSkillPoints) then
         return {
             actionName = "Message",
             message    = getLocalizedText(81, "OverloadedSkillPoints"),

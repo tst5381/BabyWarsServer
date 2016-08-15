@@ -123,9 +123,9 @@ return {
             fund                   = 0,
             isAlive                = true,
             damageCost             = 0,
+            skillActivatedCount    = 0,
             skillConfiguration = {
                 maxPoints = 100,
-                skillActivatedCount    = 0,
                 passive = {},
                 active1 = {},
                 active2 = {},
@@ -137,9 +137,9 @@ return {
             fund                   = 0,
             isAlive                = true,
             damageCost             = 0,
+            skillActivatedCount    = 0,
             skillConfiguration = {
                 maxPoints = 100,
-                skillActivatedCount    = 0,
                 passive = {},
                 active1 = {},
                 active2 = {},
@@ -151,9 +151,9 @@ return {
             fund                   = 0,
             isAlive                = true,
             damageCost             = 0,
+            skillActivatedCount    = 0,
             skillConfiguration = {
                 maxPoints = 100,
-                skillActivatedCount    = 0,
                 passive = {},
                 active1 = {},
                 active2 = {},
@@ -165,9 +165,9 @@ return {
             fund                   = 0,
             isAlive                = true,
             damageCost             = 0,
+            skillActivatedCount    = 0,
             skillConfiguration = {
                 maxPoints = 100,
-                skillActivatedCount    = 0,
                 passive = {},
                 active1 = {},
                 active2 = {},
