@@ -28,9 +28,10 @@
 
 local ModelSceneWar = require("src.global.functions.class")("ModelSceneWar")
 
-local Actor            = require("src.global.actors.Actor")
-local ActionTranslator = require("src.app.utilities.ActionTranslator")
-local EventDispatcher  = require("src.global.events.EventDispatcher")
+local ActionTranslator     = require("src.app.utilities.ActionTranslator")
+local InstantSkillExecutor = require("src.app.utilities.InstantSkillExecutor")
+local Actor                = require("src.global.actors.Actor")
+local EventDispatcher      = require("src.global.events.EventDispatcher")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -91,6 +92,8 @@ local function doActionSurrender(self, action)
 end
 
 local function doActionActivateSkillGroup(self, action)
+    InstantSkillExecutor.doActionActivateSkillGroup(action,
+        self:getModelWarField(), self:getModelPlayerManager(), self:getModelTurnManager(), self:getModelWeatherManager())
     local playerIndex = self:getModelTurnManager():getPlayerIndex()
     self:getModelPlayerManager():doActionActivateSkillGroup(action, playerIndex)
 end
