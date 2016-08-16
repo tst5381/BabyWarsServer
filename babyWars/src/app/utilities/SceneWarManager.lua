@@ -1,14 +1,21 @@
 
 local SceneWarManager = {}
 
-local Actor                  = require("src.global.actors.Actor")
-local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
-local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
-local LocalizationFunctions  = require("src.app.utilities.LocalizationFunctions")
+local ModelSkillConfiguration = require("src.app.models.common.ModelSkillConfiguration")
+local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
+local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
+local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions")
+local Actor                   = require("src.global.actors.Actor")
 
 local SCENE_WAR_PATH               = "babyWars/res/data/sceneWar/"
 local SCENE_WAR_NEXT_NAME_PATH     = SCENE_WAR_PATH .. "NextName.lua"
 local SCENE_WAR_JOINABLE_LIST_PATH = SCENE_WAR_PATH .. "JoinableList.lua"
+
+local DEFAULT_TURN_DATA = {
+    turnIndex   = 1,
+    playerIndex = 1,
+    phase       = "requestToBegin",
+}
 
 local s_IsInitialized = false
 
@@ -53,11 +60,12 @@ local function generateWarConfiguration(warData)
     return {
         warFieldFileName = warData.warField.tileMap.template,
         warPassword      = warData.warPassword,
+        maxSkillPoints   = warData.maxSkillPoints,
         players          = players,
-        -- TODO: add code to generate the real configuration of the weather/fog/max skill points.
-        fog              = {data = false,   text = LocalizationFunctions.getLocalizedText(29),},
-        weather          = {data = "clear", text = LocalizationFunctions.getLocalizedText(40),},
-        maxSkillPoints   = {data = 100,     text = LocalizationFunctions.getLocalizedText(45),},
+
+        -- TODO: add code to generate the real configuration of the weather/fog.
+        fog              = false,
+        weather          = "Clear",
     }
 end
 
@@ -153,60 +161,45 @@ local function generateWarFieldData(warFieldFileName)
     }
 end
 
-local function generateTurnData()
-    return {
-        turnIndex   = 1,
-        playerIndex = 1,
-        phase       = "requestToBegin",
-    }
-end
-
 local function generateWeatherData(defaultWeather, isRandom)
     -- TODO: add code to do the real job.
     return {
-        current = "clear",
+        current = "Clear",
     }
 end
 
-local function generateSinglePlayerData(account, skillIndex)
-    local playerProfile = PlayerProfileManager.getPlayerProfile(account)
+local function generateSinglePlayerData(account, skillConfigurationID)
+    local playerProfile           = PlayerProfileManager.getPlayerProfile(account)
+    local modelSkillConfiguration = ModelSkillConfiguration:create(PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID))
     return {
-        account       = account,
-        nickname      = playerProfile.nickname,
-        fund          = 0,
-        isAlive       = true,
-        currentEnergy = 0,
-        -- TODO: load the skill configuration.
-        passiveSkill = {
-
-        },
-        activeSkill1 = {
-            energyRequirement = 3,
-        },
-        activeSkill2 = {
-            energyRequirement = 6,
-        },
+        account             = account,
+        nickname            = playerProfile.nickname,
+        fund                = 0,
+        isAlive             = true,
+        damageCost          = 0,
+        skillActivatedCount = 0,
+        skillConfiguration  = modelSkillConfiguration:toSerializableTable(),
     }
 end
 
-local function generatePlayersData(playerIndex, account, skillIndex)
+local function generatePlayersData(playerIndex, account, skillConfigurationID)
     return {
-        [playerIndex] = generateSinglePlayerData(account, skillIndex),
+        [playerIndex] = generateSinglePlayerData(account, skillConfigurationID),
     }
 end
 
 local function generateSceneWarData(fileName, param)
-    -- TODO:validate the params.
     return {
-        fileName    = fileName,
-        warPassword = param.warPassword,
-        isEnded     = false,
-        actionID    = 0,
+        fileName       = fileName,
+        warPassword    = param.warPassword,
+        maxSkillPoints = param.maxSkillPoints,
+        isEnded        = false,
+        actionID       = 0,
 
-        warField    = generateWarFieldData(param.warFieldFileName),
-        turn        = generateTurnData(),
-        players     = generatePlayersData(param.playerIndex, param.playerAccount, param.skillIndex),
-        weather     = generateWeatherData(),
+        warField       = generateWarFieldData(param.warFieldFileName),
+        turn           = DEFAULT_TURN_DATA,
+        players        = generatePlayersData(param.playerIndex, param.playerAccount, param.skillConfigurationID),
+        weather        = generateWeatherData(),
     }, toFullFileName(fileName)
 end
 
@@ -297,35 +290,39 @@ function SceneWarManager.getJoinableSceneWarList(playerAccount, sceneWarShortNam
     return list
 end
 
-function SceneWarManager.joinWar(param)
-    local sceneWarFileName = param.sceneWarFileName
+function SceneWarManager.getJoinableSceneWarConfiguration(sceneWarFileName)
     if (not s_JoinableWarNameList[sceneWarFileName]) then
-        return nil, "SceneWarManager.joinWar() the war that the param specifies doesn't exist or is not joinable."
+        return nil, "SceneWarManager.getJoinableSceneWarConfiguration() the war that the param specifies doesn't exist or is not joinable."
     end
     if (not s_JoinableWarList[sceneWarFileName]) then
         s_JoinableWarList[sceneWarFileName] = loadJoinableWar(sceneWarFileName)
     end
 
-    local playerIndex   = param.playerIndex
-    local playerAccount = param.playerAccount
-    local configuration = s_JoinableWarList[sceneWarFileName].configuration
-    if (hasPlayerJoinedWar(playerAccount, configuration)) then
+    return s_JoinableWarList[sceneWarFileName].configuration
+end
+
+function SceneWarManager.joinWar(param)
+    local sceneWarFileName = param.sceneWarFileName
+    local playerIndex      = param.playerIndex
+    local playerAccount    = param.playerAccount
+    local configuration    = SceneWarManager.getJoinableSceneWarConfiguration(sceneWarFileName)
+
+    if (not configuration) then
+        return nil, "SceneWarManager.joinWar() the war that the param specifies doesn't exist or is not joinable."
+    elseif (hasPlayerJoinedWar(playerAccount, configuration)) then
         return nil, "SceneWarManager.joinWar() the player has already joined the war."
-    end
-    if (configuration.players[playerIndex]) then
+    elseif (configuration.players[playerIndex]) then
         return nil, "SceneWarManager.joinWar() the specified player index is already used by another player."
-    end
-    if (configuration.warPassword ~= param.warPassword) then
+    elseif (configuration.warPassword ~= param.warPassword) then
         return nil, "The password is incorrect."
     end
-    -- TODO: validate other params, such as the war password, max skill points, and so on.
 
     configuration.players[playerIndex] = {
         account  = playerAccount,
         nickname = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
     }
     local joiningSceneWar = s_JoinableWarList[sceneWarFileName].warData
-    joiningSceneWar.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillIndex)
+    joiningSceneWar.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID)
     serialize(toFullFileName(sceneWarFileName), joiningSceneWar)
 
     if (not isWarReadyForStart(configuration)) then

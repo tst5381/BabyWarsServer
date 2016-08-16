@@ -4,36 +4,66 @@ return {
  ["nickname"] = "tester1",
  ["id"] = 2,
  ["skillConfigurations"] = {
-  [1] = {
-   ["active1"] = {
-    ["energyRequirement"] = 3,
-   },
-   ["active2"] = {
-    ["energyRequirement"] = 6,
-   },
-   ["passive"] = {
-   },
-  },
-  [2] = {
-   ["active1"] = {
-    ["energyRequirement"] = 3,
-   },
-   ["active2"] = {
-    ["energyRequirement"] = 6,
-   },
-   ["passive"] = {
-   },
-  },
-  [3] = {
-   ["active1"] = {
-    ["energyRequirement"] = 3,
-   },
-   ["active2"] = {
-    ["energyRequirement"] = 6,
-   },
-   ["passive"] = {
-   },
-  },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
  },
  ["gameRecords"] = {
     [2] = {win  = 0, lose = 0, draw = 0,},

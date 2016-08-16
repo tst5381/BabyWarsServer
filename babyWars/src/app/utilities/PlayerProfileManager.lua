@@ -3,7 +3,32 @@ local PlayerProfileManager = {}
 
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
 
-local PLAYER_PROFILE_PATH = "babyWars/res/data/playerProfile/"
+local PLAYER_PROFILE_PATH          = "babyWars/res/data/playerProfile/"
+local SINGLE_SKILL_CONFIGURATION   = {
+    maxPoints = 100,
+    passive   = {},
+    active1   = {},
+    active2   = {},
+}
+local SINGLE_GAME_RECORD           = {
+    win  = 0,
+    lose = 0,
+    draw = 0,
+}
+local DEFAULT_RANK_SCORE           = 1000
+local DEFAULT_GAME_RECORDS         = {
+    [2] = SINGLE_GAME_RECORD,
+    [3] = SINGLE_GAME_RECORD,
+    [4] = SINGLE_GAME_RECORD,
+}
+local DEFAULT_WAR_LIST             = {
+    created = {},
+    ongoing = {},
+}
+local DEFAULT_SKILL_CONFIGURATIONS = {}
+for i = 1, 10 do
+    DEFAULT_SKILL_CONFIGURATIONS[i] = SINGLE_SKILL_CONFIGURATION
+end
 
 local s_PlayerProfileList = {}
 
@@ -15,36 +40,10 @@ local function generatePlayerProfile(account, password)
         password = password,
         nickname = account,
 
-        rankScore = 1000,
-
-        gameRecords = {
-            [2] = {win  = 0, lose = 0, draw = 0,},
-            [3] = {win  = 0, lose = 0, draw = 0,},
-            [4] = {win  = 0, lose = 0, draw = 0,},
-        },
-
-        skillConfigurations = {
-            {
-                passive = {},
-                active1 = {},
-                active2 = {},
-            },
-            {
-                passive = {},
-                active1 = {},
-                active2 = {},
-            },
-            {
-                passive = {},
-                active1 = {},
-                active2 = {},
-            },
-        },
-
-        warLists = {
-            created = {},
-            ongoing = {},
-        }
+        rankScore           = DEFAULT_RANK_SCORE,
+        gameRecords         = DEFAULT_GAME_RECORDS,
+        skillConfigurations = DEFAULT_SKILL_CONFIGURATIONS,
+        warLists            = DEFAULT_WAR_LIST,
     }
 end
 
@@ -81,27 +80,38 @@ function PlayerProfileManager.getPlayerProfile(account)
     return s_PlayerProfileList[account].profile
 end
 
+function PlayerProfileManager.getSkillConfiguration(account, configurationID)
+    local profile = PlayerProfileManager.getPlayerProfile(account)
+    if (not profile) then
+        return nil, "PlayerProfileManager.getSkillConfiguration() the profile doesn't exist."
+    else
+        return profile.skillConfigurations[configurationID]
+    end
+end
+
+function PlayerProfileManager.setSkillConfiguration(account, configurationID, modelSkillConfiguration)
+    local profile = PlayerProfileManager.getPlayerProfile(account)
+    assert(profile, "PlayerProfileManager.setSkillConfiguration() the profile doesn't exist.")
+
+    profile.skillConfigurations[configurationID] = modelSkillConfiguration:toSerializableTable()
+    serialize(toFullFileName(account), profile)
+
+    return PlayerProfileManager
+end
+
 function PlayerProfileManager.isAccountAndPasswordValid(account, password)
     local profile = PlayerProfileManager.getPlayerProfile(account)
     return (profile) and (profile.password == password)
 end
 
 function PlayerProfileManager.createPlayerProfile(account, password)
-    if (PlayerProfileManager.getPlayerProfile(account)) then
-        return
+    if (not PlayerProfileManager.getPlayerProfile(account)) then
+        local fullFileName = toFullFileName(account)
+        local profile      = generatePlayerProfile(account, password)
+        serialize(fullFileName, profile)
     end
 
-    local fullFileName = toFullFileName(account)
-    local profile = generatePlayerProfile(account, password)
-    serialize(fullFileName, profile)
-
-    s_PlayerProfileList[account] = {
-        fullFileName = fullFileName,
-        account      = account,
-        profile      = profile,
-    }
-
-    return s_PlayerProfileList[account].profile
+    return PlayerProfileManager.getPlayerProfile(account)
 end
 
 function PlayerProfileManager.updateProfilesWithBeginningWar(sceneWarFileName, configuration)

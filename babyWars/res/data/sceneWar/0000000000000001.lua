@@ -4,6 +4,7 @@ return {
     warPassword = "",
     isEnded     = false,
     actionID    = 0,
+    maxSkillPoints = 100,
 
     warField = {
         tileMap = {
@@ -23,40 +24,36 @@ return {
 
     players = {
         {
-            account       = "babygogogo",
-            nickname      = "Red Alice",
-            fund          = 0,
-            isAlive       = true,
-            currentEnergy = 1,
-            passiveSkill = {
-
-            },
-            activeSkill1 = {
-                energyRequirement = 2,
-            },
-            activeSkill2 = {
-                energyRequirement = 3,
+            account                = "babygogogo",
+            nickname               = "Red Alice",
+            fund                   = 0,
+            isAlive                = true,
+            damageCost             = 0,
+            skillActivatedCount    = 0,
+            skillConfiguration = {
+                maxPoints = 100,
+                passive   = {},
+                active1   = {},
+                active2   = {},
             },
         },
         {
-            account       = "tester1",
-            nickname      = "Blue Bob",
-            fund          = 0,
-            isAlive       = true,
-            currentEnergy = 2,
-            passiveSkill = {
-
-            },
-            activeSkill1 = {
-                energyRequirement = 4,
-            },
-            activeSkill2 = {
-                energyRequirement = 6,
+            account                = "tester1",
+            nickname               = "Blue Bob",
+            fund                   = 0,
+            isAlive                = true,
+            damageCost             = 0,
+            skillActivatedCount    = 0,
+            skillConfiguration = {
+                maxPoints = 100,
+                passive   = {},
+                active1   = {},
+                active2   = {},
             },
         },
     },
 
     weather = {
-        current = "clear"
+        current = "Clear"
     },
 }

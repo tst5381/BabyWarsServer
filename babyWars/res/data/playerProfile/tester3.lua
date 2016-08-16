@@ -13,37 +13,64 @@ return {
 
     skillConfigurations = {
         {
-            passive = {
-
-            },
-            active1 = {
-                energyRequirement = 3,
-            },
-            active2 = {
-                energyRequirement = 6,
-            },
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
         },
         {
-            passive = {
-
-            },
-            active1 = {
-                energyRequirement = 3,
-            },
-            active2 = {
-                energyRequirement = 6,
-            },
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
         },
         {
-            passive = {
-
-            },
-            active1 = {
-                energyRequirement = 3,
-            },
-            active2 = {
-                energyRequirement = 6,
-            },
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
         },
     },
 

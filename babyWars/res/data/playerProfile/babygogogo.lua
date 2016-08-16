@@ -13,37 +13,79 @@ return {
 
     skillConfigurations = {
         {
-            passive = {
-
+            maxPoints = 100,
+            passive   = {
+                {id = 1, level = 5,},
+                {id = 2, level = -15,},
+                {id = 3, level = 15,},
             },
-            active1 = {
-                energyRequirement = 3,
-            },
-            active2 = {
-                energyRequirement = 6,
-            },
+            active1   = {},
+            active2   = {},
         },
         {
-            passive = {
-
+            maxPoints = 100,
+            passive   = {
+                {id = 1, level = 20,},
+                {id = 2, level = 30,},
+                {id = 3, level = -30,},
             },
-            active1 = {
-                energyRequirement = 3,
-            },
-            active2 = {
-                energyRequirement = 6,
-            },
+            active1   = {},
+            active2   = {},
         },
         {
-            passive = {
-
+            maxPoints = 100,
+            passive   = {
+                {id = 3, level = 10,},
             },
-            active1 = {
-                energyRequirement = 3,
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {
+                {id = 1, level = 10,},
             },
-            active2 = {
-                energyRequirement = 6,
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {
+                {id = 1, level = 20,},
+                {id = 2, level = -15,},
             },
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
+        },
+        {
+            maxPoints = 100,
+            passive   = {},
+            active1   = {},
+            active2   = {},
         },
     },
 

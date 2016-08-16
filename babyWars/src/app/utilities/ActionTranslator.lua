@@ -19,13 +19,17 @@
 
 local ActionTranslator = {}
 
-local Producible             = require("src.app.components.Producible")
-local GridIndexFunctions     = require("src.app.utilities.GridIndexFunctions")
-local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
-local SceneWarManager        = require("src.app.utilities.SceneWarManager")
-local SessionManager         = require("src.app.utilities.SessionManager")
-local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
-local LocalizationFunctions  = require("src.app.utilities.LocalizationFunctions")
+local ModelSkillConfiguration = require("src.app.models.common.ModelSkillConfiguration")
+local Producible              = require("src.app.components.Producible")
+local GridIndexFunctions      = require("src.app.utilities.GridIndexFunctions")
+local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
+local SceneWarManager         = require("src.app.utilities.SceneWarManager")
+local SessionManager          = require("src.app.utilities.SessionManager")
+local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
+local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions")
+local GameConstantFunctions   = require("src.app.utilities.GameConstantFunctions")
+
+local getLocalizedText = LocalizationFunctions.getLocalizedText
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -160,7 +164,7 @@ local function translateLogin(action, session)
     if (not PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
         return {
             actionName = "Message",
-            message    = LocalizationFunctions.getLocalizedText(22),
+            message    = getLocalizedText(22),
         }
     else
         -- By returning the actionLogin, the session will then automatically call subscribeToPlayerChannel().
@@ -175,13 +179,13 @@ local function translateLogin(action, session)
         elseif (session:isSubscribingToPlayerChannel(account)) then
             return {
                 actionName = "Message",
-                message    = LocalizationFunctions.getLocalizedText(21, account),
+                message    = getLocalizedText(21, account),
             }
         else
             return actionLogin, {
                 [account] = {
                     actionName = "Logout",
-                    message    = LocalizationFunctions.getLocalizedText(23, account),
+                    message    = getLocalizedText(23, account),
                 }
             }
         end
@@ -193,7 +197,7 @@ local function translateRegister(action, session)
     if (PlayerProfileManager.getPlayerProfile(account)) then
         return {
             actionName = "Message",
-            message    = LocalizationFunctions.getLocalizedText(25),
+            message    = getLocalizedText(25),
         }
     else
         PlayerProfileManager.createPlayerProfile(account, password)
@@ -207,16 +211,33 @@ local function translateRegister(action, session)
 end
 
 local function translateNewWar(action)
+    -- TODO: validate more params.
+    local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, action.skillConfigurationID)
+    if (not skillConfiguration) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "FailToGetSkillConfiguration"),
+        }
+    end
+
+    local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
+    if (modelSkillConfiguration:getMaxSkillPoints() > action.maxSkillPoints) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "OverloadedSkillPoints"),
+        }
+    end
+
     local sceneWarFileName, err = SceneWarManager.createNewWar(action)
     if (not sceneWarFileName) then
         return {
             actionName = "Message",
-            message    = LocalizationFunctions.getLocalizedText(50, err)
+            message    = getLocalizedText(50, err)
         }
     else
         return {
             actionName = "NewWar",
-            message    = LocalizationFunctions.getLocalizedText(51, sceneWarFileName:sub(13))
+            message    = getLocalizedText(51, sceneWarFileName:sub(13))
         }
     end
 end
@@ -245,7 +266,7 @@ local function translateGetSceneWarData(action)
     if (not data) then
         return {
             actionName = "Message",
-            message    = LocalizationFunctions.getLocalizedText(52)
+            message    = getLocalizedText(52)
         }
     else
         return {
@@ -260,7 +281,7 @@ local function translateGetJoinableWarList(action)
     if (not list) then
         return {
             actionName = "Message",
-            message    = LocalizationFunctions.getLocalizedText(53, err)
+            message    = getLocalizedText(53, err)
         }
     else
         return {
@@ -271,11 +292,35 @@ local function translateGetJoinableWarList(action)
 end
 
 local function translateJoinWar(action)
+    local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, action.skillConfigurationID)
+    if (not skillConfiguration) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "FailToGetSkillConfiguration"),
+        }
+    end
+
+    local warConfiguration, err = SceneWarManager.getJoinableSceneWarConfiguration(action.sceneWarFileName)
+    if (not warConfiguration) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "WarNotJoinable", err)
+        }
+    end
+
+    local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
+    if (modelSkillConfiguration:getMaxSkillPoints() > warConfiguration.maxSkillPoints) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "OverloadedSkillPoints"),
+        }
+    end
+
     local msg, err = SceneWarManager.joinWar(action)
     if (not msg) then
         return {
             actionName = "Message",
-            message    = LocalizationFunctions.getLocalizedText(54, err),
+            message    = getLocalizedText(54, err),
         }
     else
         return {
@@ -285,6 +330,43 @@ local function translateJoinWar(action)
     end
 end
 
+local function translateGetSkillConfiguration(action)
+    local configurationID    = action.configurationID
+    local configuration, err = PlayerProfileManager.getSkillConfiguration(action.playerAccount, configurationID)
+    if (not configuration) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "FailToGetSkillConfiguration", err),
+        }
+    else
+        return {
+            actionName      = "GetSkillConfiguration",
+            configurationID = configurationID,
+            configuration   = configuration,
+        }
+    end
+end
+
+local function translateSetSkillConfiguration(action)
+    local configuration   = ModelSkillConfiguration:create(action.configuration)
+    local configurationID = action.configurationID
+    if ((configurationID < 1)                                                   or
+        (configurationID > GameConstantFunctions.getSkillConfigurationsCount()) or
+        (configurationID ~= math.floor(configurationID))                        or
+        (not configuration:isValid()))                                          then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "InvalidSkillConfiguration"),
+        }
+    end
+
+    PlayerProfileManager.setSkillConfiguration(action.playerAccount, configurationID, configuration)
+    return {
+        actionName = "Message",
+        message    = getLocalizedText(81, "SucceedToSetSkillConfiguration"),
+    }
+end
+
 local function translateBeginTurn(action, modelScene)
     local modelTurnManager = modelScene:getModelTurnManager()
     if (modelTurnManager:getTurnPhase() ~= "requestToBegin") then
@@ -292,7 +374,7 @@ local function translateBeginTurn(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
@@ -319,7 +401,7 @@ local function translateEndTurn(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
@@ -341,7 +423,7 @@ local function translateSurrender(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
@@ -356,6 +438,32 @@ local function translateSurrender(action, modelScene)
     }
     SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionSurrender)
     return actionSurrender, generateActionsForPublish(actionSurrender, modelPlayerManager, action.playerAccount)
+end
+
+local function translateActivateSkillGroup(action, modelScene)
+    local playerAccount      = action.playerAccount
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    local modelPlayer        = modelPlayerManager:getModelPlayerWithAccount(playerAccount)
+    local energy, req1, req2 = modelPlayer:getEnergy()
+    local skillGroupID       = action.skillGroupID
+    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main") or
+        (not modelPlayer:canActivateSkillGroup(skillGroupID)))      then
+        return {
+            actionName       = "Message",
+            additionalAction = "ReloadSceneWar",
+            message          = getLocalizedText(81, "OutOfSync"),
+        }
+    end
+
+    local sceneWarFileName         = modelScene:getFileName()
+    local actionActivateSkillGroup = {
+        actionName   = "ActivateSkillGroup",
+        actionID     = action.actionID,
+        fileName     = sceneWarFileName,
+        skillGroupID = skillGroupID,
+    }
+    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionActivateSkillGroup)
+    return actionActivateSkillGroup, generateActionsForPublish(actionActivateSkillGroup, modelPlayerManager, playerAccount)
 end
 
 -- This translation ignores the existing unit of the same player at the end of the path, so that the actions of Join/Attack/Wait can reuse this function.
@@ -432,7 +540,7 @@ local function translateWait(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync", translateMsg),
+            message          = getLocalizedText(81, "OutOfSync", translateMsg),
         }
     end
 
@@ -441,7 +549,7 @@ local function translateWait(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
@@ -464,7 +572,7 @@ local function translateAttack(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync", translateMsg),
+            message          = getLocalizedText(81, "OutOfSync", translateMsg),
         }
     end
 
@@ -484,7 +592,7 @@ local function translateAttack(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
@@ -495,7 +603,7 @@ local function translateAttack(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
@@ -549,7 +657,7 @@ local function translateJoinModelUnit(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync", translateMsg),
+            message          = getLocalizedText(81, "OutOfSync", translateMsg),
         }
     end
 
@@ -563,7 +671,7 @@ local function translateJoinModelUnit(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
@@ -599,7 +707,7 @@ local function translateCaptureModelTile(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync", translateMsg),
+            message          = getLocalizedText(81, "OutOfSync", translateMsg),
         }
     end
 
@@ -615,7 +723,7 @@ local function translateCaptureModelTile(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
@@ -663,7 +771,7 @@ local function translateLaunchSilo(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync", translateMsg),
+            message          = getLocalizedText(81, "OutOfSync", translateMsg),
         }
     end
 
@@ -681,7 +789,7 @@ local function translateLaunchSilo(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
@@ -718,7 +826,7 @@ local function translateBuildModelTile(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync", translateMsg),
+            message          = getLocalizedText(81, "OutOfSync", translateMsg),
         }
     end
 
@@ -736,7 +844,7 @@ local function translateBuildModelTile(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
@@ -772,7 +880,7 @@ local function translateProduceModelUnitOnUnit(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync", translateMsg),
+            message          = getLocalizedText(81, "OutOfSync", translateMsg),
         }
     end
 
@@ -791,7 +899,7 @@ local function translateProduceModelUnitOnUnit(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
@@ -814,7 +922,7 @@ local function translateSupplyModelUnit(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync", translateMsg),
+            message          = getLocalizedText(81, "OutOfSync", translateMsg),
         }
     end
 
@@ -826,7 +934,7 @@ local function translateSupplyModelUnit(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
@@ -862,7 +970,7 @@ local function translateLoadModelUnit(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync", translateMsg),
+            message          = getLocalizedText(81, "OutOfSync", translateMsg),
         }
     end
 
@@ -876,7 +984,7 @@ local function translateLoadModelUnit(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
@@ -912,7 +1020,7 @@ local function translateDropModelUnit(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync", translateMsg),
+            message          = getLocalizedText(81, "OutOfSync", translateMsg),
         }
     end
 
@@ -923,7 +1031,7 @@ local function translateDropModelUnit(action, modelScene)
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
@@ -965,7 +1073,7 @@ local function translateProduceOnTile(action, modelScene)
     local actionMessage      = {
         actionName       = "Message",
         additionalAction = "ReloadSceneWar",
-        message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+        message          = getLocalizedText(81, "OutOfSync"),
     }
 
     if (not GridIndexFunctions.isWithinMap(gridIndex, modelTileMap:getMapSize())) then
@@ -1004,7 +1112,7 @@ function ActionTranslator.translate(action, session)
         return {
             actionName       = "Message",
             additionalAction = "ReloadCurrentScene",
-            message          = LocalizationFunctions.getLocalizedText(81, "CorruptedAction"),
+            message          = getLocalizedText(81, "CorruptedAction"),
         }
     end
 
@@ -1019,15 +1127,17 @@ function ActionTranslator.translate(action, session)
     else
         return {
             actionName = "Logout",
-            message    = LocalizationFunctions.getLocalizedText(81, "InvalidPassword"),
+            message    = getLocalizedText(81, "InvalidPassword"),
         }
     end
 
-    if     (actionName == "NewWar")             then return translateNewWar(            action)
-    elseif (actionName == "GetOngoingWarList")  then return translateGetOngoingWarList( action)
-    elseif (actionName == "GetSceneWarData")    then return translateGetSceneWarData(   action)
-    elseif (actionName == "GetJoinableWarList") then return translateGetJoinableWarList(action)
-    elseif (actionName == "JoinWar")            then return translateJoinWar(           action)
+    if     (actionName == "NewWar")                then return translateNewWar(               action)
+    elseif (actionName == "GetOngoingWarList")     then return translateGetOngoingWarList(    action)
+    elseif (actionName == "GetSceneWarData")       then return translateGetSceneWarData(      action)
+    elseif (actionName == "GetJoinableWarList")    then return translateGetJoinableWarList(   action)
+    elseif (actionName == "JoinWar")               then return translateJoinWar(              action)
+    elseif (actionName == "GetSkillConfiguration") then return translateGetSkillConfiguration(action)
+    elseif (actionName == "SetSkillConfiguration") then return translateSetSkillConfiguration(action)
     end
 
     local sceneWarFileName   = action.sceneWarFileName
@@ -1036,20 +1146,21 @@ function ActionTranslator.translate(action, session)
         return {
             actionName       = "Message",
             additionalAction = "RunSceneMain",
-            message          = LocalizationFunctions.getLocalizedText(81, "InvalidWarFileName"),
+            message          = getLocalizedText(81, "InvalidWarFileName"),
         }
     elseif ((not SceneWarManager.isPlayerInTurn(sceneWarFileName, playerAccount)) or
         ((modelSceneWar:getActionId() + 1 ~= action.actionID)))                   then
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync"),
+            message          = getLocalizedText(81, "OutOfSync"),
         }
     end
 
     if     (actionName == "BeginTurn")              then return translateBeginTurn(             action, modelSceneWar)
     elseif (actionName == "EndTurn")                then return translateEndTurn(               action, modelSceneWar)
     elseif (actionName == "Surrender")              then return translateSurrender(             action, modelSceneWar)
+    elseif (actionName == "ActivateSkillGroup")     then return translateActivateSkillGroup(    action, modelSceneWar)
     elseif (actionName == "Wait")                   then return translateWait(                  action, modelSceneWar)
     elseif (actionName == "Attack")                 then return translateAttack(                action, modelSceneWar)
     elseif (actionName == "JoinModelUnit")          then return translateJoinModelUnit(         action, modelSceneWar)
@@ -1064,7 +1175,7 @@ function ActionTranslator.translate(action, session)
     else return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
-            message          = LocalizationFunctions.getLocalizedText(81, "OutOfSync", actionName),
+            message          = getLocalizedText(81, "OutOfSync", actionName),
         }
     end
 end

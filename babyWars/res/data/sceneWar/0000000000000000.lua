@@ -4,6 +4,7 @@ return {
     warPassword = "",
     isEnded     = false,
     actionID    = 0,
+    maxSkillPoints = 100,
 
     warField = {
         tileMap = {
@@ -23,40 +24,56 @@ return {
 
     players = {
         {
-            account       = "babygogogo",
-            nickname      = "Red Alice",
-            fund          = 0,
-            isAlive       = true,
-            currentEnergy = 1,
-            passiveSkill = {
-
-            },
-            activeSkill1 = {
-                energyRequirement = 2,
-            },
-            activeSkill2 = {
-                energyRequirement = 3,
+            account                = "babygogogo",
+            nickname               = "Red Alice",
+            fund                   = 0,
+            isAlive                = true,
+            damageCost             = 0,
+            skillActivatedCount    = 0,
+            skillConfiguration     = {
+                maxPoints = 100,
+                passive   = {
+                    {id = 1, level = 5,},
+                    {id = 2, level = -15,},
+                    {id = 3, level = 15,},
+                },
+                active1   = {
+                    {id = 1, level = 30},
+                    energyRequirement = 3,
+                },
+                active2   = {
+                    {id = 1, level = 30},
+                    {id = 3, level = 30},
+                    energyRequirement = 6,
+                },
             },
         },
         {
-            account       = "tester1",
-            nickname      = "Blue Bob",
-            fund          = 0,
-            isAlive       = true,
-            currentEnergy = 2,
-            passiveSkill = {
-
-            },
-            activeSkill1 = {
-                energyRequirement = 4,
-            },
-            activeSkill2 = {
-                energyRequirement = 6,
+            account                = "tester1",
+            nickname               = "Blue Bob",
+            fund                   = 0,
+            isAlive                = true,
+            damageCost             = 0,
+            skillActivatedCount    = 0,
+            skillConfiguration     = {
+                maxPoints = 100,
+                passive   = {
+                    {id = 1, level = 20,},
+                    {id = 2, level = 30,},
+                    {id = 3, level = -30,},
+                },
+                active1   = {},
+                active2   = {
+                    {id = 1, level = 30},
+                    {id = 2, level = 30},
+                    {id = 3, level = 10},
+                    energyRequirement = 6,
+                },
             },
         },
     },
 
     weather = {
-        current = "clear"
+        current = "Clear"
     },
 }

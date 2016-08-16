@@ -90,6 +90,11 @@ local function doActionSurrender(self, action)
     end
 end
 
+local function doActionActivateSkillGroup(self, action)
+    local playerIndex = self:getModelTurnManager():getPlayerIndex()
+    self:getModelPlayerManager():doActionActivateSkillGroup(action, playerIndex)
+end
+
 local function doActionWait(self, action)
     self:getModelWarField():doActionWait(action)
 end
@@ -208,10 +213,11 @@ end
 -- The constructor and initializers.
 --------------------------------------------------------------------------------
 function ModelSceneWar:ctor(sceneData)
-    self.m_FileName    = sceneData.fileName
-    self.m_WarPassword = sceneData.warPassword
-    self.m_IsWarEnded  = sceneData.isEnded
-    self.m_ActionID    = sceneData.actionID
+    self.m_FileName       = sceneData.fileName
+    self.m_WarPassword    = sceneData.warPassword
+    self.m_IsWarEnded     = sceneData.isEnded
+    self.m_ActionID       = sceneData.actionID
+    self.m_MaxSkillPoints = sceneData.maxSkillPoints
 
     initScriptEventDispatcher(self)
     initActorPlayerManager(   self, sceneData.players)
@@ -227,14 +233,15 @@ end
 --------------------------------------------------------------------------------
 function ModelSceneWar:toSerializableTable()
     return {
-        fileName    = self.m_FileName,
-        warPassword = self.m_WarPassword,
-        isEnded     = self.m_IsWarEnded,
-        actionID    = self.m_ActionID,
-        warField    = self:getModelWarField()      :toSerializableTable(),
-        turn        = self:getModelTurnManager()   :toSerializableTable(),
-        players     = self:getModelPlayerManager() :toSerializableTable(),
-        weather     = self:getModelWeatherManager():toSerializableTable(),
+        fileName       = self.m_FileName,
+        warPassword    = self.m_WarPassword,
+        isEnded        = self.m_IsWarEnded,
+        actionID       = self.m_ActionID,
+        maxSkillPoints = self.m_MaxSkillPoints,
+        warField       = self:getModelWarField()      :toSerializableTable(),
+        turn           = self:getModelTurnManager()   :toSerializableTable(),
+        players        = self:getModelPlayerManager() :toSerializableTable(),
+        weather        = self:getModelWeatherManager():toSerializableTable(),
     }
 end
 
@@ -275,6 +282,7 @@ function ModelSceneWar:doSystemAction(action)
     if     (actionName == "BeginTurn")              then doActionBeginTurn(             self, action)
     elseif (actionName == "EndTurn")                then doActionEndTurn(               self, action)
     elseif (actionName == "Surrender")              then doActionSurrender(             self, action)
+    elseif (actionName == "ActivateSkillGroup")     then doActionActivateSkillGroup(    self, action)
     elseif (actionName == "Wait")                   then doActionWait(                  self, action)
     elseif (actionName == "Attack")                 then doActionAttack(                self, action)
     elseif (actionName == "JoinModelUnit")          then doActionJoinModelUnit(         self, action)
