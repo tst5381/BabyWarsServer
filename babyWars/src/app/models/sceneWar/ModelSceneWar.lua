@@ -93,7 +93,7 @@ end
 
 local function doActionActivateSkillGroup(self, action)
     InstantSkillExecutor.doActionActivateSkillGroup(action,
-        self:getModelWarField(), self:getModelPlayerManager(), self:getModelTurnManager(), self:getModelWeatherManager())
+        self:getModelWarField(), self:getModelPlayerManager(), self:getModelTurnManager(), self:getModelWeatherManager(), self.m_ScriptEventDispatcher)
     local playerIndex = self:getModelTurnManager():getPlayerIndex()
     self:getModelPlayerManager():doActionActivateSkillGroup(action, playerIndex)
 end
