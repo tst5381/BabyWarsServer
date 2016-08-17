@@ -1027,9 +1027,15 @@ local function translateDropModelUnit(action, modelScene)
         }
     end
 
-    local modelUnitMap      = modelScene:getModelWarField():getModelUnitMap()
-    local existingModelUnit = modelUnitMap:getModelUnit(rawPath[#rawPath])
+    local modelWarField     = modelScene:getModelWarField()
+    local modelUnitMap      = modelWarField:getModelUnitMap()
+    local destination       = rawPath[#rawPath]
+    local existingModelUnit = modelUnitMap:getModelUnit(destination)
+    local loaderModelUnit   = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
+    local tileType          = modelWarField:getModelTileMap():getModelTile(destination):getTileType()
     if (((#rawPath ~= 1) and (existingModelUnit) and (isModelUnitVisible(existingModelUnit, modelScene)))) or
+        (not loaderModelUnit.canDropModelUnit)                                                             or
+        (not loaderModelUnit:canDropModelUnit(tileType))                                                   or
         (not validateDropDestinations(action, modelScene))                                                 then
         return {
             actionName       = "Message",
@@ -1052,7 +1058,6 @@ local function translateDropModelUnit(action, modelScene)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
-    local loaderModelUnit     = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
     local actionDropModelUnit = {
         actionName       = "DropModelUnit",
         actionID         = actionID,
