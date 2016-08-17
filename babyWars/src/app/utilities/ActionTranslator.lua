@@ -974,13 +974,16 @@ local function translateLoadModelUnit(action, modelScene)
         }
     end
 
-    local modelUnitMap    = modelScene:getModelWarField():getModelUnitMap()
+    local modelWarField   = modelScene:getModelWarField()
+    local modelUnitMap    = modelWarField:getModelUnitMap()
     local focusModelUnit  = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
-    local loaderModelUnit = modelUnitMap:getModelUnit(rawPath[#rawPath])
-    if ((#rawPath == 1)                                         or
-        (not loaderModelUnit)                                   or
-        (not loaderModelUnit.canLoadModelUnit)                  or
-        (not loaderModelUnit:canLoadModelUnit(focusModelUnit))) then
+    local destination     = rawPath[#rawPath]
+    local loaderModelUnit = modelUnitMap:getModelUnit(destination)
+    local tileType        = modelWarField:getModelTileMap():getModelTile(destination):getTileType()
+    if ((#rawPath == 1)                                                   or
+        (not loaderModelUnit)                                             or
+        (not loaderModelUnit.canLoadModelUnit)                            or
+        (not loaderModelUnit:canLoadModelUnit(focusModelUnit, tileType))) then
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
