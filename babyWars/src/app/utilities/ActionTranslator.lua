@@ -31,6 +31,8 @@ local GameConstantFunctions   = require("src.app.utilities.GameConstantFunctions
 
 local getLocalizedText = LocalizationFunctions.getLocalizedText
 
+local GAME_VERSION = GameConstantFunctions.getGameVersion()
+
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
@@ -161,7 +163,12 @@ end
 --------------------------------------------------------------------------------
 local function translateLogin(action, session)
     local account, password = action.account, action.password
-    if (not PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
+    if (action.version ~= GAME_VERSION) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "InvalidGameVersion", GAME_VERSION)
+        }
+    elseif (not PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
         return {
             actionName = "Message",
             message    = getLocalizedText(22),
@@ -194,7 +201,12 @@ end
 
 local function translateRegister(action, session)
     local account, password = action.account, action.password
-    if (PlayerProfileManager.getPlayerProfile(account)) then
+    if (action.version ~= GAME_VERSION) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "InvalidGameVersion", GAME_VERSION)
+        }
+    elseif (PlayerProfileManager.getPlayerProfile(account)) then
         return {
             actionName = "Message",
             message    = getLocalizedText(25),
