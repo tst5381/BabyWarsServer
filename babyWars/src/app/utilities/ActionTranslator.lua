@@ -103,9 +103,8 @@ local function validateDropDestinations(action, modelSceneWar)
             (not isAdjacent(droppingGridIndex, loaderEndingGridIndex))) then
             return false
         else
-            local moveType = droppingModelUnit:getMoveType()
-            if ((not loaderEndingModelTile:getMoveCost(moveType))                         or
-                (not modelTileMap:getModelTile(droppingGridIndex):getMoveCost(moveType))) then
+            if ((not loaderEndingModelTile:getMoveCostWithModelUnit(droppingModelUnit))                         or
+                (not modelTileMap:getModelTile(droppingGridIndex):getMoveCostWithModelUnit(droppingModelUnit))) then
                 return false
             end
 
@@ -502,7 +501,6 @@ local function translatePath(path, launchUnitID, modelSceneWar)
     local clone                = GridIndexFunctions.clone
     local isAdjacent           = GridIndexFunctions.isAdjacent
     local modelTileMap         = modelWarField:getModelTileMap()
-    local moveType             = focusModelUnit:getMoveType()
     local translatedPath       = {clone(beginningGridIndex)}
     local totalFuelConsumption = 0
     local maxFuelConsumption   = math.min(focusModelUnit:getCurrentFuel(), focusModelUnit:getMoveRange())
@@ -526,7 +524,7 @@ local function translatePath(path, launchUnitID, modelSceneWar)
             end
         end
 
-        local fuelConsumption = modelTileMap:getModelTile(gridIndex):getMoveCost(moveType)
+        local fuelConsumption = modelTileMap:getModelTile(gridIndex):getMoveCostWithModelUnit(focusModelUnit)
         if (not fuelConsumption) then
             return nil, "ActionTranslator-translatePath() the path is invalid because some tiles on it is impassable."
         end
