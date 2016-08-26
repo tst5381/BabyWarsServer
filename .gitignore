@@ -1,2 +1,4 @@
 *.log
 *.pid
+/babyWars/res/data/playerProfile
+/babyWars/res/data/sceneWar
