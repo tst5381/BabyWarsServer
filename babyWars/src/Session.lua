@@ -143,9 +143,7 @@ local function doAction(self, actionForSelf, actionsForPublish)
     publishTranslatedActions(self, actionsForPublish)
 
     if ((actionForSelf.actionName == "Login") or (actionForSelf.actionName == "Register")) then
-        ngx.log(ngx.CRIT, "Session-doAction() before subscribe")
         self:subscribeToPlayerChannel(actionForSelf.account, actionForSelf.password)
-        ngx.log(ngx.CRIT, "Session-doAction() after subscribe")
     end
 
     local bytes, err = self.m_WebSocket:send_text(SerializationFunctions.toString(actionForSelf))
@@ -187,9 +185,7 @@ function Session:subscribeToPlayerChannel(account, password)
         return self
     end
 
-    ngx.log(ngx.CRIT, "Session:subscribeToPlayerChannel() before unsubscribe.")
     self:unsubscribeFromPlayerChannel()
-    ngx.log(ngx.CRIT, "Session:subscribeToPlayerChannel() after unsubscribe.")
 
     initRedisForSubscribe(self, account)
     initThreadForSubscribe(self)
@@ -201,12 +197,8 @@ end
 
 -- WARNING: You can't call this method outside the context of the request.
 function Session:unsubscribeFromPlayerChannel()
-    ngx.log(ngx.CRIT, "Session:unsubscribeFromPlayerChannel() before destroying thread.")
     destroyThreadForSubscribe(self)
-    ngx.log(ngx.CRIT, "Session:unsubscribeFromPlayerChannel() after destroying thread.")
-    ngx.log(ngx.CRIT, "Session:unsubscribeFromPlayerChannel() before destroying redis.")
     destroyRedisForSubscribe(self)
-    ngx.log(ngx.CRIT, "Session:unsubscribeFromPlayerChannel() after destroying redis")
 
     if (self.m_PlayerAccount) then
         SessionManager.deleteSessionIdWithPlayerAccount(self.m_PlayerAccount)
