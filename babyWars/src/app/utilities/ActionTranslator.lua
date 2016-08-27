@@ -232,7 +232,13 @@ local function translateNewWar(action)
     end
 
     local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-    if (modelSkillConfiguration:getMaxSkillPoints() > action.maxSkillPoints) then
+    local isValid, err            = modelSkillConfiguration:isValid()
+    if (not isValid) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
+        }
+    elseif (modelSkillConfiguration:getMaxSkillPoints() > action.maxSkillPoints) then
         return {
             actionName = "Message",
             message    = getLocalizedText(81, "OverloadedSkillPoints"),
@@ -320,7 +326,13 @@ local function translateJoinWar(action)
     end
 
     local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-    if (modelSkillConfiguration:getMaxSkillPoints() > warConfiguration.maxSkillPoints) then
+    local isValid, err            = modelSkillConfiguration:isValid()
+    if (not isValid) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
+        }
+    elseif (modelSkillConfiguration:getMaxSkillPoints() > warConfiguration.maxSkillPoints) then
         return {
             actionName = "Message",
             message    = getLocalizedText(81, "OverloadedSkillPoints"),
