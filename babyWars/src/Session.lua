@@ -12,6 +12,11 @@ local ActionTranslator       = require("src.app.utilities.ActionTranslator")
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
 local SessionManager         = require("src.app.utilities.SessionManager")
 
+local DEFAULT_CONFIGURATION = {
+    timeout = 10000000, -- 10000s
+    max_payload_len = 65535
+}
+
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
@@ -29,10 +34,7 @@ end
 local function initWebSocket(self)
     assert(self.m_WebSocket == nil, "Session-initWebSocket() the webSocket is initialized already.")
 
-    local webSocket, err = WebSocketServer:new({
-        timeout = 5000,
-        max_payload_len = 65535
-    })
+    local webSocket, err = WebSocketServer:new(DEFAULT_CONFIGURATION)
     if (not webSocket) then
         ngx.log(ngx.ERR, "Session-initWebSocket() failed to create a websocket: ", err)
         return
@@ -80,6 +82,10 @@ local function initThreadForSubscribe(self)
 
     local thread = ngx.thread.spawn(function()
         while (true) do
+            if (not self.m_RedisForSubscribe) then
+                return self:stop()
+            end
+
             local res, err = self.m_RedisForSubscribe:read_reply()
             if (not res) then
                 ngx.log(ngx.ERR, "Session-threadForSubscribe main loop: failed to read reply: ", err)
@@ -137,9 +143,7 @@ local function doAction(self, actionForSelf, actionsForPublish)
     publishTranslatedActions(self, actionsForPublish)
 
     if ((actionForSelf.actionName == "Login") or (actionForSelf.actionName == "Register")) then
-        ngx.log(ngx.CRIT, "Session-doAction() before subscribe")
         self:subscribeToPlayerChannel(actionForSelf.account, actionForSelf.password)
-        ngx.log(ngx.CRIT, "Session-doAction() after subscribe")
     end
 
     local bytes, err = self.m_WebSocket:send_text(SerializationFunctions.toString(actionForSelf))
@@ -181,9 +185,7 @@ function Session:subscribeToPlayerChannel(account, password)
         return self
     end
 
-    ngx.log(ngx.CRIT, "Session:subscribeToPlayerChannel() before unsubscribe.")
     self:unsubscribeFromPlayerChannel()
-    ngx.log(ngx.CRIT, "Session:subscribeToPlayerChannel() after unsubscribe.")
 
     initRedisForSubscribe(self, account)
     initThreadForSubscribe(self)
@@ -195,12 +197,8 @@ end
 
 -- WARNING: You can't call this method outside the context of the request.
 function Session:unsubscribeFromPlayerChannel()
-    ngx.log(ngx.CRIT, "Session:unsubscribeFromPlayerChannel() before destroying thread.")
     destroyThreadForSubscribe(self)
-    ngx.log(ngx.CRIT, "Session:unsubscribeFromPlayerChannel() after destroying thread.")
-    ngx.log(ngx.CRIT, "Session:unsubscribeFromPlayerChannel() before destroying redis.")
     destroyRedisForSubscribe(self)
-    ngx.log(ngx.CRIT, "Session:unsubscribeFromPlayerChannel() after destroying redis")
 
     if (self.m_PlayerAccount) then
         SessionManager.deleteSessionIdWithPlayerAccount(self.m_PlayerAccount)

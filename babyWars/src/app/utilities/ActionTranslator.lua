@@ -31,6 +31,8 @@ local GameConstantFunctions   = require("src.app.utilities.GameConstantFunctions
 
 local getLocalizedText = LocalizationFunctions.getLocalizedText
 
+local GAME_VERSION = GameConstantFunctions.getGameVersion()
+
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
@@ -101,9 +103,8 @@ local function validateDropDestinations(action, modelSceneWar)
             (not isAdjacent(droppingGridIndex, loaderEndingGridIndex))) then
             return false
         else
-            local moveType = droppingModelUnit:getMoveType()
-            if ((not loaderEndingModelTile:getMoveCost(moveType))                         or
-                (not modelTileMap:getModelTile(droppingGridIndex):getMoveCost(moveType))) then
+            if ((not loaderEndingModelTile:getMoveCostWithModelUnit(droppingModelUnit))                         or
+                (not modelTileMap:getModelTile(droppingGridIndex):getMoveCostWithModelUnit(droppingModelUnit))) then
                 return false
             end
 
@@ -161,7 +162,12 @@ end
 --------------------------------------------------------------------------------
 local function translateLogin(action, session)
     local account, password = action.account, action.password
-    if (not PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
+    if (action.version ~= GAME_VERSION) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "InvalidGameVersion", GAME_VERSION)
+        }
+    elseif (not PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
         return {
             actionName = "Message",
             message    = getLocalizedText(22),
@@ -194,7 +200,12 @@ end
 
 local function translateRegister(action, session)
     local account, password = action.account, action.password
-    if (PlayerProfileManager.getPlayerProfile(account)) then
+    if (action.version ~= GAME_VERSION) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "InvalidGameVersion", GAME_VERSION)
+        }
+    elseif (PlayerProfileManager.getPlayerProfile(account)) then
         return {
             actionName = "Message",
             message    = getLocalizedText(25),
@@ -221,7 +232,13 @@ local function translateNewWar(action)
     end
 
     local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-    if (modelSkillConfiguration:getMaxSkillPoints() > action.maxSkillPoints) then
+    local isValid, err            = modelSkillConfiguration:isValid()
+    if (not isValid) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
+        }
+    elseif (modelSkillConfiguration:getMaxSkillPoints() > action.maxSkillPoints) then
         return {
             actionName = "Message",
             message    = getLocalizedText(81, "OverloadedSkillPoints"),
@@ -309,7 +326,13 @@ local function translateJoinWar(action)
     end
 
     local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-    if (modelSkillConfiguration:getMaxSkillPoints() > warConfiguration.maxSkillPoints) then
+    local isValid, err            = modelSkillConfiguration:isValid()
+    if (not isValid) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
+        }
+    elseif (modelSkillConfiguration:getMaxSkillPoints() > warConfiguration.maxSkillPoints) then
         return {
             actionName = "Message",
             message    = getLocalizedText(81, "OverloadedSkillPoints"),
@@ -490,7 +513,6 @@ local function translatePath(path, launchUnitID, modelSceneWar)
     local clone                = GridIndexFunctions.clone
     local isAdjacent           = GridIndexFunctions.isAdjacent
     local modelTileMap         = modelWarField:getModelTileMap()
-    local moveType             = focusModelUnit:getMoveType()
     local translatedPath       = {clone(beginningGridIndex)}
     local totalFuelConsumption = 0
     local maxFuelConsumption   = math.min(focusModelUnit:getCurrentFuel(), focusModelUnit:getMoveRange())
@@ -514,7 +536,7 @@ local function translatePath(path, launchUnitID, modelSceneWar)
             end
         end
 
-        local fuelConsumption = modelTileMap:getModelTile(gridIndex):getMoveCost(moveType)
+        local fuelConsumption = modelTileMap:getModelTile(gridIndex):getMoveCostWithModelUnit(focusModelUnit)
         if (not fuelConsumption) then
             return nil, "ActionTranslator-translatePath() the path is invalid because some tiles on it is impassable."
         end
@@ -974,13 +996,16 @@ local function translateLoadModelUnit(action, modelScene)
         }
     end
 
-    local modelUnitMap    = modelScene:getModelWarField():getModelUnitMap()
+    local modelWarField   = modelScene:getModelWarField()
+    local modelUnitMap    = modelWarField:getModelUnitMap()
     local focusModelUnit  = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
-    local loaderModelUnit = modelUnitMap:getModelUnit(rawPath[#rawPath])
-    if ((#rawPath == 1)                                         or
-        (not loaderModelUnit)                                   or
-        (not loaderModelUnit.canLoadModelUnit)                  or
-        (not loaderModelUnit:canLoadModelUnit(focusModelUnit))) then
+    local destination     = rawPath[#rawPath]
+    local loaderModelUnit = modelUnitMap:getModelUnit(destination)
+    local tileType        = modelWarField:getModelTileMap():getModelTile(destination):getTileType()
+    if ((#rawPath == 1)                                                   or
+        (not loaderModelUnit)                                             or
+        (not loaderModelUnit.canLoadModelUnit)                            or
+        (not loaderModelUnit:canLoadModelUnit(focusModelUnit, tileType))) then
         return {
             actionName       = "Message",
             additionalAction = "ReloadSceneWar",
@@ -1024,9 +1049,15 @@ local function translateDropModelUnit(action, modelScene)
         }
     end
 
-    local modelUnitMap      = modelScene:getModelWarField():getModelUnitMap()
-    local existingModelUnit = modelUnitMap:getModelUnit(rawPath[#rawPath])
+    local modelWarField     = modelScene:getModelWarField()
+    local modelUnitMap      = modelWarField:getModelUnitMap()
+    local destination       = rawPath[#rawPath]
+    local existingModelUnit = modelUnitMap:getModelUnit(destination)
+    local loaderModelUnit   = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
+    local tileType          = modelWarField:getModelTileMap():getModelTile(destination):getTileType()
     if (((#rawPath ~= 1) and (existingModelUnit) and (isModelUnitVisible(existingModelUnit, modelScene)))) or
+        (not loaderModelUnit.canDropModelUnit)                                                             or
+        (not loaderModelUnit:canDropModelUnit(tileType))                                                   or
         (not validateDropDestinations(action, modelScene))                                                 then
         return {
             actionName       = "Message",
@@ -1049,7 +1080,6 @@ local function translateDropModelUnit(action, modelScene)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
-    local loaderModelUnit     = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
     local actionDropModelUnit = {
         actionName       = "DropModelUnit",
         actionID         = actionID,
