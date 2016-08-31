@@ -204,6 +204,31 @@ local function generateSceneWarData(fileName, param)
 end
 
 --------------------------------------------------------------------------------
+-- The functions for initialization.
+--------------------------------------------------------------------------------
+local function initSceneWarNextName()
+    local file = io.open(SCENE_WAR_NEXT_NAME_PATH, "r")
+    if (file) then
+        file:close()
+        s_SceneWarNextName = dofile(SCENE_WAR_NEXT_NAME_PATH)
+    else
+        s_SceneWarNextName = "0000000000000000"
+        serialize(SCENE_WAR_NEXT_NAME_PATH, s_SceneWarNextName)
+    end
+end
+
+local function initJoinableWarNameList()
+    local file = io.open(SCENE_WAR_JOINABLE_LIST_PATH)
+    if (file) then
+        file:close()
+        s_JoinableWarNameList = dofile(SCENE_WAR_JOINABLE_LIST_PATH)
+    else
+        s_JoinableWarNameList = {}
+        serialize(SCENE_WAR_JOINABLE_LIST_PATH, s_JoinableWarNameList)
+    end
+end
+
+--------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
 function SceneWarManager.init()
@@ -212,8 +237,8 @@ function SceneWarManager.init()
     end
     s_IsInitialized = true
 
-    s_SceneWarNextName    = dofile(SCENE_WAR_NEXT_NAME_PATH)
-    s_JoinableWarNameList = dofile(SCENE_WAR_JOINABLE_LIST_PATH)
+    initSceneWarNextName()
+    initJoinableWarNameList()
 
     return SceneWarManager
 end
