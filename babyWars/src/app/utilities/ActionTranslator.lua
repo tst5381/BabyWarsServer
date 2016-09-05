@@ -162,6 +162,13 @@ end
 --------------------------------------------------------------------------------
 -- The translate functions.
 --------------------------------------------------------------------------------
+local function translateConnectionHeartbeat(action)
+    return {
+        actionName  = "ConnectionHeartbeat",
+        heartbeatID = action.heartbeatID,
+    }
+end
+
 local function translateLogin(action, session)
     local account, password = action.account, action.password
     if (action.version ~= GAME_VERSION) then
@@ -1147,8 +1154,9 @@ function ActionTranslator.translate(action, session)
     end
 
     local actionName = action.actionName
-    if     (actionName == "Login")    then return translateLogin(   action, session)
-    elseif (actionName == "Register") then return translateRegister(action)
+    if     (actionName == "ConnectionHeartbeat") then return translateConnectionHeartbeat(action)
+    elseif (actionName == "Login")               then return translateLogin(              action, session)
+    elseif (actionName == "Register")            then return translateRegister(           action)
     end
 
     local playerAccount = action.playerAccount
