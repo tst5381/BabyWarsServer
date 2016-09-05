@@ -162,10 +162,10 @@ end
 --------------------------------------------------------------------------------
 -- The translate functions.
 --------------------------------------------------------------------------------
-local function translateConnectionHeartbeat(action)
+local function translateNetworkHeartbeat(action)
     return {
-        actionName  = "ConnectionHeartbeat",
-        heartbeatID = action.heartbeatID,
+        actionName       = "NetworkHeartbeat",
+        heartbeatCounter = action.heartbeatCounter,
     }
 end
 
@@ -1154,9 +1154,9 @@ function ActionTranslator.translate(action, session)
     end
 
     local actionName = action.actionName
-    if     (actionName == "ConnectionHeartbeat") then return translateConnectionHeartbeat(action)
-    elseif (actionName == "Login")               then return translateLogin(              action, session)
-    elseif (actionName == "Register")            then return translateRegister(           action)
+    if     (actionName == "NetworkHeartbeat") then return translateNetworkHeartbeat(action)
+    elseif (actionName == "Login")            then return translateLogin(           action, session)
+    elseif (actionName == "Register")         then return translateRegister(        action)
     end
 
     local playerAccount = action.playerAccount
