@@ -19,15 +19,17 @@
 
 local ActionTranslator = {}
 
-local ModelSkillConfiguration = require("src.app.models.common.ModelSkillConfiguration")
 local Producible              = require("src.app.components.Producible")
+local ModelSkillConfiguration = require("src.app.models.common.ModelSkillConfiguration")
+local DamageCalculator        = require("src.app.utilities.DamageCalculator")
+local GameConstantFunctions   = require("src.app.utilities.GameConstantFunctions")
 local GridIndexFunctions      = require("src.app.utilities.GridIndexFunctions")
+local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions")
+local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
 local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
 local SceneWarManager         = require("src.app.utilities.SceneWarManager")
 local SessionManager          = require("src.app.utilities.SessionManager")
-local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
-local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions")
-local GameConstantFunctions   = require("src.app.utilities.GameConstantFunctions")
+local ComponentManager        = require("src.global.components.ComponentManager")
 
 local getLocalizedText = LocalizationFunctions.getLocalizedText
 
@@ -607,7 +609,7 @@ local function translateAttack(action, modelScene)
     local existingModelUnit = modelUnitMap:getModelUnit(endingGridIndex)
     local targetTile        = modelTileMap:getModelTile(targetGridIndex)
     local attackTarget      = modelUnitMap:getModelUnit(targetGridIndex) or targetTile
-    if ((not attacker.getUltimateBattleDamage)                                                             or
+    if ((not ComponentManager.getComponent(attacker, "AttackDoer"))                                        or
         (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))                   or
         ((attackTarget.getUnitType) and (not isModelUnitVisible(attackTarget, modelScene)))                or
         ((#rawPath ~= 1) and (existingModelUnit) and (isModelUnitVisible(existingModelUnit, modelScene)))) then
@@ -618,9 +620,7 @@ local function translateAttack(action, modelScene)
         }
     end
 
-    local attackerTile                = modelTileMap:getModelTile(endingGridIndex)
-    local weatherType                 = modelScene:getModelWeatherManager():getCurrentWeather()
-    local attackDamage, counterDamage = attacker:getUltimateBattleDamage(attackTarget, endingGridIndex, modelTileMap)
+    local attackDamage, counterDamage = DamageCalculator.getUltimateBattleDamage(rawPath, launchUnitID, targetGridIndex, modelScene)
     if (not attackDamage) then
         return {
             actionName       = "Message",
