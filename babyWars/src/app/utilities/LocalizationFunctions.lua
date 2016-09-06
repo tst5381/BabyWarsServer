@@ -553,6 +553,7 @@ local s_Texts = {
             elseif (textType == "SkillInfo")     then return "技 能 信 息"
             elseif (textType == "ActivateSkill") then return "发 动 技 能"
             elseif (textType == "HideUI")        then return "隐 藏 界 面"
+            elseif (textType == "DamageChart")   then return "基 础 伤 害 表"
             elseif (textType == "Surrender")     then return "投 降"
             elseif (textType == "ReloadWar")     then return "重 新 载 入"
             elseif (textType == "EndTurn")       then return "结 束 回 合"
@@ -574,6 +575,7 @@ local s_Texts = {
             elseif (textType == "SkillInfo")     then return "Skill Info"
             elseif (textType == "ActivateSkill") then return "ActivateSkill"
             elseif (textType == "HideUI")        then return "Hide UI"
+            elseif (textType == "DamageChart")   then return "DamageChart"
             elseif (textType == "Surrender")     then return "Surrender"
             elseif (textType == "ReloadWar")     then return "Reload"
             elseif (textType == "EndTurn")       then return "End Turn"
@@ -940,6 +942,7 @@ local s_Texts = {
             elseif (unitType == "Cruiser")         then return "巡洋舰"
             elseif (unitType == "Lander")          then return "登陆舰"
             elseif (unitType == "Gunboat")         then return "炮舰"
+            elseif (unitType == "Meteor")          then return "陨石"
             else                                        return "未知"
             end
         end,
@@ -970,6 +973,7 @@ local s_Texts = {
             elseif (unitType == "Cruiser")         then return "Cruiser"
             elseif (unitType == "Lander")          then return "Lander"
             elseif (unitType == "Gunboat")         then return "GBoat"
+            elseif (unitType == "Meteor")          then return "Meteor"
             else                                        return "Unknown"
             end
         end,
