@@ -232,26 +232,30 @@ end
 
 local function translateNewWar(action)
     -- TODO: validate more params.
-    local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, action.skillConfigurationID)
-    if (not skillConfiguration) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "FailToGetSkillConfiguration"),
-        }
-    end
+    local skillConfigurationID = action.skillConfigurationID
+    local maxSkillPoints       = action.maxSkillPoints
+    if (skillConfigurationID > 0) then
+        local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID)
+        if (not skillConfiguration) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "FailToGetSkillConfiguration"),
+            }
+        end
 
-    local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-    local isValid, err            = modelSkillConfiguration:isValid()
-    if (not isValid) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
-        }
-    elseif (modelSkillConfiguration:getMaxSkillPoints() > action.maxSkillPoints) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "OverloadedSkillPoints"),
-        }
+        local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
+        local isValid, err            = modelSkillConfiguration:isValid()
+        if (not isValid) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
+            }
+        elseif ((not maxSkillPoints) or (modelSkillConfiguration:getMaxSkillPoints() > maxSkillPoints)) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "OverloadedSkillPoints"),
+            }
+        end
     end
 
     local sceneWarFileName, err = SceneWarManager.createNewWar(action)
@@ -318,14 +322,6 @@ local function translateGetJoinableWarList(action)
 end
 
 local function translateJoinWar(action)
-    local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, action.skillConfigurationID)
-    if (not skillConfiguration) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "FailToGetSkillConfiguration"),
-        }
-    end
-
     local warConfiguration, err = SceneWarManager.getJoinableSceneWarConfiguration(action.sceneWarFileName)
     if (not warConfiguration) then
         return {
@@ -334,18 +330,30 @@ local function translateJoinWar(action)
         }
     end
 
-    local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-    local isValid, err            = modelSkillConfiguration:isValid()
-    if (not isValid) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
-        }
-    elseif (modelSkillConfiguration:getMaxSkillPoints() > warConfiguration.maxSkillPoints) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "OverloadedSkillPoints"),
-        }
+    local skillConfigurationID = action.skillConfigurationID
+    if (skillConfigurationID > 0) then
+        local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID)
+        if (not skillConfiguration) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "FailToGetSkillConfiguration"),
+            }
+        end
+
+        local maxSkillPoints          = warConfiguration.maxSkillPoints
+        local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
+        local isValid, err            = modelSkillConfiguration:isValid()
+        if (not isValid) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
+            }
+        elseif ((not maxSkillPoints) or (modelSkillConfiguration:getMaxSkillPoints() > maxSkillPoints)) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "OverloadedSkillPoints"),
+            }
+        end
     end
 
     local msg, err = SceneWarManager.joinWar(action)
