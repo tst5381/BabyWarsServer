@@ -19,15 +19,17 @@
 
 local ActionTranslator = {}
 
-local ModelSkillConfiguration = require("src.app.models.common.ModelSkillConfiguration")
 local Producible              = require("src.app.components.Producible")
+local ModelSkillConfiguration = require("src.app.models.common.ModelSkillConfiguration")
+local DamageCalculator        = require("src.app.utilities.DamageCalculator")
+local GameConstantFunctions   = require("src.app.utilities.GameConstantFunctions")
 local GridIndexFunctions      = require("src.app.utilities.GridIndexFunctions")
+local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions")
+local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
 local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
 local SceneWarManager         = require("src.app.utilities.SceneWarManager")
 local SessionManager          = require("src.app.utilities.SessionManager")
-local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
-local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions")
-local GameConstantFunctions   = require("src.app.utilities.GameConstantFunctions")
+local ComponentManager        = require("src.global.components.ComponentManager")
 
 local getLocalizedText = LocalizationFunctions.getLocalizedText
 
@@ -160,6 +162,13 @@ end
 --------------------------------------------------------------------------------
 -- The translate functions.
 --------------------------------------------------------------------------------
+local function translateNetworkHeartbeat(action)
+    return {
+        actionName       = "NetworkHeartbeat",
+        heartbeatCounter = action.heartbeatCounter,
+    }
+end
+
 local function translateLogin(action, session)
     local account, password = action.account, action.password
     if (action.version ~= GAME_VERSION) then
@@ -223,26 +232,30 @@ end
 
 local function translateNewWar(action)
     -- TODO: validate more params.
-    local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, action.skillConfigurationID)
-    if (not skillConfiguration) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "FailToGetSkillConfiguration"),
-        }
-    end
+    local skillConfigurationID = action.skillConfigurationID
+    local maxSkillPoints       = action.maxSkillPoints
+    if (skillConfigurationID > 0) then
+        local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID)
+        if (not skillConfiguration) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "FailToGetSkillConfiguration"),
+            }
+        end
 
-    local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-    local isValid, err            = modelSkillConfiguration:isValid()
-    if (not isValid) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
-        }
-    elseif (modelSkillConfiguration:getMaxSkillPoints() > action.maxSkillPoints) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "OverloadedSkillPoints"),
-        }
+        local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
+        local isValid, err            = modelSkillConfiguration:isValid()
+        if (not isValid) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
+            }
+        elseif ((not maxSkillPoints) or (modelSkillConfiguration:getMaxSkillPoints() > maxSkillPoints)) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "OverloadedSkillPoints"),
+            }
+        end
     end
 
     local sceneWarFileName, err = SceneWarManager.createNewWar(action)
@@ -309,14 +322,6 @@ local function translateGetJoinableWarList(action)
 end
 
 local function translateJoinWar(action)
-    local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, action.skillConfigurationID)
-    if (not skillConfiguration) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "FailToGetSkillConfiguration"),
-        }
-    end
-
     local warConfiguration, err = SceneWarManager.getJoinableSceneWarConfiguration(action.sceneWarFileName)
     if (not warConfiguration) then
         return {
@@ -325,18 +330,30 @@ local function translateJoinWar(action)
         }
     end
 
-    local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-    local isValid, err            = modelSkillConfiguration:isValid()
-    if (not isValid) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
-        }
-    elseif (modelSkillConfiguration:getMaxSkillPoints() > warConfiguration.maxSkillPoints) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "OverloadedSkillPoints"),
-        }
+    local skillConfigurationID = action.skillConfigurationID
+    if (skillConfigurationID > 0) then
+        local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID)
+        if (not skillConfiguration) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "FailToGetSkillConfiguration"),
+            }
+        end
+
+        local maxSkillPoints          = warConfiguration.maxSkillPoints
+        local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
+        local isValid, err            = modelSkillConfiguration:isValid()
+        if (not isValid) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
+            }
+        elseif ((not maxSkillPoints) or (modelSkillConfiguration:getMaxSkillPoints() > maxSkillPoints)) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "OverloadedSkillPoints"),
+            }
+        end
     end
 
     local msg, err = SceneWarManager.joinWar(action)
@@ -607,7 +624,7 @@ local function translateAttack(action, modelScene)
     local existingModelUnit = modelUnitMap:getModelUnit(endingGridIndex)
     local targetTile        = modelTileMap:getModelTile(targetGridIndex)
     local attackTarget      = modelUnitMap:getModelUnit(targetGridIndex) or targetTile
-    if ((not attacker.getUltimateBattleDamage)                                                             or
+    if ((not ComponentManager.getComponent(attacker, "AttackDoer"))                                        or
         (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))                   or
         ((attackTarget.getUnitType) and (not isModelUnitVisible(attackTarget, modelScene)))                or
         ((#rawPath ~= 1) and (existingModelUnit) and (isModelUnitVisible(existingModelUnit, modelScene)))) then
@@ -618,9 +635,7 @@ local function translateAttack(action, modelScene)
         }
     end
 
-    local attackerTile                = modelTileMap:getModelTile(endingGridIndex)
-    local weatherType                 = modelScene:getModelWeatherManager():getCurrentWeather()
-    local attackDamage, counterDamage = attacker:getUltimateBattleDamage(attackTarget, endingGridIndex, modelTileMap)
+    local attackDamage, counterDamage = DamageCalculator.getUltimateBattleDamage(rawPath, launchUnitID, targetGridIndex, modelScene)
     if (not attackDamage) then
         return {
             actionName       = "Message",
@@ -1147,8 +1162,9 @@ function ActionTranslator.translate(action, session)
     end
 
     local actionName = action.actionName
-    if     (actionName == "Login")    then return translateLogin(   action, session)
-    elseif (actionName == "Register") then return translateRegister(action)
+    if     (actionName == "NetworkHeartbeat") then return translateNetworkHeartbeat(action)
+    elseif (actionName == "Login")            then return translateLogin(           action, session)
+    elseif (actionName == "Register")         then return translateRegister(        action)
     end
 
     local playerAccount = action.playerAccount

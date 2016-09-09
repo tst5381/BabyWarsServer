@@ -169,16 +169,16 @@ local function generateWeatherData(defaultWeather, isRandom)
 end
 
 local function generateSinglePlayerData(account, skillConfigurationID)
-    local playerProfile           = PlayerProfileManager.getPlayerProfile(account)
-    local modelSkillConfiguration = ModelSkillConfiguration:create(PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID))
     return {
         account             = account,
-        nickname            = playerProfile.nickname,
+        nickname            = PlayerProfileManager.getPlayerProfile(account).nickname,
         fund                = 0,
         isAlive             = true,
         damageCost          = 0,
         skillActivatedCount = 0,
-        skillConfiguration  = modelSkillConfiguration:toSerializableTable(),
+        skillConfiguration  = (skillConfigurationID == 0) and
+            ({maxPoints = 0})                             or
+            ModelSkillConfiguration:create(PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID)):toSerializableTable(),
     }
 end
 
@@ -244,7 +244,7 @@ function SceneWarManager.init()
 end
 
 function SceneWarManager.createNewWar(param)
-    local sceneWarFileName = s_SceneWarNextName
+    local sceneWarFileName      = s_SceneWarNextName
     local warData, fullFileName = generateSceneWarData(sceneWarFileName, param)
     if (not warData) then
         return nil, "SceneWarManager.createNewWar() failed because some param is invalid."
