@@ -28,7 +28,6 @@ local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions
 local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
 local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
 local SceneWarManager         = require("src.app.utilities.SceneWarManager")
-local SessionManager          = require("src.app.utilities.SessionManager")
 local ComponentManager        = require("src.global.components.ComponentManager")
 
 local getLocalizedText = LocalizationFunctions.getLocalizedText
@@ -149,8 +148,7 @@ local function generateActionsForPublish(action, modelPlayerManager, currentPlay
     modelPlayerManager:forEachModelPlayer(function(modelPlayer)
         local otherPlayerAccount = modelPlayer:getAccount()
         if ((otherPlayerAccount ~= currentPlayerAccount) and
-            (modelPlayer:isAlive()) and
-            (SessionManager.getSessionIdWithPlayerAccount(otherPlayerAccount))) then
+            (modelPlayer:isAlive()))                     then
             actionsForPublish = actionsForPublish or {}
             actionsForPublish[otherPlayerAccount] = action
         end
@@ -169,8 +167,8 @@ local function translateNetworkHeartbeat(action)
     }
 end
 
-local function translateLogin(action, session)
-    local account, password = action.account, action.password
+local function translateLogin(action)
+    local account, password = action.playerAccount, action.playerPassword
     if (action.version ~= GAME_VERSION) then
         return {
             actionName = "Message",
@@ -182,33 +180,21 @@ local function translateLogin(action, session)
             message    = getLocalizedText(22),
         }
     else
-        -- By returning the actionLogin, the session will then automatically call subscribeToPlayerChannel().
-        local actionLogin = {
+        return {
             actionName = "Login",
             account    = account,
             password   = password,
+        }, {
+            [account] = {
+                actionName = "Logout",
+                message    = getLocalizedText(23, account),
+            }
         }
-
-        if (SessionManager.getSessionIdWithPlayerAccount(account) == nil) then
-            return actionLogin
-        elseif (session:isSubscribingToPlayerChannel(account)) then
-            return {
-                actionName = "Message",
-                message    = getLocalizedText(21, account),
-            }
-        else
-            return actionLogin, {
-                [account] = {
-                    actionName = "Logout",
-                    message    = getLocalizedText(23, account),
-                }
-            }
-        end
     end
 end
 
-local function translateRegister(action, session)
-    local account, password = action.account, action.password
+local function translateRegister(action)
+    local account, password = action.playerAccount, action.playerPassword
     if (action.version ~= GAME_VERSION) then
         return {
             actionName = "Message",
@@ -221,7 +207,6 @@ local function translateRegister(action, session)
         }
     else
         PlayerProfileManager.createPlayerProfile(account, password)
-        -- By returning the actionRegister, the session will then automatically call subscribeToPlayerChannel().
         return {
             actionName = "Register",
             account    = account,
@@ -1152,7 +1137,7 @@ end
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
-function ActionTranslator.translate(action, session)
+function ActionTranslator.translate(action)
     if (type(action) ~= "table") then
         return {
             actionName       = "Message",
@@ -1163,14 +1148,12 @@ function ActionTranslator.translate(action, session)
 
     local actionName = action.actionName
     if     (actionName == "NetworkHeartbeat") then return translateNetworkHeartbeat(action)
-    elseif (actionName == "Login")            then return translateLogin(           action, session)
+    elseif (actionName == "Login")            then return translateLogin(           action)
     elseif (actionName == "Register")         then return translateRegister(        action)
     end
 
     local playerAccount = action.playerAccount
-    if (PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
-        session:subscribeToPlayerChannel(playerAccount, action.playerPassword)
-    else
+    if (not PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
         return {
             actionName = "Logout",
             message    = getLocalizedText(81, "InvalidPassword"),

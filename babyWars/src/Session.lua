@@ -9,12 +9,12 @@ local Session = require("src.global.functions.class")("Session")
 local WebSocketServer        = require("resty.websocket.server")
 local Redis                  = require("resty.redis")
 local ActionTranslator       = require("src.app.utilities.ActionTranslator")
+local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
-local SessionManager         = require("src.app.utilities.SessionManager")
 
 local DEFAULT_CONFIGURATION = {
-    timeout = 10000000, -- 10000s
-    max_payload_len = 65535
+    timeout         = 10000000, -- 10000s
+    max_payload_len = 65535,
 }
 
 --------------------------------------------------------------------------------
@@ -120,7 +120,7 @@ local function destroyThreadForSubscribe(self)
     end
 end
 
-local function publishTranslatedActions(self, actions)
+local function publishTranslatedActions(actions)
     if (actions == nil) then
         return
     end
@@ -139,11 +139,14 @@ local function publishTranslatedActions(self, actions)
     red:close()
 end
 
-local function doAction(self, actionForSelf, actionsForPublish)
-    publishTranslatedActions(self, actionsForPublish)
+local function doAction(self, rawAction, actionForSelf, actionsForPublish)
+    publishTranslatedActions(actionsForPublish)
 
-    if ((actionForSelf.actionName == "Login") or (actionForSelf.actionName == "Register")) then
-        self:subscribeToPlayerChannel(actionForSelf.account, actionForSelf.password)
+    local account, password = rawAction.playerAccount, rawAction.playerPassword
+    if (PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
+        self:subscribeToPlayerChannel(account, password)
+    else
+        self:unsubscribeFromPlayerChannel()
     end
 
     local bytes, err = self.m_WebSocket:send_text(SerializationFunctions.toString(actionForSelf))
@@ -157,31 +160,16 @@ end
 -- The constructor.
 --------------------------------------------------------------------------------
 function Session:ctor()
-    self.m_ID = SessionManager.getAvailableSessionId()
-    SessionManager.tickAvailableSessionId()
-
     return self
 end
 
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
-function Session:getID()
-    return self.m_ID
-end
-
-function Session:isSubscribingToPlayerChannel(account)
-    if (account == nil) then
-        return self.m_PlayerAccount ~= nil
-    else
-        return self.m_PlayerAccount == account
-    end
-end
-
 -- WARNING: You can't call this method outside the context of the request.
 function Session:subscribeToPlayerChannel(account, password)
     assert(type(account) == "string", "Session:subscribeToPlayerChannel() the param account is invalid.")
-    if (self:isSubscribingToPlayerChannel(account)) then
+    if (self.m_PlayerAccount == account) then
         return self
     end
 
@@ -190,7 +178,6 @@ function Session:subscribeToPlayerChannel(account, password)
     initRedisForSubscribe(self, account)
     initThreadForSubscribe(self)
     self.m_PlayerAccount, self.m_PlayerPassword = account, password
-    SessionManager.setSessionIdWithPlayerAccount(account, self.m_ID)
 
     return self
 end
@@ -200,9 +187,6 @@ function Session:unsubscribeFromPlayerChannel()
     destroyThreadForSubscribe(self)
     destroyRedisForSubscribe(self)
 
-    if (self.m_PlayerAccount) then
-        SessionManager.deleteSessionIdWithPlayerAccount(self.m_PlayerAccount)
-    end
     self.m_PlayerAccount, self.m_PlayerPassword = nil, nil
 
     return self
@@ -233,7 +217,8 @@ function Session:start()
             -- TODO: validate the data before loadstring().
             local chunk = loadstring("return " .. data)
             if (chunk) then
-                doAction(self, ActionTranslator.translate(chunk(), self))
+                local rawAction = chunk()
+                doAction(self, rawAction, ActionTranslator.translate(rawAction))
             else
                 local bytes, err = webSocket:send_text("Server: Failed to parse the data came from the client.")
                 if (not bytes) then
