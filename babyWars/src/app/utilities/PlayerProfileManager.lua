@@ -3,7 +3,7 @@ local PlayerProfileManager = {}
 
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
 
-local PLAYER_PROFILE_PATH          = "babyWars/res/data/playerProfile/"
+local PLAYER_PROFILE_PATH          = "babyWars\\res\\data\\playerProfile\\"
 local SINGLE_SKILL_CONFIGURATION   = {
     maxPoints = 100,
     passive   = {},

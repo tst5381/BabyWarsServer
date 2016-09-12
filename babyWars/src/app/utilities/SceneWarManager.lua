@@ -7,7 +7,7 @@ local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager"
 local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions")
 local Actor                   = require("src.global.actors.Actor")
 
-local SCENE_WAR_PATH               = "babyWars/res/data/sceneWar/"
+local SCENE_WAR_PATH               = "babyWars\\res\\data\\sceneWar\\"
 local SCENE_WAR_NEXT_NAME_PATH     = SCENE_WAR_PATH .. "NextName.lua"
 local SCENE_WAR_JOINABLE_LIST_PATH = SCENE_WAR_PATH .. "JoinableList.lua"
 

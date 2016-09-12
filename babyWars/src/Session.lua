@@ -134,7 +134,7 @@ local function publishTranslatedActions(actions)
 
     local toString = SerializationFunctions.toString
     for account, action in pairs(actions) do
-        red:publish("Session." .. account, toString(action))
+        red:publish("Session." .. string.lower(account), toString(action))
     end
 
     red:close()
@@ -143,11 +143,17 @@ end
 local function doAction(self, rawAction, actionForSelf, actionsForPublish)
     publishTranslatedActions(actionsForPublish)
 
-    local account, password = string.lower(rawAction.playerAccount), rawAction.playerPassword
-    if (PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
-        self:subscribeToPlayerChannel(account, password)
-    else
+    local account, password    = string.lower(rawAction.playerAccount or ""), rawAction.playerPassword
+    local translatedActionName = actionForSelf.actionName
+    if ((translatedActionName == "Logout")                                       or
+        (not PlayerProfileManager.isAccountAndPasswordValid(account, password))) then
         self:unsubscribeFromPlayerChannel()
+    else
+        local rawActionName = rawAction.actionName
+        if ((rawActionName ~= "Register")                                                or
+            ((rawActionName == "Register") and (translatedActionName == rawActionName))) then
+            self:subscribeToPlayerChannel(account, password)
+        end
     end
 
     local bytes, err = self.m_WebSocket:send_text(SerializationFunctions.toString(actionForSelf))
