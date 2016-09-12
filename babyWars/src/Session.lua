@@ -2,7 +2,8 @@
 -- TODO: move the code that initializes the server to somewhere else (like main()).
 package.path = package.path .. ";./babyWars/?.lua"
 require("src.app.utilities.GameConstantFunctions").init(true)
-require("src.app.utilities.SceneWarManager").init()
+require("src.app.utilities.SceneWarManager")      .init()
+require("src.app.utilities.PlayerProfileManager") .init()
 
 local Session = require("src.global.functions.class")("Session")
 
@@ -142,7 +143,7 @@ end
 local function doAction(self, rawAction, actionForSelf, actionsForPublish)
     publishTranslatedActions(actionsForPublish)
 
-    local account, password = rawAction.playerAccount, rawAction.playerPassword
+    local account, password = string.lower(rawAction.playerAccount), rawAction.playerPassword
     if (PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
         self:subscribeToPlayerChannel(account, password)
     else

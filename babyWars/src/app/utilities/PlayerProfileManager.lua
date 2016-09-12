@@ -30,6 +30,7 @@ for i = 1, 10 do
     DEFAULT_SKILL_CONFIGURATIONS[i] = SINGLE_SKILL_CONFIGURATION
 end
 
+local s_IsInitialized     = false
 local s_PlayerProfileList = {}
 
 --------------------------------------------------------------------------------
@@ -61,23 +62,38 @@ end
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
+function PlayerProfileManager.init()
+    if (s_IsInitialized) then
+        return
+    end
+
+    os.execute("mkdir " .. PLAYER_PROFILE_PATH)
+
+    s_IsInitialized = true
+    return PlayerProfileManager
+end
+
 function PlayerProfileManager.getPlayerProfile(account)
-    if (not s_PlayerProfileList[account]) then
-        local fullFileName = toFullFileName(account)
+    if ((type(account) ~= "string") or (string.len(account) == 0)) then
+        return nil
+    end
+
+    local lowerAccount = string.lower(account)
+    if (not s_PlayerProfileList[lowerAccount]) then
+        local fullFileName = toFullFileName(lowerAccount)
         local file = io.open(fullFileName, "r")
         if (not file) then
             return nil
         else
             file:close()
-            s_PlayerProfileList[account] = {
+            s_PlayerProfileList[lowerAccount] = {
                 fullFileName = fullFileName,
-                account      = account,
                 profile      = dofile(fullFileName),
             }
         end
     end
 
-    return s_PlayerProfileList[account].profile
+    return s_PlayerProfileList[lowerAccount].profile
 end
 
 function PlayerProfileManager.getSkillConfiguration(account, configurationID)

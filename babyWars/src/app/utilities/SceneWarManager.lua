@@ -237,6 +237,7 @@ function SceneWarManager.init()
     end
     s_IsInitialized = true
 
+    os.execute("mkdir " .. SCENE_WAR_PATH)
     initSceneWarNextName()
     initJoinableWarNameList()
 
