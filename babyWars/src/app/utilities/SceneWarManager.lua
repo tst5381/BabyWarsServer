@@ -44,7 +44,6 @@ end
 
 local function createActorSceneWar(warData)
     local modelSceneWar = Actor.createModel("sceneWar.ModelSceneWar", warData)
-    modelSceneWar:onStartRunning()
     return Actor.createWithModelAndViewInstance(modelSceneWar)
 end
 
@@ -89,6 +88,7 @@ local function getOngoingWarListItem(sceneWarFileName)
         end
 
         s_OngoingWarList[sceneWarFileName] = item
+        item.actorSceneWar:getModel():onStartRunning()
     end
 
     return s_OngoingWarList[sceneWarFileName]
