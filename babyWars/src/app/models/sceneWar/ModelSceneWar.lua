@@ -183,7 +183,6 @@ end
 
 local function initActorPlayerManager(self, playersData)
     local actor = Actor.createWithModelAndViewName("sceneWar.ModelPlayerManager", playersData)
-    actor:getModel():setRootScriptEventDispatcher(self:getScriptEventDispatcher())
 
     self.m_ActorPlayerManager = actor
 end
@@ -205,7 +204,6 @@ end
 
 local function initActorTurnManager(self, turnData)
     local actor = Actor.createWithModelAndViewName("sceneWar.ModelTurnManager", turnData)
-    actor:getModel():setSceneWarFileName(self.m_FileName)
 
     self.m_ActorTurnManager = actor
 end
@@ -250,6 +248,10 @@ end
 -- The callback functions on start/stop running and script events.
 --------------------------------------------------------------------------------
 function ModelSceneWar:onStartRunning()
+    local sceneWarFileName = self:getFileName()
+    self:getModelTurnManager()  :onStartRunning(sceneWarFileName)
+    self:getModelPlayerManager():onStartRunning(sceneWarFileName)
+
     self:getScriptEventDispatcher():dispatchEvent({
             name         = "EvtModelWeatherUpdated",
             modelWeather = self:getModelWeatherManager():getCurrentWeather()
