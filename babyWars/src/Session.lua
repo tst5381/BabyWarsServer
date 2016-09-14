@@ -134,7 +134,7 @@ local function publishTranslatedActions(actions)
 
     local toString = SerializationFunctions.toString
     for account, action in pairs(actions) do
-        red:publish("Session." .. string.lower(account), toString(action))
+        red:publish("Session." .. account, toString(action))
     end
 
     red:close()
@@ -143,7 +143,7 @@ end
 local function doAction(self, rawAction, actionForSelf, actionsForPublish)
     publishTranslatedActions(actionsForPublish)
 
-    local account, password    = string.lower(rawAction.playerAccount or ""), rawAction.playerPassword
+    local account, password    = rawAction.playerAccount, rawAction.playerPassword
     local translatedActionName = actionForSelf.actionName
     if ((translatedActionName == "Logout")                                       or
         (not PlayerProfileManager.isAccountAndPasswordValid(account, password))) then

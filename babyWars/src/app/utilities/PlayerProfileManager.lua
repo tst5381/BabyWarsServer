@@ -38,6 +38,7 @@ local s_PlayerProfileList = {}
 --------------------------------------------------------------------------------
 local function generatePlayerProfile(account, password)
     return {
+        account  = account,
         password = password,
         nickname = account,
 
@@ -74,26 +75,30 @@ function PlayerProfileManager.init()
 end
 
 function PlayerProfileManager.getPlayerProfile(account)
-    if ((type(account) ~= "string") or (string.len(account) == 0)) then
+    if (type(account) ~= "string") then
         return nil
     end
 
-    local lowerAccount = string.lower(account)
-    if (not s_PlayerProfileList[lowerAccount]) then
-        local fullFileName = toFullFileName(lowerAccount)
+    if (not s_PlayerProfileList[account]) then
+        local fullFileName = toFullFileName(account)
         local file = io.open(fullFileName, "r")
         if (not file) then
             return nil
         else
             file:close()
-            s_PlayerProfileList[lowerAccount] = {
+            local profile = dofile(fullFileName)
+            if (profile.account ~= account) then
+                return nil
+            end
+
+            s_PlayerProfileList[account] = {
                 fullFileName = fullFileName,
-                profile      = dofile(fullFileName),
+                profile      = profile,
             }
         end
     end
 
-    return s_PlayerProfileList[lowerAccount].profile
+    return s_PlayerProfileList[account].profile
 end
 
 function PlayerProfileManager.getSkillConfiguration(account, configurationID)
