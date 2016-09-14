@@ -251,6 +251,7 @@ function ModelSceneWar:onStartRunning()
     local sceneWarFileName = self:getFileName()
     self:getModelTurnManager()  :onStartRunning(sceneWarFileName)
     self:getModelPlayerManager():onStartRunning(sceneWarFileName)
+    self:getModelWarField()     :onStartRunning(sceneWarFileName)
 
     self:getScriptEventDispatcher():dispatchEvent({
             name         = "EvtModelWeatherUpdated",
