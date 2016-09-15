@@ -101,6 +101,17 @@ function PlayerProfileManager.getPlayerProfile(account)
     return s_PlayerProfileList[account].profile
 end
 
+function PlayerProfileManager.isAccountRegistered(account)
+    local fullFileName = toFullFileName(account)
+    local file = io.open(fullFileName, "r")
+    if (file) then
+        file:close()
+        return true
+    else
+        return false
+    end
+end
+
 function PlayerProfileManager.getSkillConfiguration(account, configurationID)
     local profile = PlayerProfileManager.getPlayerProfile(account)
     if (not profile) then

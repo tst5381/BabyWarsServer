@@ -200,7 +200,7 @@ local function translateRegister(action)
             actionName = "Message",
             message    = getLocalizedText(81, "InvalidGameVersion", GAME_VERSION)
         }
-    elseif (PlayerProfileManager.getPlayerProfile(account)) then
+    elseif (PlayerProfileManager.isAccountRegistered(account)) then
         return {
             actionName = "Message",
             message    = getLocalizedText(25),
