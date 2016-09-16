@@ -7,7 +7,7 @@ local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager"
 local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions")
 local Actor                   = require("src.global.actors.Actor")
 
-local SCENE_WAR_PATH               = "babyWars/res/data/sceneWar/"
+local SCENE_WAR_PATH               = "babyWars\\res\\data\\sceneWar\\"
 local SCENE_WAR_NEXT_NAME_PATH     = SCENE_WAR_PATH .. "NextName.lua"
 local SCENE_WAR_JOINABLE_LIST_PATH = SCENE_WAR_PATH .. "JoinableList.lua"
 
@@ -44,7 +44,6 @@ end
 
 local function createActorSceneWar(warData)
     local modelSceneWar = Actor.createModel("sceneWar.ModelSceneWar", warData)
-    modelSceneWar:onStartRunning()
     return Actor.createWithModelAndViewInstance(modelSceneWar)
 end
 
@@ -89,6 +88,7 @@ local function getOngoingWarListItem(sceneWarFileName)
         end
 
         s_OngoingWarList[sceneWarFileName] = item
+        item.actorSceneWar:getModel():onStartRunning()
     end
 
     return s_OngoingWarList[sceneWarFileName]
@@ -237,6 +237,7 @@ function SceneWarManager.init()
     end
     s_IsInitialized = true
 
+    os.execute("mkdir " .. SCENE_WAR_PATH)
     initSceneWarNextName()
     initJoinableWarNameList()
 

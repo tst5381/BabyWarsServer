@@ -3,7 +3,7 @@ local PlayerProfileManager = {}
 
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
 
-local PLAYER_PROFILE_PATH          = "babyWars/res/data/playerProfile/"
+local PLAYER_PROFILE_PATH          = "babyWars\\res\\data\\playerProfile\\"
 local SINGLE_SKILL_CONFIGURATION   = {
     maxPoints = 100,
     passive   = {},
@@ -30,6 +30,7 @@ for i = 1, 10 do
     DEFAULT_SKILL_CONFIGURATIONS[i] = SINGLE_SKILL_CONFIGURATION
 end
 
+local s_IsInitialized     = false
 local s_PlayerProfileList = {}
 
 --------------------------------------------------------------------------------
@@ -37,6 +38,7 @@ local s_PlayerProfileList = {}
 --------------------------------------------------------------------------------
 local function generatePlayerProfile(account, password)
     return {
+        account  = account,
         password = password,
         nickname = account,
 
@@ -61,7 +63,22 @@ end
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
+function PlayerProfileManager.init()
+    if (s_IsInitialized) then
+        return
+    end
+
+    os.execute("mkdir " .. PLAYER_PROFILE_PATH)
+
+    s_IsInitialized = true
+    return PlayerProfileManager
+end
+
 function PlayerProfileManager.getPlayerProfile(account)
+    if (type(account) ~= "string") then
+        return nil
+    end
+
     if (not s_PlayerProfileList[account]) then
         local fullFileName = toFullFileName(account)
         local file = io.open(fullFileName, "r")
@@ -69,15 +86,30 @@ function PlayerProfileManager.getPlayerProfile(account)
             return nil
         else
             file:close()
+            local profile = dofile(fullFileName)
+            if (profile.account ~= account) then
+                return nil
+            end
+
             s_PlayerProfileList[account] = {
                 fullFileName = fullFileName,
-                account      = account,
-                profile      = dofile(fullFileName),
+                profile      = profile,
             }
         end
     end
 
     return s_PlayerProfileList[account].profile
+end
+
+function PlayerProfileManager.isAccountRegistered(account)
+    local fullFileName = toFullFileName(account)
+    local file = io.open(fullFileName, "r")
+    if (file) then
+        file:close()
+        return true
+    else
+        return false
+    end
 end
 
 function PlayerProfileManager.getSkillConfiguration(account, configurationID)
