@@ -680,8 +680,9 @@ local function translateJoinModelUnit(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(actionWait)
-        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+        return actionWait,
+            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            actionWait
     end
 
     local actionJoinModelUnit = {
@@ -691,8 +692,9 @@ local function translateJoinModelUnit(action, modelScene)
         path         = translatedPath,
         launchUnitID = launchUnitID,
     }
-    SceneWarManager.updateModelSceneWarWithAction(actionJoinModelUnit)
-    return actionJoinModelUnit, generateActionsForPublish(actionJoinModelUnit, modelPlayerManager, action.playerAccount)
+    return actionJoinModelUnit,
+        generateActionsForPublish(actionJoinModelUnit, modelPlayerManager, action.playerAccount),
+        actionJoinModelUnit
 end
 
 local function translateCaptureModelTile(action, modelScene)
