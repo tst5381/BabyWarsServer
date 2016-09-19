@@ -784,8 +784,9 @@ local function translateLaunchSilo(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(actionWait)
-        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+        return actionWait,
+            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            actionWait
     end
 
     local actionLaunchSilo = {
@@ -796,8 +797,9 @@ local function translateLaunchSilo(action, modelScene)
         targetGridIndex = targetGridIndex,
         launchUnitID    = launchUnitID,
     }
-    SceneWarManager.updateModelSceneWarWithAction(actionLaunchSilo)
-    return actionLaunchSilo, generateActionsForPublish(actionLaunchSilo, modelPlayerManager, action.playerAccount)
+    return actionLaunchSilo,
+        generateActionsForPublish(actionLaunchSilo, modelPlayerManager, action.playerAccount),
+        actionLaunchSilo
 end
 
 local function translateBuildModelTile(action, modelScene)
