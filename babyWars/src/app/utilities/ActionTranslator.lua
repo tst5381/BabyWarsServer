@@ -422,7 +422,7 @@ local function translateBeginTurn(action, modelScene)
         actionID   = action.actionID,
         fileName   = sceneWarFileName,
     }
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionBeginTurn)
+    SceneWarManager.updateModelSceneWarWithAction(actionBeginTurn)
 
     local modelPlayerManager = modelScene:getModelPlayerManager()
     if (not modelPlayerManager:getModelPlayer(playerIndex):isAlive()) then
@@ -446,7 +446,7 @@ local function translateEndTurn(action, modelScene)
         fileName    = sceneWarFileName,
         nextWeather = modelScene:getModelWeatherManager():getNextWeather(),
     }
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionEndTurn)
+    SceneWarManager.updateModelSceneWarWithAction(actionEndTurn)
     return actionEndTurn, generateActionsForPublish(actionEndTurn, modelScene:getModelPlayerManager(), action.playerAccount)
 end
 
@@ -465,7 +465,7 @@ local function translateSurrender(action, modelScene)
         fileName        = sceneWarFileName,
         lostPlayerIndex = playerIndex,
     }
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionSurrender)
+    SceneWarManager.updateModelSceneWarWithAction(actionSurrender)
     return actionSurrender, generateActionsForPublish(actionSurrender, modelPlayerManager, action.playerAccount)
 end
 
@@ -487,7 +487,7 @@ local function translateActivateSkillGroup(action, modelScene)
         fileName     = sceneWarFileName,
         skillGroupID = skillGroupID,
     }
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionActivateSkillGroup)
+    SceneWarManager.updateModelSceneWarWithAction(actionActivateSkillGroup)
     return actionActivateSkillGroup, generateActionsForPublish(actionActivateSkillGroup, modelPlayerManager, playerAccount)
 end
 
@@ -578,7 +578,9 @@ local function translateWait(action, modelScene)
         launchUnitID = launchUnitID,
     }
     SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
-    return actionWait, generateActionsForPublish(actionWait, modelScene:getModelPlayerManager(), action.playerAccount)
+    return actionWait,
+        generateActionsForPublish(actionWait, modelScene:getModelPlayerManager(), action.playerAccount),
+        actionWait
 end
 
 local function translateAttack(action, modelScene)
@@ -619,7 +621,7 @@ local function translateAttack(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        SceneWarManager.updateModelSceneWarWithAction(actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
@@ -633,7 +635,7 @@ local function translateAttack(action, modelScene)
         counterDamage   = counterDamage,
         launchUnitID    = launchUnitID,
     }
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionAttack)
+    SceneWarManager.updateModelSceneWarWithAction(actionAttack)
 
     local attackerPlayerIndex = attacker:getPlayerIndex()
     local targetPlayerIndex   = attackTarget:getPlayerIndex()
@@ -679,7 +681,7 @@ local function translateJoinModelUnit(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        SceneWarManager.updateModelSceneWarWithAction(actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
@@ -690,7 +692,7 @@ local function translateJoinModelUnit(action, modelScene)
         path         = translatedPath,
         launchUnitID = launchUnitID,
     }
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionJoinModelUnit)
+    SceneWarManager.updateModelSceneWarWithAction(actionJoinModelUnit)
     return actionJoinModelUnit, generateActionsForPublish(actionJoinModelUnit, modelPlayerManager, action.playerAccount)
 end
 
@@ -723,7 +725,7 @@ local function translateCaptureModelTile(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        SceneWarManager.updateModelSceneWarWithAction(actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
@@ -735,7 +737,7 @@ local function translateCaptureModelTile(action, modelScene)
         path         = translatedPath,
         launchUnitID = launchUnitID,
     }
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionCapture)
+    SceneWarManager.updateModelSceneWarWithAction(actionCapture)
 
     if ((targetPlayerIndex ~= 0) and (not modelPlayerManager:getModelPlayer(targetPlayerIndex):isAlive())) then
         actionCapture.lostPlayerIndex = targetPlayerIndex
@@ -781,7 +783,7 @@ local function translateLaunchSilo(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        SceneWarManager.updateModelSceneWarWithAction(actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
@@ -793,7 +795,7 @@ local function translateLaunchSilo(action, modelScene)
         targetGridIndex = targetGridIndex,
         launchUnitID    = launchUnitID,
     }
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionLaunchSilo)
+    SceneWarManager.updateModelSceneWarWithAction(actionLaunchSilo)
     return actionLaunchSilo, generateActionsForPublish(actionLaunchSilo, modelPlayerManager, action.playerAccount)
 end
 
@@ -828,7 +830,7 @@ local function translateBuildModelTile(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        SceneWarManager.updateModelSceneWarWithAction(actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
@@ -839,7 +841,7 @@ local function translateBuildModelTile(action, modelScene)
         path         = translatedPath,
         launchUnitID = launchUnitID,
     }
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionBuildModelTile)
+    SceneWarManager.updateModelSceneWarWithAction(actionBuildModelTile)
     return actionBuildModelTile, generateActionsForPublish(actionBuildModelTile, modelPlayerManager, action.playerAccount)
 end
 
@@ -873,7 +875,7 @@ local function translateProduceModelUnitOnUnit(action, modelScene)
         path        = translatedPath,
         cost        = cost,
     }
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionProduceModelUnitOnUnit)
+    SceneWarManager.updateModelSceneWarWithAction(actionProduceModelUnitOnUnit)
     return actionProduceModelUnitOnUnit, generateActionsForPublish(actionProduceModelUnitOnUnit, modelPlayerManager, action.playerAccount)
 end
 
@@ -902,7 +904,7 @@ local function translateSupplyModelUnit(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        SceneWarManager.updateModelSceneWarWithAction(actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
@@ -913,7 +915,7 @@ local function translateSupplyModelUnit(action, modelScene)
         path         = translatedPath,
         launchUnitID = launchUnitID,
     }
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionSupplyModelUnit)
+    SceneWarManager.updateModelSceneWarWithAction(actionSupplyModelUnit)
     return actionSupplyModelUnit, generateActionsForPublish(actionSupplyModelUnit, modelScene:getModelPlayerManager(), action.playerAccount)
 end
 
@@ -947,7 +949,7 @@ local function translateLoadModelUnit(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        SceneWarManager.updateModelSceneWarWithAction(actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
@@ -958,7 +960,7 @@ local function translateLoadModelUnit(action, modelScene)
         path         = translatedPath,
         launchUnitID = launchUnitID,
     }
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionLoadModelUnit)
+    SceneWarManager.updateModelSceneWarWithAction(actionLoadModelUnit)
     return actionLoadModelUnit, generateActionsForPublish(actionLoadModelUnit, modelScene:getModelPlayerManager(), action.playerAccount)
 end
 
@@ -992,7 +994,7 @@ local function translateDropModelUnit(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
+        SceneWarManager.updateModelSceneWarWithAction(actionWait)
         return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
     end
 
@@ -1005,7 +1007,7 @@ local function translateDropModelUnit(action, modelScene)
         launchUnitID     = launchUnitID,
     }
 
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionDropModelUnit)
+    SceneWarManager.updateModelSceneWarWithAction(actionDropModelUnit)
     return actionDropModelUnit, generateActionsForPublish(actionDropModelUnit, modelPlayerManager, action.playerAccount)
 end
 
@@ -1041,7 +1043,7 @@ local function translateProduceOnTile(action, modelScene)
         tiledID    = tiledID,
         cost       = cost, -- the cost can be calculated by the clients, but that calculations can be eliminated by sending the cost to clients.
     }
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionProduceOnTile)
+    SceneWarManager.updateModelSceneWarWithAction(actionProduceOnTile)
     return actionProduceOnTile, generateActionsForPublish(actionProduceOnTile, modelPlayerManager, action.playerAccount)
 end
 

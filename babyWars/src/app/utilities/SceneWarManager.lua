@@ -364,15 +364,16 @@ function SceneWarManager.joinWar(param)
     end
 end
 
-function SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, action)
-    assert(SceneWarManager.getOngoingModelSceneWar(sceneWarFileName) ~= nil, "SceneWarManager.updateModelSceneWarWithAction() the param sceneWarFileName is invalid.")
+function SceneWarManager.updateModelSceneWarWithAction(action)
+    local sceneWarFileName = action.fileName
+    local modelSceneWar    = SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
+    assert(modelSceneWar, "SceneWarManager.updateModelSceneWarWithAction() the param sceneWarFileName is invalid:" .. (sceneWarFileName or ""))
 
     local cloneAction = {}
     for k, v in pairs(action) do
         cloneAction[k] = v
     end
 
-    local modelSceneWar = s_OngoingWarList[sceneWarFileName].actorSceneWar:getModel()
     serialize(toFullFileName(sceneWarFileName), modelSceneWar:doSystemAction(cloneAction):toSerializableTable())
     PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
