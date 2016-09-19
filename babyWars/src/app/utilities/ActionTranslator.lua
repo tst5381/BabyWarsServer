@@ -577,7 +577,6 @@ local function translateWait(action, modelScene)
         path         = translatedPath,
         launchUnitID = launchUnitID,
     }
-    SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, actionWait)
     return actionWait,
         generateActionsForPublish(actionWait, modelScene:getModelPlayerManager(), action.playerAccount),
         actionWait

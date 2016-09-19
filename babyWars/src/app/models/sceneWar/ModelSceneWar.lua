@@ -28,7 +28,7 @@
 
 local ModelSceneWar = require("src.global.functions.class")("ModelSceneWar")
 
-local ActionTranslator     = require("src.app.utilities.ActionTranslator")
+local ActionExecutor       = require("src.app.utilities.ActionExecutor")
 local InstantSkillExecutor = require("src.app.utilities.InstantSkillExecutor")
 local Actor                = require("src.global.actors.Actor")
 local EventDispatcher      = require("src.global.events.EventDispatcher")
@@ -96,10 +96,6 @@ local function doActionActivateSkillGroup(self, action)
         self:getModelWarField(), self:getModelPlayerManager(), self:getModelTurnManager(), self:getModelWeatherManager(), self:getScriptEventDispatcher())
     local playerIndex = self:getModelTurnManager():getPlayerIndex()
     self:getModelPlayerManager():doActionActivateSkillGroup(action, playerIndex)
-end
-
-local function doActionWait(self, action)
-    self:getModelWarField():doActionWait(action)
 end
 
 local function doActionAttack(self, action)
@@ -276,15 +272,19 @@ end
 -- The public functions.
 --------------------------------------------------------------------------------
 function ModelSceneWar:doSystemAction(action)
+    local actionName = action.actionName
+    if (actionName == "Wait") then
+        ActionExecutor.execute(action)
+        return self
+    end
+
     assert(self.m_ActionID + 1 == action.actionID)
     self.m_ActionID = action.actionID
 
-    local actionName = action.actionName
     if     (actionName == "BeginTurn")              then doActionBeginTurn(             self, action)
     elseif (actionName == "EndTurn")                then doActionEndTurn(               self, action)
     elseif (actionName == "Surrender")              then doActionSurrender(             self, action)
     elseif (actionName == "ActivateSkillGroup")     then doActionActivateSkillGroup(    self, action)
-    elseif (actionName == "Wait")                   then doActionWait(                  self, action)
     elseif (actionName == "Attack")                 then doActionAttack(                self, action)
     elseif (actionName == "JoinModelUnit")          then doActionJoinModelUnit(         self, action)
     elseif (actionName == "CaptureModelTile")       then doActionCaptureModelTile(      self, action)
@@ -311,6 +311,12 @@ end
 
 function ModelSceneWar:getActionId()
     return self.m_ActionID
+end
+
+function ModelSceneWar:setActionId(actionID)
+    self.m_ActionID = actionID
+
+    return self
 end
 
 function ModelSceneWar:getModelTurnManager()
