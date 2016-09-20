@@ -958,8 +958,9 @@ local function translateLoadModelUnit(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(actionWait)
-        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+        return actionWait,
+            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            actionWait
     end
 
     local actionLoadModelUnit = {
@@ -969,8 +970,9 @@ local function translateLoadModelUnit(action, modelScene)
         path         = translatedPath,
         launchUnitID = launchUnitID,
     }
-    SceneWarManager.updateModelSceneWarWithAction(actionLoadModelUnit)
-    return actionLoadModelUnit, generateActionsForPublish(actionLoadModelUnit, modelScene:getModelPlayerManager(), action.playerAccount)
+    return actionLoadModelUnit,
+        generateActionsForPublish(actionLoadModelUnit, modelScene:getModelPlayerManager(), action.playerAccount),
+        actionLoadModelUnit
 end
 
 local function translateDropModelUnit(action, modelScene)
