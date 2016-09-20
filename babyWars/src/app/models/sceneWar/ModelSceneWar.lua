@@ -144,11 +144,6 @@ local function doActionDropModelUnit(self, action)
     self:getModelWarField():doActionDropModelUnit(action)
 end
 
-local function doActionProduceOnTile(self, action)
-    self:getModelPlayerManager():doActionProduceOnTile(action, self:getModelTurnManager():getPlayerIndex())
-    self:getModelWarField():doActionProduceOnTile(action)
-end
-
 --------------------------------------------------------------------------------
 -- The composition elements.
 --------------------------------------------------------------------------------
@@ -254,11 +249,12 @@ end
 --------------------------------------------------------------------------------
 function ModelSceneWar:doSystemAction(action)
     local actionName = action.actionName
-    if ((actionName == "ActivateSkillGroup") or
-        (actionName == "BuildModelTile")     or
-        (actionName == "JoinModelUnit")      or
-        (actionName == "LaunchSilo")         or
-        (actionName == "Wait"))              then
+    if ((actionName == "ActivateSkillGroup")     or
+        (actionName == "BuildModelTile")         or
+        (actionName == "JoinModelUnit")          or
+        (actionName == "LaunchSilo")             or
+        (actionName == "ProduceModelUnitOnTile") or
+        (actionName == "Wait"))                  then
         ActionExecutor.execute(action)
         return self
     end
@@ -275,7 +271,6 @@ function ModelSceneWar:doSystemAction(action)
     elseif (actionName == "SupplyModelUnit")        then doActionSupplyModelUnit(       self, action)
     elseif (actionName == "LoadModelUnit")          then doActionLoadModelUnit(         self, action)
     elseif (actionName == "DropModelUnit")          then doActionDropModelUnit(         self, action)
-    elseif (actionName == "ProduceOnTile")          then doActionProduceOnTile(         self, action)
     else                                                 error("ModelSceneWar:doSystemAction() unrecognized action.")
     end
 

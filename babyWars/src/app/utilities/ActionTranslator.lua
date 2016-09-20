@@ -1017,7 +1017,7 @@ local function translateDropModelUnit(action, modelScene)
     return actionDropModelUnit, generateActionsForPublish(actionDropModelUnit, modelPlayerManager, action.playerAccount)
 end
 
-local function translateProduceOnTile(action, modelScene)
+local function translateProduceModelUnitOnTile(action, modelScene)
     local playerIndex           = modelScene:getModelTurnManager():getPlayerIndex()
     local modelPlayerManager    = modelScene:getModelPlayerManager()
     local modelWarField         = modelScene:getModelWarField()
@@ -1041,16 +1041,17 @@ local function translateProduceOnTile(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, getLocalizedText(81, "OutOfSync"))
     end
 
-    local actionProduceOnTile = {
-        actionName = "ProduceOnTile",
+    local actionProduceModelUnitOnTile = {
+        actionName = "ProduceModelUnitOnTile",
         actionID   = action.actionID,
         fileName   = sceneWarFileName,
         gridIndex  = gridIndex,
         tiledID    = tiledID,
         cost       = cost, -- the cost can be calculated by the clients, but that calculations can be eliminated by sending the cost to clients.
     }
-    SceneWarManager.updateModelSceneWarWithAction(actionProduceOnTile)
-    return actionProduceOnTile, generateActionsForPublish(actionProduceOnTile, modelPlayerManager, action.playerAccount)
+    return actionProduceModelUnitOnTile,
+        generateActionsForPublish(actionProduceModelUnitOnTile, modelPlayerManager, action.playerAccount),
+        actionProduceModelUnitOnTile
 end
 
 --------------------------------------------------------------------------------
@@ -1109,7 +1110,7 @@ function ActionTranslator.translate(action)
     elseif (actionName == "SupplyModelUnit")        then return translateSupplyModelUnit(       action, modelSceneWar)
     elseif (actionName == "LoadModelUnit")          then return translateLoadModelUnit(         action, modelSceneWar)
     elseif (actionName == "DropModelUnit")          then return translateDropModelUnit(         action, modelSceneWar)
-    elseif (actionName == "ProduceOnTile")          then return translateProduceOnTile(         action, modelSceneWar)
+    elseif (actionName == "ProduceModelUnitOnTile") then return translateProduceModelUnitOnTile(action, modelSceneWar)
     else    return createActionReloadOrExitWar(sceneWarFileName, getLocalizedText(81, "OutOfSync", actionName))
     end
 end
