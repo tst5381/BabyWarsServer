@@ -881,8 +881,9 @@ local function translateProduceModelUnitOnUnit(action, modelScene)
         path        = translatedPath,
         cost        = cost,
     }
-    SceneWarManager.updateModelSceneWarWithAction(actionProduceModelUnitOnUnit)
-    return actionProduceModelUnitOnUnit, generateActionsForPublish(actionProduceModelUnitOnUnit, modelPlayerManager, action.playerAccount)
+    return actionProduceModelUnitOnUnit,
+        generateActionsForPublish(actionProduceModelUnitOnUnit, modelPlayerManager, action.playerAccount),
+        actionProduceModelUnitOnUnit
 end
 
 local function translateSupplyModelUnit(action, modelScene)

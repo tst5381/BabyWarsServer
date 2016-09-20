@@ -127,11 +127,6 @@ local function doActionCaptureModelTile(self, action)
     end
 end
 
-local function doActionProduceModelUnitOnUnit(self, action)
-    self:getModelPlayerManager():doActionProduceModelUnitOnUnit(action, self:getModelTurnManager():getPlayerIndex())
-    self:getModelWarField():doActionProduceModelUnitOnUnit(action)
-end
-
 local function doActionSupplyModelUnit(self, action)
     self:getModelWarField():doActionSupplyModelUnit(action)
 end
@@ -254,6 +249,7 @@ function ModelSceneWar:doSystemAction(action)
         (actionName == "JoinModelUnit")          or
         (actionName == "LaunchSilo")             or
         (actionName == "ProduceModelUnitOnTile") or
+        (actionName == "ProduceModelUnitOnUnit") or
         (actionName == "Wait"))                  then
         ActionExecutor.execute(action)
         return self
@@ -267,7 +263,6 @@ function ModelSceneWar:doSystemAction(action)
     elseif (actionName == "Surrender")              then doActionSurrender(             self, action)
     elseif (actionName == "Attack")                 then doActionAttack(                self, action)
     elseif (actionName == "CaptureModelTile")       then doActionCaptureModelTile(      self, action)
-    elseif (actionName == "ProduceModelUnitOnUnit") then doActionProduceModelUnitOnUnit(self, action)
     elseif (actionName == "SupplyModelUnit")        then doActionSupplyModelUnit(       self, action)
     elseif (actionName == "LoadModelUnit")          then doActionLoadModelUnit(         self, action)
     elseif (actionName == "DropModelUnit")          then doActionDropModelUnit(         self, action)
