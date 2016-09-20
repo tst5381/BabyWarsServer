@@ -127,10 +127,6 @@ local function doActionCaptureModelTile(self, action)
     end
 end
 
-local function doActionSupplyModelUnit(self, action)
-    self:getModelWarField():doActionSupplyModelUnit(action)
-end
-
 local function doActionLoadModelUnit(self, action)
     self:getModelWarField():doActionLoadModelUnit(action)
 end
@@ -250,6 +246,7 @@ function ModelSceneWar:doSystemAction(action)
         (actionName == "LaunchSilo")             or
         (actionName == "ProduceModelUnitOnTile") or
         (actionName == "ProduceModelUnitOnUnit") or
+        (actionName == "SupplyModelUnit")        or
         (actionName == "Wait"))                  then
         ActionExecutor.execute(action)
         return self
@@ -263,7 +260,6 @@ function ModelSceneWar:doSystemAction(action)
     elseif (actionName == "Surrender")              then doActionSurrender(             self, action)
     elseif (actionName == "Attack")                 then doActionAttack(                self, action)
     elseif (actionName == "CaptureModelTile")       then doActionCaptureModelTile(      self, action)
-    elseif (actionName == "SupplyModelUnit")        then doActionSupplyModelUnit(       self, action)
     elseif (actionName == "LoadModelUnit")          then doActionLoadModelUnit(         self, action)
     elseif (actionName == "DropModelUnit")          then doActionDropModelUnit(         self, action)
     else                                                 error("ModelSceneWar:doSystemAction() unrecognized action.")
