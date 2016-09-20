@@ -1005,8 +1005,9 @@ local function translateDropModelUnit(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(actionWait)
-        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+        return actionWait,
+            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            actionWait
     end
 
     local actionDropModelUnit = {
@@ -1017,9 +1018,9 @@ local function translateDropModelUnit(action, modelScene)
         dropDestinations = translateDropDestinations(action.dropDestinations, modelUnitMap, loaderModelUnit),
         launchUnitID     = launchUnitID,
     }
-
-    SceneWarManager.updateModelSceneWarWithAction(actionDropModelUnit)
-    return actionDropModelUnit, generateActionsForPublish(actionDropModelUnit, modelPlayerManager, action.playerAccount)
+    return actionDropModelUnit,
+        generateActionsForPublish(actionDropModelUnit, modelPlayerManager, action.playerAccount),
+        actionDropModelUnit
 end
 
 local function translateProduceModelUnitOnTile(action, modelScene)

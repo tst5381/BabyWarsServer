@@ -127,10 +127,6 @@ local function doActionCaptureModelTile(self, action)
     end
 end
 
-local function doActionDropModelUnit(self, action)
-    self:getModelWarField():doActionDropModelUnit(action)
-end
-
 --------------------------------------------------------------------------------
 -- The composition elements.
 --------------------------------------------------------------------------------
@@ -238,6 +234,7 @@ function ModelSceneWar:doSystemAction(action)
     local actionName = action.actionName
     if ((actionName == "ActivateSkillGroup")     or
         (actionName == "BuildModelTile")         or
+        (actionName == "DropModelUnit")          or
         (actionName == "JoinModelUnit")          or
         (actionName == "LaunchSilo")             or
         (actionName == "LoadModelUnit")          or
@@ -257,7 +254,6 @@ function ModelSceneWar:doSystemAction(action)
     elseif (actionName == "Surrender")              then doActionSurrender(             self, action)
     elseif (actionName == "Attack")                 then doActionAttack(                self, action)
     elseif (actionName == "CaptureModelTile")       then doActionCaptureModelTile(      self, action)
-    elseif (actionName == "DropModelUnit")          then doActionDropModelUnit(         self, action)
     else                                                 error("ModelSceneWar:doSystemAction() unrecognized action.")
     end
 
