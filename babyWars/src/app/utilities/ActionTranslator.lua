@@ -834,8 +834,9 @@ local function translateBuildModelTile(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(actionWait)
-        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+        return actionWait,
+            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            actionWait
     end
 
     local actionBuildModelTile = {
@@ -845,8 +846,9 @@ local function translateBuildModelTile(action, modelScene)
         path         = translatedPath,
         launchUnitID = launchUnitID,
     }
-    SceneWarManager.updateModelSceneWarWithAction(actionBuildModelTile)
-    return actionBuildModelTile, generateActionsForPublish(actionBuildModelTile, modelPlayerManager, action.playerAccount)
+    return actionBuildModelTile,
+        generateActionsForPublish(actionBuildModelTile, modelPlayerManager, action.playerAccount),
+        actionBuildModelTile
 end
 
 local function translateProduceModelUnitOnUnit(action, modelScene)
