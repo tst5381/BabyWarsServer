@@ -487,8 +487,9 @@ local function translateActivateSkillGroup(action, modelScene)
         fileName     = sceneWarFileName,
         skillGroupID = skillGroupID,
     }
-    SceneWarManager.updateModelSceneWarWithAction(actionActivateSkillGroup)
-    return actionActivateSkillGroup, generateActionsForPublish(actionActivateSkillGroup, modelPlayerManager, playerAccount)
+    return actionActivateSkillGroup,
+        generateActionsForPublish(actionActivateSkillGroup, modelPlayerManager, playerAccount),
+        actionActivateSkillGroup
 end
 
 -- This translation ignores the existing unit of the same player at the end of the path, so that the actions of Join/Attack/Wait can reuse this function.

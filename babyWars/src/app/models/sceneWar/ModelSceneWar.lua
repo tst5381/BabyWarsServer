@@ -91,13 +91,6 @@ local function doActionSurrender(self, action)
     end
 end
 
-local function doActionActivateSkillGroup(self, action)
-    InstantSkillExecutor.doActionActivateSkillGroup(action,
-        self:getModelWarField(), self:getModelPlayerManager(), self:getModelTurnManager(), self:getModelWeatherManager(), self:getScriptEventDispatcher())
-    local playerIndex = self:getModelTurnManager():getPlayerIndex()
-    self:getModelPlayerManager():doActionActivateSkillGroup(action, playerIndex)
-end
-
 local function doActionAttack(self, action)
     local modelUnitMap        = self:getModelWarField():getModelUnitMap()
     local attackerPlayerIndex = modelUnitMap:getModelUnit(action.path[1]):getPlayerIndex()
@@ -265,9 +258,10 @@ end
 --------------------------------------------------------------------------------
 function ModelSceneWar:doSystemAction(action)
     local actionName = action.actionName
-    if ((actionName == "JoinModelUnit") or
-        (actionName == "LaunchSilo")    or
-        (actionName == "Wait"))         then
+    if ((actionName == "ActivateSkillGroup") or
+        (actionName == "JoinModelUnit")      or
+        (actionName == "LaunchSilo")         or
+        (actionName == "Wait"))              then
         ActionExecutor.execute(action)
         return self
     end
@@ -278,7 +272,6 @@ function ModelSceneWar:doSystemAction(action)
     if     (actionName == "BeginTurn")              then doActionBeginTurn(             self, action)
     elseif (actionName == "EndTurn")                then doActionEndTurn(               self, action)
     elseif (actionName == "Surrender")              then doActionSurrender(             self, action)
-    elseif (actionName == "ActivateSkillGroup")     then doActionActivateSkillGroup(    self, action)
     elseif (actionName == "Attack")                 then doActionAttack(                self, action)
     elseif (actionName == "CaptureModelTile")       then doActionCaptureModelTile(      self, action)
     elseif (actionName == "BuildModelTile")         then doActionBuildModelTile(        self, action)
