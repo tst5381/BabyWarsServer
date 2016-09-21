@@ -29,6 +29,7 @@
 local ModelSceneWar = require("src.global.functions.class")("ModelSceneWar")
 
 local ActionExecutor       = require("src.app.utilities.ActionExecutor")
+local Destroyers           = require("src.app.utilities.Destroyers")
 local InstantSkillExecutor = require("src.app.utilities.InstantSkillExecutor")
 local Actor                = require("src.global.actors.Actor")
 local EventDispatcher      = require("src.global.events.EventDispatcher")
@@ -47,11 +48,6 @@ local function getAliveModelUnitsCount(modelUnitMap, playerIndex)
     return count
 end
 
-local function clearPlayerForce(self, playerIndex)
-    self:getModelPlayerManager():getModelPlayer(playerIndex):setAlive(false)
-    self:getModelWarField():clearPlayerForce(playerIndex)
-end
-
 --------------------------------------------------------------------------------
 -- The functions that do the actions the system requested.
 --------------------------------------------------------------------------------
@@ -65,7 +61,7 @@ local function doActionBeginTurn(self, action)
 
     if ((prevAliveModelUnitsCount > 0) and
         (getAliveModelUnitsCount(modelUnitMap, playerIndex) == 0)) then
-        clearPlayerForce(self, playerIndex)
+        Destroyers.destroyPlayerForce(self:getFileName(), playerIndex)
 
         if (self:getModelPlayerManager():getAlivePlayersCount() == 1) then
             self.m_IsWarEnded = true
@@ -80,13 +76,10 @@ local function doActionEndTurn(self, action)
 end
 
 local function doActionSurrender(self, action)
-    local modelPlayerManager = self:getModelPlayerManager()
-    local modelTurnManager   = self:getModelTurnManager()
-    modelPlayerManager:doActionSurrender(action)
-    modelTurnManager:doActionSurrender(action)
-    self:getModelWarField():doActionSurrender(action)
+    Destroyers.destroyPlayerForce(self:getFileName(), action.lostPlayerIndex)
+    self:getModelTurnManager():endTurn()
 
-    if (modelPlayerManager:getAlivePlayersCount() <= 1) then
+    if (self:getModelPlayerManager():getAlivePlayersCount() <= 1) then
         self.m_IsWarEnded = true
     end
 end
@@ -100,10 +93,10 @@ local function doActionAttack(self, action)
     self:getModelWarField():doActionAttack(action)
 
     if (getAliveModelUnitsCount(modelUnitMap, attackerPlayerIndex) == 0) then
-        clearPlayerForce(self, attackerPlayerIndex)
+        Destroyers.destroyPlayerForce(self:getFileName(), attackerPlayerIndex)
         self:getModelTurnManager():endTurn()
     elseif ((targetPlayerIndex) and (getAliveModelUnitsCount(modelUnitMap, targetPlayerIndex) == 0)) then
-        clearPlayerForce(self, targetPlayerIndex)
+        Destroyers.destroyPlayerForce(self:getFileName(), targetPlayerIndex)
     end
 
     if (self:getModelPlayerManager():getAlivePlayersCount() <= 1) then
@@ -120,7 +113,7 @@ local function doActionCaptureModelTile(self, action)
     modelWarField:doActionCaptureModelTile(action)
 
     if ((isDefeatOnCapture) and (targetModelTile:getPlayerIndex() ~= targetPlayerIndex)) then
-        clearPlayerForce(self, targetPlayerIndex)
+        Destroyers.destroyPlayerForce(self:getFileName(), targetPlayerIndex)
         if (self:getModelPlayerManager():getAlivePlayersCount() <= 1) then
             self.m_IsWarEnded = true
         end
