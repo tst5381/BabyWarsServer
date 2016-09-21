@@ -457,16 +457,14 @@ local function translateSurrender(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, getLocalizedText(81, "OutOfSync"))
     end
 
-    local modelPlayerManager = modelScene:getModelPlayerManager()
-    local _, playerIndex     = modelPlayerManager:getModelPlayerWithAccount(action.playerAccount)
-    local actionSurrender    = {
-        actionName      = "Surrender",
-        actionID        = action.actionID,
-        fileName        = sceneWarFileName,
-        lostPlayerIndex = playerIndex,
+    local actionSurrender = {
+        actionName = "Surrender",
+        actionID   = action.actionID,
+        fileName   = sceneWarFileName,
     }
-    SceneWarManager.updateModelSceneWarWithAction(actionSurrender)
-    return actionSurrender, generateActionsForPublish(actionSurrender, modelPlayerManager, action.playerAccount)
+    return actionSurrender,
+        generateActionsForPublish(actionSurrender, modelScene:getModelPlayerManager(), action.playerAccount),
+        actionSurrender
 end
 
 local function translateActivateSkillGroup(action, modelScene)

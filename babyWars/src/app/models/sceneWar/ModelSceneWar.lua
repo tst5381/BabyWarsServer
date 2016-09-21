@@ -34,6 +34,8 @@ local InstantSkillExecutor = require("src.app.utilities.InstantSkillExecutor")
 local Actor                = require("src.global.actors.Actor")
 local EventDispatcher      = require("src.global.events.EventDispatcher")
 
+local IS_SERVER = require("src.app.utilities.GameConstantFunctions").isServer()
+
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
@@ -73,15 +75,6 @@ end
 
 local function doActionEndTurn(self, action)
     self:getModelTurnManager():doActionEndTurn()
-end
-
-local function doActionSurrender(self, action)
-    Destroyers.destroyPlayerForce(self:getFileName(), action.lostPlayerIndex)
-    self:getModelTurnManager():endTurn()
-
-    if (self:getModelPlayerManager():getAlivePlayersCount() <= 1) then
-        self.m_IsWarEnded = true
-    end
 end
 
 local function doActionAttack(self, action)
@@ -234,6 +227,7 @@ function ModelSceneWar:doSystemAction(action)
         (actionName == "ProduceModelUnitOnTile") or
         (actionName == "ProduceModelUnitOnUnit") or
         (actionName == "SupplyModelUnit")        or
+        (actionName == "Surrender")              or
         (actionName == "Wait"))                  then
         ActionExecutor.execute(action)
         return self
@@ -244,7 +238,6 @@ function ModelSceneWar:doSystemAction(action)
 
     if     (actionName == "BeginTurn")              then doActionBeginTurn(             self, action)
     elseif (actionName == "EndTurn")                then doActionEndTurn(               self, action)
-    elseif (actionName == "Surrender")              then doActionSurrender(             self, action)
     elseif (actionName == "Attack")                 then doActionAttack(                self, action)
     elseif (actionName == "CaptureModelTile")       then doActionCaptureModelTile(      self, action)
     else                                                 error("ModelSceneWar:doSystemAction() unrecognized action.")
@@ -259,6 +252,12 @@ end
 
 function ModelSceneWar:isEnded()
     return self.m_IsWarEnded
+end
+
+function ModelSceneWar:setEnded(ended)
+    self.m_IsWarEnded = ended
+
+    return self
 end
 
 function ModelSceneWar:getActionId()
@@ -289,6 +288,20 @@ end
 
 function ModelSceneWar:getScriptEventDispatcher()
     return self.m_ScriptEventDispatcher
+end
+
+function ModelSceneWar:showEffectSurrender(callback)
+    assert(not IS_SERVER, "ModelSceneWar:showEffectSurrender() should not be invoked on the server.")
+    self.m_View:showEffectSurrender(callback)
+
+    return self
+end
+
+function ModelSceneWar:showEffectWin(callback)
+    assert(not IS_SERVER, "ModelSceneWar:showEffectWin() should not be invoked on the server.")
+    self.m_View:showEffectWin(callback)
+
+    return self
 end
 
 return ModelSceneWar
