@@ -57,6 +57,34 @@ local function isDropBlocked(destination, modelUnitMap, loaderModelUnit)
     return (existingModelUnit) and (existingModelUnit ~= loaderModelUnit)
 end
 
+local function areAllUnitsOutOfFuelAndDestroyed(modelUnitMap, modelTileMap, playerIndex)
+    local mapSize       = modelUnitMap:getMapSize()
+    local width, height = mapSize.width, mapSize.height
+    local hasUnit       = false
+    for x = 1, width do
+        for y = 1, height do
+            local gridIndex = {x = x, y = y}
+            local modelUnit = modelUnitMap:getModelUnit(gridIndex)
+            if ((modelUnit) and (modelUnit:getPlayerIndex() == playerIndex)) then
+                hasUnit = true
+                if ((modelUnit.getCurrentFuel)                                            and
+                    (modelUnit:getCurrentFuel() <= modelUnit:getFuelConsumptionPerTurn()) and
+                    (modelUnit:shouldDestroyOnOutOfFuel()))                               then
+
+                    local modelTile = modelTileMap:getModelTile(gridIndex)
+                    if ((modelTile.canRepairTarget) and (modelTile:canRepairTarget(modelUnit))) then
+                        return false
+                    end
+                else
+                    return false
+                end
+            end
+        end
+    end
+
+    return hasUnit
+end
+
 local function canDoActionSupplyModelUnit(focusModelUnit, destination, modelUnitMap)
     if (focusModelUnit.canSupplyModelUnit) then
         for _, gridIndex in pairs(GridIndexFunctions.getAdjacentGrids(destination, modelUnitMap:getMapSize())) do
@@ -416,20 +444,23 @@ local function translateBeginTurn(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, getLocalizedText(81, "OutOfSync"))
     end
 
-    local playerIndex      = modelTurnManager:getPlayerIndex()
-    local actionBeginTurn  = {
-        actionName = "BeginTurn",
-        actionID   = action.actionID,
-        fileName   = sceneWarFileName,
+    local modelWarField   = modelScene:getModelWarField()
+    local modelUnitMap    = modelWarField:getModelUnitMap()
+    local modelTileMap    = modelWarField:getModelTileMap()
+    local playerIndex     = modelTurnManager:getPlayerIndex()
+    local turnIndex       = modelTurnManager:getTurnIndex()
+    local actionBeginTurn = {
+        actionName      = "BeginTurn",
+        actionID        = action.actionID,
+        fileName        = sceneWarFileName,
+        lostPlayerIndex = ((turnIndex > 1) and (areAllUnitsOutOfFuelAndDestroyed(modelUnitMap, modelTileMap, playerIndex)))
+            and (playerIndex)
+            or (nil),
     }
-    SceneWarManager.updateModelSceneWarWithAction(actionBeginTurn)
 
-    local modelPlayerManager = modelScene:getModelPlayerManager()
-    if (not modelPlayerManager:getModelPlayer(playerIndex):isAlive()) then
-        actionBeginTurn.lostPlayerIndex = playerIndex
-    end
-
-    return actionBeginTurn, generateActionsForPublish(actionBeginTurn, modelPlayerManager, action.playerAccount)
+    return actionBeginTurn,
+        generateActionsForPublish(actionBeginTurn, modelScene:getModelPlayerManager(), action.playerAccount),
+        actionBeginTurn
 end
 
 local function translateEndTurn(action, modelScene)
@@ -446,8 +477,9 @@ local function translateEndTurn(action, modelScene)
         fileName    = sceneWarFileName,
         nextWeather = modelScene:getModelWeatherManager():getNextWeather(),
     }
-    SceneWarManager.updateModelSceneWarWithAction(actionEndTurn)
-    return actionEndTurn, generateActionsForPublish(actionEndTurn, modelScene:getModelPlayerManager(), action.playerAccount)
+    return actionEndTurn,
+        generateActionsForPublish(actionEndTurn, modelScene:getModelPlayerManager(), action.playerAccount),
+        actionEndTurn
 end
 
 local function translateSurrender(action, modelScene)

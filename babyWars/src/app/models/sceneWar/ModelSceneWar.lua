@@ -53,26 +53,6 @@ end
 --------------------------------------------------------------------------------
 -- The functions that do the actions the system requested.
 --------------------------------------------------------------------------------
-local function doActionBeginTurn(self, action)
-    local modelTurnManager         = self:getModelTurnManager()
-    local modelUnitMap             = self:getModelWarField():getModelUnitMap()
-    local playerIndex              = modelTurnManager:getPlayerIndex()
-    local prevAliveModelUnitsCount = getAliveModelUnitsCount(modelUnitMap, playerIndex)
-
-    modelTurnManager:doActionBeginTurn(action)
-
-    if ((prevAliveModelUnitsCount > 0) and
-        (getAliveModelUnitsCount(modelUnitMap, playerIndex) == 0)) then
-        Destroyers.destroyPlayerForce(self:getFileName(), playerIndex)
-
-        if (self:getModelPlayerManager():getAlivePlayersCount() == 1) then
-            self.m_IsWarEnded = true
-        else
-            modelTurnManager:endTurn()
-        end
-    end
-end
-
 local function doActionAttack(self, action)
     local modelUnitMap        = self:getModelWarField():getModelUnitMap()
     local attackerPlayerIndex = modelUnitMap:getModelUnit(action.path[1]):getPlayerIndex()
@@ -215,6 +195,7 @@ end
 function ModelSceneWar:doSystemAction(action)
     local actionName = action.actionName
     if ((actionName == "ActivateSkillGroup")     or
+        (actionName == "BeginTurn")              or
         (actionName == "BuildModelTile")         or
         (actionName == "DropModelUnit")          or
         (actionName == "EndTurn")                or
@@ -233,8 +214,7 @@ function ModelSceneWar:doSystemAction(action)
     assert(self.m_ActionID + 1 == action.actionID)
     self.m_ActionID = action.actionID
 
-    if     (actionName == "BeginTurn")              then doActionBeginTurn(             self, action)
-    elseif (actionName == "Attack")                 then doActionAttack(                self, action)
+    if     (actionName == "Attack")                 then doActionAttack(                self, action)
     elseif (actionName == "CaptureModelTile")       then doActionCaptureModelTile(      self, action)
     else                                                 error("ModelSceneWar:doSystemAction() unrecognized action.")
     end
