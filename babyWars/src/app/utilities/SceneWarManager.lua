@@ -374,7 +374,7 @@ function SceneWarManager.updateModelSceneWarWithAction(action)
         cloneAction[k] = v
     end
 
-    serialize(toFullFileName(sceneWarFileName), modelSceneWar:doSystemAction(cloneAction):toSerializableTable())
+    serialize(toFullFileName(sceneWarFileName), modelSceneWar:executeAction(cloneAction):toSerializableTable())
     PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
     if (modelSceneWar:isEnded()) then
