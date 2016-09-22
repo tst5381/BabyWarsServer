@@ -73,10 +73,6 @@ local function doActionBeginTurn(self, action)
     end
 end
 
-local function doActionEndTurn(self, action)
-    self:getModelTurnManager():doActionEndTurn()
-end
-
 local function doActionAttack(self, action)
     local modelUnitMap        = self:getModelWarField():getModelUnitMap()
     local attackerPlayerIndex = modelUnitMap:getModelUnit(action.path[1]):getPlayerIndex()
@@ -221,6 +217,7 @@ function ModelSceneWar:doSystemAction(action)
     if ((actionName == "ActivateSkillGroup")     or
         (actionName == "BuildModelTile")         or
         (actionName == "DropModelUnit")          or
+        (actionName == "EndTurn")                or
         (actionName == "JoinModelUnit")          or
         (actionName == "LaunchSilo")             or
         (actionName == "LoadModelUnit")          or
@@ -237,7 +234,6 @@ function ModelSceneWar:doSystemAction(action)
     self.m_ActionID = action.actionID
 
     if     (actionName == "BeginTurn")              then doActionBeginTurn(             self, action)
-    elseif (actionName == "EndTurn")                then doActionEndTurn(               self, action)
     elseif (actionName == "Attack")                 then doActionAttack(                self, action)
     elseif (actionName == "CaptureModelTile")       then doActionCaptureModelTile(      self, action)
     else                                                 error("ModelSceneWar:doSystemAction() unrecognized action.")
