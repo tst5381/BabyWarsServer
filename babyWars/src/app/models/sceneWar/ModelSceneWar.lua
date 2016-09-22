@@ -73,22 +73,6 @@ local function doActionAttack(self, action)
     end
 end
 
-local function doActionCaptureModelTile(self, action)
-    local modelWarField     = self:getModelWarField()
-    local targetModelTile   = modelWarField:getModelTileMap():getModelTile(action.path[#action.path])
-    local targetPlayerIndex = targetModelTile:getPlayerIndex()
-    local isDefeatOnCapture = targetModelTile:isDefeatOnCapture()
-
-    modelWarField:doActionCaptureModelTile(action)
-
-    if ((isDefeatOnCapture) and (targetModelTile:getPlayerIndex() ~= targetPlayerIndex)) then
-        Destroyers.destroyPlayerForce(self:getFileName(), targetPlayerIndex)
-        if (self:getModelPlayerManager():getAlivePlayersCount() <= 1) then
-            self.m_IsWarEnded = true
-        end
-    end
-end
-
 --------------------------------------------------------------------------------
 -- The composition elements.
 --------------------------------------------------------------------------------
@@ -197,6 +181,7 @@ function ModelSceneWar:doSystemAction(action)
     if ((actionName == "ActivateSkillGroup")     or
         (actionName == "BeginTurn")              or
         (actionName == "BuildModelTile")         or
+        (actionName == "CaptureModelTile")       or
         (actionName == "DropModelUnit")          or
         (actionName == "EndTurn")                or
         (actionName == "JoinModelUnit")          or
@@ -215,7 +200,6 @@ function ModelSceneWar:doSystemAction(action)
     self.m_ActionID = action.actionID
 
     if     (actionName == "Attack")                 then doActionAttack(                self, action)
-    elseif (actionName == "CaptureModelTile")       then doActionCaptureModelTile(      self, action)
     else                                                 error("ModelSceneWar:doSystemAction() unrecognized action.")
     end
 

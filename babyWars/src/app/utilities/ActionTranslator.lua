@@ -757,31 +757,24 @@ local function translateCaptureModelTile(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(actionWait)
-        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+        return actionWait,
+            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            actionWait
     end
 
-    local targetPlayerIndex = captureTarget:getPlayerIndex()
     local actionCapture     = {
         actionName   = "CaptureModelTile",
         actionID     = actionID,
         fileName     = sceneWarFileName,
         path         = translatedPath,
         launchUnitID = launchUnitID,
+        lostPlayerIndex = ((capturer:getCaptureAmount() >= captureTarget:getCurrentCapturePoint()) and (captureTarget:isDefeatOnCapture()))
+            and (captureTarget:getPlayerIndex())
+            or  (nil),
     }
-    SceneWarManager.updateModelSceneWarWithAction(actionCapture)
-
-    if ((targetPlayerIndex ~= 0) and (not modelPlayerManager:getModelPlayer(targetPlayerIndex):isAlive())) then
-        actionCapture.lostPlayerIndex = targetPlayerIndex
-    end
-
-    local actionsForPublish = generateActionsForPublish(actionCapture, modelPlayerManager, action.playerAccount) or {}
-    if (actionCapture.lostPlayerIndex) then
-        local lostModelPlayer = modelPlayerManager:getModelPlayer(actionCapture.lostPlayerIndex)
-        actionsForPublish[lostModelPlayer:getAccount()] = actionCapture
-    end
-
-    return actionCapture, actionsForPublish
+    return actionCapture,
+        generateActionsForPublish(actionCapture, modelPlayerManager, action.playerAccount),
+        actionCapture
 end
 
 local function translateLaunchSilo(action, modelScene)
