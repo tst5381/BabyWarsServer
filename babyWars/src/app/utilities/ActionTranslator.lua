@@ -673,7 +673,7 @@ local function translateAttack(action, modelScene)
         if (countModelUnitOnMapWithPlayerIndex(modelUnitMap, playerIndex) == 1) then
             lostPlayerIndex = playerIndex
         end
-    elseif ((counterDamage) and (counterDamage > attacker:getCurrentHP())) then
+    elseif ((counterDamage) and (counterDamage >= attacker:getCurrentHP())) then
         local playerIndex = attacker:getPlayerIndex()
         if (countModelUnitOnMapWithPlayerIndex(modelUnitMap, playerIndex) == 1) then
             lostPlayerIndex = playerIndex
