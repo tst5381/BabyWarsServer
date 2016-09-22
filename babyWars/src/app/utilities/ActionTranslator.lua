@@ -57,6 +57,17 @@ local function isDropBlocked(destination, modelUnitMap, loaderModelUnit)
     return (existingModelUnit) and (existingModelUnit ~= loaderModelUnit)
 end
 
+local function countModelUnitOnMapWithPlayerIndex(modelUnitMap, playerIndex)
+    local count = 0
+    modelUnitMap:forEachModelUnitOnMap(function(modelUnit)
+        if (modelUnit:getPlayerIndex() == playerIndex) then
+            count = count + 1
+        end
+    end)
+
+    return count
+end
+
 local function areAllUnitsOutOfFuelAndDestroyed(modelUnitMap, modelTileMap, playerIndex)
     local mapSize       = modelUnitMap:getMapSize()
     local width, height = mapSize.width, mapSize.height
@@ -651,8 +662,22 @@ local function translateAttack(action, modelScene)
             fileName   = sceneWarFileName,
             path       = translatedPath,
         }
-        SceneWarManager.updateModelSceneWarWithAction(actionWait)
-        return actionWait, generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount)
+        return actionWait,
+            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            actionWait
+    end
+
+    local lostPlayerIndex
+    if ((attackDamage >= attackTarget:getCurrentHP()) and (attackTarget.getUnitType)) then
+        local playerIndex = attackTarget:getPlayerIndex()
+        if (countModelUnitOnMapWithPlayerIndex(modelUnitMap, playerIndex) == 1) then
+            lostPlayerIndex = playerIndex
+        end
+    elseif ((counterDamage) and (counterDamage > attacker:getCurrentHP())) then
+        local playerIndex = attacker:getPlayerIndex()
+        if (countModelUnitOnMapWithPlayerIndex(modelUnitMap, playerIndex) == 1) then
+            lostPlayerIndex = playerIndex
+        end
     end
 
     local actionAttack = {
@@ -664,24 +689,12 @@ local function translateAttack(action, modelScene)
         attackDamage    = attackDamage,
         counterDamage   = counterDamage,
         launchUnitID    = launchUnitID,
+        lostPlayerIndex = lostPlayerIndex,
     }
-    SceneWarManager.updateModelSceneWarWithAction(actionAttack)
 
-    local attackerPlayerIndex = attacker:getPlayerIndex()
-    local targetPlayerIndex   = attackTarget:getPlayerIndex()
-    if (not modelPlayerManager:getModelPlayer(attackerPlayerIndex):isAlive()) then
-        actionAttack.lostPlayerIndex = attackerPlayerIndex
-    elseif ((targetPlayerIndex ~= 0) and (not modelPlayerManager:getModelPlayer(targetPlayerIndex):isAlive())) then
-        actionAttack.lostPlayerIndex = targetPlayerIndex
-    end
-
-    local actionsForPublish = generateActionsForPublish(actionAttack, modelPlayerManager, action.playerAccount) or {}
-    if ((actionAttack.lostPlayerIndex) and (actionAttack.lostPlayerIndex == targetPlayerIndex)) then
-        local lostModelPlayer = modelPlayerManager:getModelPlayer(actionAttack.lostPlayerIndex)
-        actionsForPublish[lostModelPlayer:getAccount()] = actionAttack
-    end
-
-    return actionAttack, actionsForPublish
+    return actionAttack,
+        generateActionsForPublish(actionAttack, modelPlayerManager, action.playerAccount),
+        actionAttack
 end
 
 local function translateJoinModelUnit(action, modelScene)

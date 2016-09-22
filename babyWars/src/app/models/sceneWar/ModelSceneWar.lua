@@ -51,29 +51,6 @@ local function getAliveModelUnitsCount(modelUnitMap, playerIndex)
 end
 
 --------------------------------------------------------------------------------
--- The functions that do the actions the system requested.
---------------------------------------------------------------------------------
-local function doActionAttack(self, action)
-    local modelUnitMap        = self:getModelWarField():getModelUnitMap()
-    local attackerPlayerIndex = modelUnitMap:getModelUnit(action.path[1]):getPlayerIndex()
-    local targetModelUnit     = modelUnitMap:getModelUnit(action.targetGridIndex)
-    local targetPlayerIndex   = (targetModelUnit) and (targetModelUnit:getPlayerIndex()) or (nil)
-
-    self:getModelWarField():doActionAttack(action)
-
-    if (getAliveModelUnitsCount(modelUnitMap, attackerPlayerIndex) == 0) then
-        Destroyers.destroyPlayerForce(self:getFileName(), attackerPlayerIndex)
-        self:getModelTurnManager():endTurn()
-    elseif ((targetPlayerIndex) and (getAliveModelUnitsCount(modelUnitMap, targetPlayerIndex) == 0)) then
-        Destroyers.destroyPlayerForce(self:getFileName(), targetPlayerIndex)
-    end
-
-    if (self:getModelPlayerManager():getAlivePlayersCount() <= 1) then
-        self.m_IsWarEnded = true
-    end
-end
-
---------------------------------------------------------------------------------
 -- The composition elements.
 --------------------------------------------------------------------------------
 local function initScriptEventDispatcher(self)
@@ -179,6 +156,7 @@ end
 function ModelSceneWar:doSystemAction(action)
     local actionName = action.actionName
     if ((actionName == "ActivateSkillGroup")     or
+        (actionName == "Attack")                 or
         (actionName == "BeginTurn")              or
         (actionName == "BuildModelTile")         or
         (actionName == "CaptureModelTile")       or
@@ -193,14 +171,8 @@ function ModelSceneWar:doSystemAction(action)
         (actionName == "Surrender")              or
         (actionName == "Wait"))                  then
         ActionExecutor.execute(action)
-        return self
-    end
-
-    assert(self.m_ActionID + 1 == action.actionID)
-    self.m_ActionID = action.actionID
-
-    if     (actionName == "Attack")                 then doActionAttack(                self, action)
-    else                                                 error("ModelSceneWar:doSystemAction() unrecognized action.")
+    else
+        error("ModelSceneWar:doSystemAction() unrecognized action: " .. (actionName or ""))
     end
 
     return self
