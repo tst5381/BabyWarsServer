@@ -11,6 +11,7 @@ local WebSocketServer        = require("resty.websocket.server")
 local Redis                  = require("resty.redis")
 local ActionTranslator       = require("src.app.utilities.ActionTranslator")
 local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
+local SceneWarManager        = require("src.app.utilities.SceneWarManager")
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
 
 local DEFAULT_CONFIGURATION = {
@@ -122,10 +123,6 @@ local function destroyThreadForSubscribe(self)
 end
 
 local function publishTranslatedActions(actions)
-    if (actions == nil) then
-        return
-    end
-
     -- It seems that if we use self.m_RedisForSubscribe to publish the actions, it may fail mysteriously.
     -- So it's safer to use a temporary redis for publishing.
     local red = Redis:new()
@@ -140,11 +137,16 @@ local function publishTranslatedActions(actions)
     red:close()
 end
 
-local function doAction(self, rawAction, actionForSelf, actionsForPublish)
-    publishTranslatedActions(actionsForPublish)
+local function doAction(self, rawAction, actionForRequester, actionsForPublish, actionForServer)
+    if (actionForServer) then
+        SceneWarManager.updateModelSceneWarWithAction(actionForServer)
+    end
+    if (actionsForPublish) then
+        publishTranslatedActions(actionsForPublish)
+    end
 
     local account, password    = rawAction.playerAccount, rawAction.playerPassword
-    local translatedActionName = actionForSelf.actionName
+    local translatedActionName = actionForRequester.actionName
     if ((translatedActionName == "Logout")                                       or
         (not PlayerProfileManager.isAccountAndPasswordValid(account, password))) then
         self:unsubscribeFromPlayerChannel()
@@ -156,7 +158,7 @@ local function doAction(self, rawAction, actionForSelf, actionsForPublish)
         end
     end
 
-    local bytes, err = self.m_WebSocket:send_text(SerializationFunctions.toString(actionForSelf))
+    local bytes, err = self.m_WebSocket:send_text(SerializationFunctions.toString(actionForRequester))
     if (not bytes) then
         ngx.log(ngx.ERR, "Session-doAction() failed to send text: ", err)
         return self:stop()

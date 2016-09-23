@@ -2,9 +2,10 @@
 local SceneWarManager = {}
 
 local ModelSkillConfiguration = require("src.app.models.common.ModelSkillConfiguration")
-local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
-local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
+local GameConstantFunctions   = require("src.app.utilities.GameConstantFunctions")
 local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions")
+local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
+local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
 local Actor                   = require("src.global.actors.Actor")
 
 local SCENE_WAR_PATH               = "babyWars\\res\\data\\sceneWar\\"
@@ -169,6 +170,15 @@ local function generateWeatherData(defaultWeather, isRandom)
 end
 
 local function generateSinglePlayerData(account, skillConfigurationID)
+    local skillConfiguration
+    if (type(skillConfigurationID) == "string") then
+        skillConfiguration = ModelSkillConfiguration:create(GameConstantFunctions.getSkillPresets()[skillConfigurationID]):toSerializableTable()
+    elseif (skillConfigurationID == 0) then
+        skillConfiguration = {maxPoints = 0}
+    else
+        skillConfiguration = ModelSkillConfiguration:create(PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID)):toSerializableTable()
+    end
+
     return {
         account             = account,
         nickname            = PlayerProfileManager.getPlayerProfile(account).nickname,
@@ -176,9 +186,7 @@ local function generateSinglePlayerData(account, skillConfigurationID)
         isAlive             = true,
         damageCost          = 0,
         skillActivatedCount = 0,
-        skillConfiguration  = (skillConfigurationID == 0) and
-            ({maxPoints = 0})                             or
-            ModelSkillConfiguration:create(PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID)):toSerializableTable(),
+        skillConfiguration  = skillConfiguration,
     }
 end
 
@@ -364,16 +372,17 @@ function SceneWarManager.joinWar(param)
     end
 end
 
-function SceneWarManager.updateModelSceneWarWithAction(sceneWarFileName, action)
-    assert(SceneWarManager.getOngoingModelSceneWar(sceneWarFileName) ~= nil, "SceneWarManager.updateModelSceneWarWithAction() the param sceneWarFileName is invalid.")
+function SceneWarManager.updateModelSceneWarWithAction(action)
+    local sceneWarFileName = action.fileName
+    local modelSceneWar    = SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
+    assert(modelSceneWar, "SceneWarManager.updateModelSceneWarWithAction() the param sceneWarFileName is invalid:" .. (sceneWarFileName or ""))
 
     local cloneAction = {}
     for k, v in pairs(action) do
         cloneAction[k] = v
     end
 
-    local modelSceneWar = s_OngoingWarList[sceneWarFileName].actorSceneWar:getModel()
-    serialize(toFullFileName(sceneWarFileName), modelSceneWar:doSystemAction(cloneAction):toSerializableTable())
+    serialize(toFullFileName(sceneWarFileName), modelSceneWar:executeAction(cloneAction):toSerializableTable())
     PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
     if (modelSceneWar:isEnded()) then

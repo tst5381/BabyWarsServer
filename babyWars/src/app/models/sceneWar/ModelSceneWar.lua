@@ -13,163 +13,45 @@
 --    - TurnManager
 --    - WeatherManager
 --
---  - ModelSceneWar要正确处理服务器传来的事件消息。目前，是使用doActionXXX系列函数来处理的。
---    由于ModelSceneWar本身是由许多子actor组成，所以这些系列函数通常只是把服务器事件分发给合适的子actor再行处理。
---
 --  - model和view的“时间差”
 --    在目前的设计中，一旦收到事件，model将即时完成所有相关计算，而view将随后跨帧显示相应效果。
 --    考虑服务器传来“某unit A按某路线移动后对unit B发起攻击”的事件的情况。这种情况下，在model中，unit的新的数值将马上完成结算（如hp，弹药量，消灭与否，等级等都会有更新），
 --    但在view不可能立刻按model的新状态进行呈现（否则，玩家就会看到unit发生了瞬移，或是突然消失了），而必须跨帧逐步更新。
 --    采取model先行结算的方式可以避免很多问题，所以后续开发应该遵守同样的规范。
---
---  - 目前，ModelSceneWar还简单地模拟把玩家操作（也就是EvtPlayerRequestDoAction）传送到服务器，再接收服务器传回的操作（EvtSystemRequestDoAction）的过程（参见ActionTranslator）。
---    这本不应该是ModelSceneWar的工作，等以后实现了网络模块，就应该把相关代码移除。
 --]]--------------------------------------------------------------------------------
 
 local ModelSceneWar = require("src.global.functions.class")("ModelSceneWar")
 
-local ActionTranslator     = require("src.app.utilities.ActionTranslator")
-local InstantSkillExecutor = require("src.app.utilities.InstantSkillExecutor")
-local Actor                = require("src.global.actors.Actor")
-local EventDispatcher      = require("src.global.events.EventDispatcher")
+local ActionExecutor        = require("src.app.utilities.ActionExecutor")
+local LocalizationFunctions = require("src.app.utilities.LocalizationFunctions")
+local Actor                 = require("src.global.actors.Actor")
+local EventDispatcher       = require("src.global.events.EventDispatcher")
+
+local IS_SERVER        = require("src.app.utilities.GameConstantFunctions").isServer()
+local AudioManager     = (not IS_SERVER) and (require("src.app.utilities.AudioManager"))     or (nil)
+local WebSocketManager = (not IS_SERVER) and (require("src.app.utilities.WebSocketManager")) or (nil)
 
 --------------------------------------------------------------------------------
--- The util functions.
+-- The private callback function on web socket events.
 --------------------------------------------------------------------------------
-local function getAliveModelUnitsCount(modelUnitMap, playerIndex)
-    local count = 0
-    modelUnitMap:forEachModelUnitOnMap(function(modelUnit)
-        if (modelUnit:getPlayerIndex() == playerIndex) then
-            count = count + 1
-        end
-    end)
-
-    return count
+local function onWebSocketOpen(self, param)
+    print("ModelSceneWar-onWebSocketOpen()")
+    self:getModelMessageIndicator():showMessage(LocalizationFunctions.getLocalizedText(30))
 end
 
-local function clearPlayerForce(self, playerIndex)
-    self:getModelPlayerManager():getModelPlayer(playerIndex):setAlive(false)
-    self:getModelWarField():clearPlayerForce(playerIndex)
+local function onWebSocketMessage(self, param)
+    print("ModelSceneWar-onWebSocketMessage():\n" .. param.message)
+    self:executeAction(param.action)
 end
 
---------------------------------------------------------------------------------
--- The functions that do the actions the system requested.
---------------------------------------------------------------------------------
-local function doActionBeginTurn(self, action)
-    local modelTurnManager         = self:getModelTurnManager()
-    local modelUnitMap             = self:getModelWarField():getModelUnitMap()
-    local playerIndex              = modelTurnManager:getPlayerIndex()
-    local prevAliveModelUnitsCount = getAliveModelUnitsCount(modelUnitMap, playerIndex)
-
-    modelTurnManager:doActionBeginTurn(action)
-
-    if ((prevAliveModelUnitsCount > 0) and
-        (getAliveModelUnitsCount(modelUnitMap, playerIndex) == 0)) then
-        clearPlayerForce(self, playerIndex)
-
-        if (self:getModelPlayerManager():getAlivePlayersCount() == 1) then
-            self.m_IsWarEnded = true
-        else
-            modelTurnManager:endTurn()
-        end
-    end
+local function onWebSocketClose(self, param)
+    print("ModelSceneWar-onWebSocketClose()")
+    self:getModelMessageIndicator():showMessage(LocalizationFunctions.getLocalizedText(31))
 end
 
-local function doActionEndTurn(self, action)
-    self:getModelTurnManager():doActionEndTurn()
-end
-
-local function doActionSurrender(self, action)
-    local modelPlayerManager = self:getModelPlayerManager()
-    local modelTurnManager   = self:getModelTurnManager()
-    modelPlayerManager:doActionSurrender(action)
-    modelTurnManager:doActionSurrender(action)
-    self:getModelWarField():doActionSurrender(action)
-
-    if (modelPlayerManager:getAlivePlayersCount() <= 1) then
-        self.m_IsWarEnded = true
-    end
-end
-
-local function doActionActivateSkillGroup(self, action)
-    InstantSkillExecutor.doActionActivateSkillGroup(action,
-        self:getModelWarField(), self:getModelPlayerManager(), self:getModelTurnManager(), self:getModelWeatherManager(), self:getScriptEventDispatcher())
-    local playerIndex = self:getModelTurnManager():getPlayerIndex()
-    self:getModelPlayerManager():doActionActivateSkillGroup(action, playerIndex)
-end
-
-local function doActionWait(self, action)
-    self:getModelWarField():doActionWait(action)
-end
-
-local function doActionAttack(self, action)
-    local modelUnitMap        = self:getModelWarField():getModelUnitMap()
-    local attackerPlayerIndex = modelUnitMap:getModelUnit(action.path[1]):getPlayerIndex()
-    local targetModelUnit     = modelUnitMap:getModelUnit(action.targetGridIndex)
-    local targetPlayerIndex   = (targetModelUnit) and (targetModelUnit:getPlayerIndex()) or (nil)
-
-    self:getModelWarField():doActionAttack(action)
-
-    if (getAliveModelUnitsCount(modelUnitMap, attackerPlayerIndex) == 0) then
-        clearPlayerForce(self, attackerPlayerIndex)
-        self:getModelTurnManager():endTurn()
-    elseif ((targetPlayerIndex) and (getAliveModelUnitsCount(modelUnitMap, targetPlayerIndex) == 0)) then
-        clearPlayerForce(self, targetPlayerIndex)
-    end
-
-    if (self:getModelPlayerManager():getAlivePlayersCount() <= 1) then
-        self.m_IsWarEnded = true
-    end
-end
-
-local function doActionJoinModelUnit(self, action)
-    self:getModelWarField():doActionJoinModelUnit(action)
-end
-
-local function doActionCaptureModelTile(self, action)
-    local modelWarField     = self:getModelWarField()
-    local targetModelTile   = modelWarField:getModelTileMap():getModelTile(action.path[#action.path])
-    local targetPlayerIndex = targetModelTile:getPlayerIndex()
-    local isDefeatOnCapture = targetModelTile:isDefeatOnCapture()
-
-    modelWarField:doActionCaptureModelTile(action)
-
-    if ((isDefeatOnCapture) and (targetModelTile:getPlayerIndex() ~= targetPlayerIndex)) then
-        clearPlayerForce(self, targetPlayerIndex)
-        if (self:getModelPlayerManager():getAlivePlayersCount() <= 1) then
-            self.m_IsWarEnded = true
-        end
-    end
-end
-
-local function doActionLaunchSilo(self, action)
-    self:getModelWarField():doActionLaunchSilo(action)
-end
-
-local function doActionBuildModelTile(self, action)
-    self:getModelWarField():doActionBuildModelTile(action)
-end
-
-local function doActionProduceModelUnitOnUnit(self, action)
-    self:getModelPlayerManager():doActionProduceModelUnitOnUnit(action, self:getModelTurnManager():getPlayerIndex())
-    self:getModelWarField():doActionProduceModelUnitOnUnit(action)
-end
-
-local function doActionSupplyModelUnit(self, action)
-    self:getModelWarField():doActionSupplyModelUnit(action)
-end
-
-local function doActionLoadModelUnit(self, action)
-    self:getModelWarField():doActionLoadModelUnit(action)
-end
-
-local function doActionDropModelUnit(self, action)
-    self:getModelWarField():doActionDropModelUnit(action)
-end
-
-local function doActionProduceOnTile(self, action)
-    self:getModelPlayerManager():doActionProduceOnTile(action, self:getModelTurnManager():getPlayerIndex())
-    self:getModelWarField():doActionProduceOnTile(action)
+local function onWebSocketError(self, param)
+    print("ModelSceneWar-onWebSocketError()")
+    self:getModelMessageIndicator():showMessage(LocalizationFunctions.getLocalizedText(32, param.error))
 end
 
 --------------------------------------------------------------------------------
@@ -179,6 +61,19 @@ local function initScriptEventDispatcher(self)
     local dispatcher = EventDispatcher:create()
 
     self.m_ScriptEventDispatcher = dispatcher
+end
+
+local function initActorConfirmBox(self)
+    local actor = Actor.createWithModelAndViewName("common.ModelConfirmBox", nil, "common.ViewConfirmBox")
+    actor:getModel():setEnabled(false)
+
+    self.m_ActorConfirmBox = actor
+end
+
+local function initActorMessageIndicator(self)
+    local actor = Actor.createWithModelAndViewName("common.ModelMessageIndicator", nil, "common.ViewMessageIndicator")
+
+    self.m_ActorMessageIndicator = actor
 end
 
 local function initActorPlayerManager(self, playersData)
@@ -194,13 +89,19 @@ local function initActorWeatherManager(self, weatherData)
 end
 
 local function initActorWarField(self, warFieldData)
-    local actor = Actor.createWithModelAndViewName("sceneWar.ModelWarField", warFieldData)
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelWarField", warFieldData, "sceneWar.ViewWarField")
 
     self.m_ActorWarField = actor
 end
 
+local function initActorWarHud(self)
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelWarHUD", nil, "sceneWar.ViewWarHUD")
+
+    self.m_ActorWarHud = actor
+end
+
 local function initActorTurnManager(self, turnData)
-    local actor = Actor.createWithModelAndViewName("sceneWar.ModelTurnManager", turnData)
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelTurnManager", turnData, "sceneWar.ViewTurnManager")
 
     self.m_ActorTurnManager = actor
 end
@@ -209,17 +110,38 @@ end
 -- The constructor and initializers.
 --------------------------------------------------------------------------------
 function ModelSceneWar:ctor(sceneData)
-    self.m_FileName       = sceneData.fileName
-    self.m_WarPassword    = sceneData.warPassword
-    self.m_IsWarEnded     = sceneData.isEnded
     self.m_ActionID       = sceneData.actionID
+    self.m_FileName       = sceneData.fileName
+    self.m_IsWarEnded     = sceneData.isEnded
     self.m_MaxSkillPoints = sceneData.maxSkillPoints
+    self.m_WarPassword    = sceneData.warPassword
+    self.m_CachedActions  = {}
 
     initScriptEventDispatcher(self)
     initActorPlayerManager(   self, sceneData.players)
     initActorWeatherManager(  self, sceneData.weather)
     initActorWarField(        self, sceneData.warField)
     initActorTurnManager(     self, sceneData.turn)
+    if (not IS_SERVER) then
+        initActorConfirmBox(      self)
+        initActorMessageIndicator(self)
+        initActorWarHud(          self)
+    end
+
+    if (self.m_View) then
+        self:initView()
+    end
+
+    return self
+end
+
+function ModelSceneWar:initView()
+    assert(self.m_View, "ModelSceneWar:initView() no view is attached to the owner actor of the model.")
+    self.m_View:setViewConfirmBox(self.m_ActorConfirmBox      :getView())
+        :setViewWarField(         self.m_ActorWarField        :getView())
+        :setViewWarHud(           self.m_ActorWarHud          :getView())
+        :setViewTurnManager(      self.m_ActorTurnManager     :getView())
+        :setViewMessageIndicator( self.m_ActorMessageIndicator:getView())
 
     return self
 end
@@ -245,14 +167,18 @@ end
 -- The callback functions on start/stop running and script events.
 --------------------------------------------------------------------------------
 function ModelSceneWar:onStartRunning()
-    local sceneWarFileName = self:getFileName()
-    self:getModelTurnManager()  :onStartRunning(sceneWarFileName)
-    self:getModelPlayerManager():onStartRunning(sceneWarFileName)
-    self:getModelWarField()     :onStartRunning(sceneWarFileName)
+    local sceneWarFileName   = self:getFileName()
+    local modelTurnManager   = self:getModelTurnManager()
+    if (not IS_SERVER) then
+        self.m_ActorWarHud:getModel():onStartRunning(sceneWarFileName)
+    end
+    modelTurnManager       :onStartRunning(sceneWarFileName)
+    self:getModelWarField():onStartRunning(sceneWarFileName)
 
+    local playerIndex = modelTurnManager:getPlayerIndex()
     self:getScriptEventDispatcher():dispatchEvent({
             name         = "EvtModelWeatherUpdated",
-            modelWeather = self:getModelWeatherManager():getCurrentWeather()
+            modelWeather = self:getModelWeatherManager():getCurrentWeather(),
         })
         :dispatchEvent({
             name = "EvtSceneWarStarted",
@@ -263,7 +189,10 @@ function ModelSceneWar:onStartRunning()
             modelPlayer = self:getModelPlayerManager():getModelPlayer(playerIndex),
         })
 
-    self:getModelTurnManager():runTurn()
+    modelTurnManager:runTurn()
+    if (not IS_SERVER) then
+        AudioManager.playRandomWarMusic()
+    end
 
     return self
 end
@@ -272,31 +201,58 @@ function ModelSceneWar:onStopRunning()
     return self
 end
 
+function ModelSceneWar:onWebSocketEvent(eventName, param)
+    if     (eventName == "open")    then onWebSocketOpen(   self, param)
+    elseif (eventName == "message") then onWebSocketMessage(self, param)
+    elseif (eventName == "close")   then onWebSocketClose(  self, param)
+    elseif (eventName == "error")   then onWebSocketError(  self, param)
+    end
+
+    return self
+end
+
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
-function ModelSceneWar:doSystemAction(action)
-    assert(self.m_ActionID + 1 == action.actionID)
-    self.m_ActionID = action.actionID
+function ModelSceneWar:executeAction(action)
+    ActionExecutor.execute(action)
 
-    local actionName = action.actionName
-    if     (actionName == "BeginTurn")              then doActionBeginTurn(             self, action)
-    elseif (actionName == "EndTurn")                then doActionEndTurn(               self, action)
-    elseif (actionName == "Surrender")              then doActionSurrender(             self, action)
-    elseif (actionName == "ActivateSkillGroup")     then doActionActivateSkillGroup(    self, action)
-    elseif (actionName == "Wait")                   then doActionWait(                  self, action)
-    elseif (actionName == "Attack")                 then doActionAttack(                self, action)
-    elseif (actionName == "JoinModelUnit")          then doActionJoinModelUnit(         self, action)
-    elseif (actionName == "CaptureModelTile")       then doActionCaptureModelTile(      self, action)
-    elseif (actionName == "LaunchSilo")             then doActionLaunchSilo(            self, action)
-    elseif (actionName == "BuildModelTile")         then doActionBuildModelTile(        self, action)
-    elseif (actionName == "ProduceModelUnitOnUnit") then doActionProduceModelUnitOnUnit(self, action)
-    elseif (actionName == "SupplyModelUnit")        then doActionSupplyModelUnit(       self, action)
-    elseif (actionName == "LoadModelUnit")          then doActionLoadModelUnit(         self, action)
-    elseif (actionName == "DropModelUnit")          then doActionDropModelUnit(         self, action)
-    elseif (actionName == "ProduceOnTile")          then doActionProduceOnTile(         self, action)
-    else                                                 error("ModelSceneWar:doSystemAction() unrecognized action.")
+    return self
+end
+
+function ModelSceneWar:isExecutingAction()
+    return self.m_IsExecutingAction
+end
+
+function ModelSceneWar:setExecutingAction(executing)
+    self.m_IsExecutingAction = executing
+    if ((not executing) and (not self:isEnded())) then
+        local actionID = self:getActionId() + 1
+        local action   = self.m_CachedActions[actionID]
+        if (action) then
+            self.m_CachedActions[actionID] = nil
+            self:executeAction(action)
+        end
     end
+
+    return self
+end
+
+function ModelSceneWar:cacheAction(action)
+    local actionID = action.actionID
+    if (actionID > self:getActionId()) then
+        self.m_CachedActions[actionID] = action
+    end
+
+    return self
+end
+
+function ModelSceneWar:getActionId()
+    return self.m_ActionID
+end
+
+function ModelSceneWar:setActionId(actionID)
+    self.m_ActionID = actionID
 
     return self
 end
@@ -309,8 +265,18 @@ function ModelSceneWar:isEnded()
     return self.m_IsWarEnded
 end
 
-function ModelSceneWar:getActionId()
-    return self.m_ActionID
+function ModelSceneWar:setEnded(ended)
+    self.m_IsWarEnded = ended
+
+    return self
+end
+
+function ModelSceneWar:getModelConfirmBox()
+    return self.m_ActorConfirmBox:getModel()
+end
+
+function ModelSceneWar:getModelMessageIndicator()
+    return self.m_ActorMessageIndicator:getModel()
 end
 
 function ModelSceneWar:getModelTurnManager()
@@ -331,6 +297,27 @@ end
 
 function ModelSceneWar:getScriptEventDispatcher()
     return self.m_ScriptEventDispatcher
+end
+
+function ModelSceneWar:showEffectSurrender(callback)
+    assert(not IS_SERVER, "ModelSceneWar:showEffectSurrender() should not be invoked on the server.")
+    self.m_View:showEffectSurrender(callback)
+
+    return self
+end
+
+function ModelSceneWar:showEffectWin(callback)
+    assert(not IS_SERVER, "ModelSceneWar:showEffectWin() should not be invoked on the server.")
+    self.m_View:showEffectWin(callback)
+
+    return self
+end
+
+function ModelSceneWar:showEffectLose(callback)
+    assert(not IS_SERVER, "ModelSceneWar:showEffectLose() should not be invoked on the server.")
+    self.m_View:showEffectLose(callback)
+
+    return self
 end
 
 return ModelSceneWar
