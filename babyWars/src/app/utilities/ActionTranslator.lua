@@ -274,7 +274,7 @@ local function translateNewWar(action)
     -- TODO: validate more params.
     local skillConfigurationID = action.skillConfigurationID
     local maxSkillPoints       = action.maxSkillPoints
-    if (skillConfigurationID > 0) then
+    if ((type(skillConfigurationID) == "number") and (skillConfigurationID > 0)) then
         local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID)
         if (not skillConfiguration) then
             return {
@@ -291,6 +291,18 @@ local function translateNewWar(action)
                 message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
             }
         elseif ((not maxSkillPoints) or (modelSkillConfiguration:getMaxSkillPoints() > maxSkillPoints)) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "OverloadedSkillPoints"),
+            }
+        end
+    elseif (type(skillConfigurationID) == "string") then
+        if (not GameConstantFunctions.getSkillPresets()[skillConfigurationID]) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
+            }
+        elseif ((not maxSkillPoints) or (maxSkillPoints < 100)) then
             return {
                 actionName = "Message",
                 message    = getLocalizedText(81, "OverloadedSkillPoints"),
@@ -371,7 +383,8 @@ local function translateJoinWar(action)
     end
 
     local skillConfigurationID = action.skillConfigurationID
-    if (skillConfigurationID > 0) then
+    local maxSkillPoints       = warConfiguration.maxSkillPoints
+    if ((type(skillConfigurationID) == "number") and (skillConfigurationID > 0)) then
         local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID)
         if (not skillConfiguration) then
             return {
@@ -380,7 +393,6 @@ local function translateJoinWar(action)
             }
         end
 
-        local maxSkillPoints          = warConfiguration.maxSkillPoints
         local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
         local isValid, err            = modelSkillConfiguration:isValid()
         if (not isValid) then
@@ -389,6 +401,18 @@ local function translateJoinWar(action)
                 message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
             }
         elseif ((not maxSkillPoints) or (modelSkillConfiguration:getMaxSkillPoints() > maxSkillPoints)) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "OverloadedSkillPoints"),
+            }
+        end
+    elseif (type(skillConfigurationID) == "string") then
+        if (not GameConstantFunctions.getSkillPresets()[skillConfigurationID]) then
+            return {
+                actionName = "Message",
+                message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
+            }
+        elseif ((not maxSkillPoints) or (maxSkillPoints < 100)) then
             return {
                 actionName = "Message",
                 message    = getLocalizedText(81, "OverloadedSkillPoints"),
