@@ -1126,7 +1126,7 @@ end
 function ActionTranslator.translate(action)
     if (type(action) ~= "table") then
         return {
-            actionName = "ReloadCurrentScene",
+            actionName = "Message",
             message    = getLocalizedText(81, "CorruptedAction"),
         }
     end
