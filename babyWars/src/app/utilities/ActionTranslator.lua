@@ -201,6 +201,7 @@ local function createActionReloadOrExitWar(sceneWarFileName, message)
     if (data) then
         return {
             actionName = "ReloadSceneWar",
+            fileName   = sceneWarFileName,
             data       = data,
             message    = message,
         }
@@ -340,6 +341,16 @@ local function translateGetOngoingWarList(action)
     return {
         actionName = "GetOngoingWarList",
         list       = list,
+    }
+end
+
+local function translateGetSceneWarActionId(action)
+    local sceneWarFileName = action.fileName
+    local data, err        = SceneWarManager.getOngoingSceneWarData(sceneWarFileName)
+    return {
+        actionName       = "GetSceneWarActionId",
+        fileName         = sceneWarFileName,
+        sceneWarActionID = (data) and (data.actionID) or (nil),
     }
 end
 
@@ -1151,6 +1162,7 @@ function ActionTranslator.translate(action)
 
     if     (actionName == "NewWar")                then return translateNewWar(               action)
     elseif (actionName == "GetOngoingWarList")     then return translateGetOngoingWarList(    action)
+    elseif (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
     elseif (actionName == "GetSceneWarData")       then return translateGetSceneWarData(      action)
     elseif (actionName == "GetJoinableWarList")    then return translateGetJoinableWarList(   action)
     elseif (actionName == "JoinWar")               then return translateJoinWar(              action)
