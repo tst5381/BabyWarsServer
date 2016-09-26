@@ -200,7 +200,7 @@ local function createActionReloadOrExitWar(sceneWarFileName, message)
     local data = SceneWarManager.getOngoingSceneWarData(sceneWarFileName)
     if (data) then
         return {
-            actionName = "GetSceneWarData",
+            actionName = "ReloadSceneWar",
             data       = data,
             message    = message,
         }
@@ -449,6 +449,10 @@ local function translateGetSkillConfiguration(action)
             configuration   = configuration,
         }
     end
+end
+
+local function translateReloadSceneWar(action)
+    return createActionReloadOrExitWar(action.fileName)
 end
 
 local function translateSetSkillConfiguration(action)
@@ -1151,6 +1155,7 @@ function ActionTranslator.translate(action)
     elseif (actionName == "GetJoinableWarList")    then return translateGetJoinableWarList(   action)
     elseif (actionName == "JoinWar")               then return translateJoinWar(              action)
     elseif (actionName == "GetSkillConfiguration") then return translateGetSkillConfiguration(action)
+    elseif (actionName == "ReloadSceneWar")        then return translateReloadSceneWar(       action)
     elseif (actionName == "SetSkillConfiguration") then return translateSetSkillConfiguration(action)
     end
 
