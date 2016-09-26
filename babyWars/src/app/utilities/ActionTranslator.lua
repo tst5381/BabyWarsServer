@@ -292,7 +292,7 @@ local function translateNewWar(action)
                 actionName = "Message",
                 message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
             }
-        elseif ((not maxSkillPoints) or (modelSkillConfiguration:getMaxSkillPoints() > maxSkillPoints)) then
+        elseif ((not maxSkillPoints) or (modelSkillConfiguration:getBaseSkillPoints() > maxSkillPoints)) then
             return {
                 actionName = "Message",
                 message    = getLocalizedText(81, "OverloadedSkillPoints"),
@@ -412,7 +412,7 @@ local function translateJoinWar(action)
                 actionName = "Message",
                 message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
             }
-        elseif ((not maxSkillPoints) or (modelSkillConfiguration:getMaxSkillPoints() > maxSkillPoints)) then
+        elseif ((not maxSkillPoints) or (modelSkillConfiguration:getBaseSkillPoints() > maxSkillPoints)) then
             return {
                 actionName = "Message",
                 message    = getLocalizedText(81, "OverloadedSkillPoints"),
