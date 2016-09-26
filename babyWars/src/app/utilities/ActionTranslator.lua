@@ -208,6 +208,7 @@ local function createActionReloadOrExitWar(sceneWarFileName, message)
     else
         return {
             actionName = "RunSceneMain",
+            fileName   = sceneWarFileName,
             message    = getLocalizedText(81, "InvalidWarFileName"),
         }
     end
