@@ -200,13 +200,15 @@ local function createActionReloadOrExitWar(sceneWarFileName, message)
     local data = SceneWarManager.getOngoingSceneWarData(sceneWarFileName)
     if (data) then
         return {
-            actionName = "GetSceneWarData",
+            actionName = "ReloadSceneWar",
+            fileName   = sceneWarFileName,
             data       = data,
             message    = message,
         }
     else
         return {
             actionName = "RunSceneMain",
+            fileName   = sceneWarFileName,
             message    = getLocalizedText(81, "InvalidWarFileName"),
         }
     end
@@ -290,7 +292,7 @@ local function translateNewWar(action)
                 actionName = "Message",
                 message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
             }
-        elseif ((not maxSkillPoints) or (modelSkillConfiguration:getMaxSkillPoints() > maxSkillPoints)) then
+        elseif ((not maxSkillPoints) or (modelSkillConfiguration:getBaseSkillPoints() > maxSkillPoints)) then
             return {
                 actionName = "Message",
                 message    = getLocalizedText(81, "OverloadedSkillPoints"),
@@ -340,6 +342,16 @@ local function translateGetOngoingWarList(action)
     return {
         actionName = "GetOngoingWarList",
         list       = list,
+    }
+end
+
+local function translateGetSceneWarActionId(action)
+    local sceneWarFileName = action.fileName
+    local data, err        = SceneWarManager.getOngoingSceneWarData(sceneWarFileName)
+    return {
+        actionName       = "GetSceneWarActionId",
+        fileName         = sceneWarFileName,
+        sceneWarActionID = (data) and (data.actionID) or (nil),
     }
 end
 
@@ -400,7 +412,7 @@ local function translateJoinWar(action)
                 actionName = "Message",
                 message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
             }
-        elseif ((not maxSkillPoints) or (modelSkillConfiguration:getMaxSkillPoints() > maxSkillPoints)) then
+        elseif ((not maxSkillPoints) or (modelSkillConfiguration:getBaseSkillPoints() > maxSkillPoints)) then
             return {
                 actionName = "Message",
                 message    = getLocalizedText(81, "OverloadedSkillPoints"),
@@ -449,6 +461,10 @@ local function translateGetSkillConfiguration(action)
             configuration   = configuration,
         }
     end
+end
+
+local function translateReloadSceneWar(action)
+    return createActionReloadOrExitWar(action.fileName)
 end
 
 local function translateSetSkillConfiguration(action)
@@ -1126,7 +1142,7 @@ end
 function ActionTranslator.translate(action)
     if (type(action) ~= "table") then
         return {
-            actionName = "ReloadCurrentScene",
+            actionName = "Message",
             message    = getLocalizedText(81, "CorruptedAction"),
         }
     end
@@ -1147,10 +1163,12 @@ function ActionTranslator.translate(action)
 
     if     (actionName == "NewWar")                then return translateNewWar(               action)
     elseif (actionName == "GetOngoingWarList")     then return translateGetOngoingWarList(    action)
+    elseif (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
     elseif (actionName == "GetSceneWarData")       then return translateGetSceneWarData(      action)
     elseif (actionName == "GetJoinableWarList")    then return translateGetJoinableWarList(   action)
     elseif (actionName == "JoinWar")               then return translateJoinWar(              action)
     elseif (actionName == "GetSkillConfiguration") then return translateGetSkillConfiguration(action)
+    elseif (actionName == "ReloadSceneWar")        then return translateReloadSceneWar(       action)
     elseif (actionName == "SetSkillConfiguration") then return translateSetSkillConfiguration(action)
     end
 

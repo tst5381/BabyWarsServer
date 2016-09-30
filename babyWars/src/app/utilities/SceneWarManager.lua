@@ -174,7 +174,7 @@ local function generateSinglePlayerData(account, skillConfigurationID)
     if (type(skillConfigurationID) == "string") then
         skillConfiguration = ModelSkillConfiguration:create(GameConstantFunctions.getSkillPresets()[skillConfigurationID]):toSerializableTable()
     elseif (skillConfigurationID == 0) then
-        skillConfiguration = {maxPoints = 0}
+        skillConfiguration = {basePoints = 0}
     else
         skillConfiguration = ModelSkillConfiguration:create(PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID)):toSerializableTable()
     end
