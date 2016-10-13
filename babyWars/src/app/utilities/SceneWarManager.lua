@@ -276,23 +276,12 @@ function SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
     return getOngoingWarListItem(sceneWarFileName).actorSceneWar:getModel()
 end
 
-function SceneWarManager.getOngoingSceneWarData(sceneWarFileName, playerAccount)
+function SceneWarManager.getOngoingSceneWarData(sceneWarFileName)
     local item = getOngoingWarListItem(sceneWarFileName)
     if (not item) then
         return nil, "SceneWarManager.getOngoingSceneWarData() the war is invalid or ended."
-    end
-
-    local modelSceneWar = item.actorSceneWar:getModel()
-    local data
-    modelSceneWar:getModelPlayerManager():forEachModelPlayer(function(modelPlayer, playerIndex)
-        if ((modelPlayer:isAlive()) and (modelPlayer:getAccount() == playerAccount)) then
-            data = modelSceneWar:toSerializableTableForPlayerIndex(playerIndex)
-        end
-    end)
-    if (data) then
-        return data
     else
-        return nil, "SceneWarManager.getOngoingSceneWarData() the player doesn't participate in the war, or is not alive."
+        return item.actorSceneWar:getModel():toSerializableTable()
     end
 end
 
