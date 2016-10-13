@@ -29,6 +29,7 @@ local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager"
 local SceneWarManager         = require("src.app.utilities.SceneWarManager")
 local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
 local SingletonGetters        = require("src.app.utilities.SingletonGetters")
+local TableFunctions          = require("src.app.utilities.TableFunctions")
 local VisibilityFunctions     = require("src.app.utilities.VisibilityFunctions")
 local ComponentManager        = require("src.global.components.ComponentManager")
 
@@ -210,13 +211,17 @@ end
 local generatorsForPublishActions = {}
 generatorsForPublishActions.generatePublishActionForProduceModelUnitOnTile = function(action, playerIndex)
     if (GameConstantFunctions.getUnitTypeWithTiledId(action.tiledID) ~= "Submarine") then
-        return action
+        local publishAction = TableFunctions.clone(action)
+        publishAction.revealedUnits = nil
+        return publishAction
     else
         local modelUnitMap = getModelUnitMap(action.fileName)
         for _, adjacentGridIndex in ipairs(GridIndexFunctions.getAdjacentGrids(action.gridIndex, modelUnitMap:getMapSize())) do
             local modelUnit = modelUnitMap:getModelUnit(adjacentGridIndex)
             if ((modelUnit) and (modelUnit:getPlayerIndex() == playerIndex)) then
-                return action
+                local publishAction = TableFunctions.clone(action)
+                publishAction.revealedUnits = nil
+                return publishAction
             end
         end
 
@@ -674,6 +679,8 @@ local function translatePath(path, launchUnitID, modelSceneWar)
     end
 
     translatedPath.fuelConsumption = totalFuelConsumption
+    translatedPath.revealedUnits   = VisibilityFunctions.getRevealedUnitsDataWithGridIndex(translatedPath[#translatedPath], sceneWarFileName, playerIndexInTurn)
+
     return translatedPath
 end
 
@@ -994,15 +1001,16 @@ local function translateProduceModelUnitOnTile(action, modelScene)
     end
 
     local actionProduceModelUnitOnTile = {
-        actionName = "ProduceModelUnitOnTile",
-        actionID   = action.actionID,
-        fileName   = sceneWarFileName,
-        gridIndex  = gridIndex,
-        tiledID    = tiledID,
-        cost       = cost, -- the cost can be calculated by the clients, but that calculations can be eliminated by sending the cost to clients.
+        actionName    = "ProduceModelUnitOnTile",
+        actionID      = action.actionID,
+        fileName      = sceneWarFileName,
+        gridIndex     = gridIndex,
+        tiledID       = tiledID,
+        revealedUnits = VisibilityFunctions.getRevealedUnitsDataWithGridIndex(gridIndex, sceneWarFileName, playerIndex),
+        cost          = cost, -- the cost can be calculated by the clients, but that calculations can be eliminated by sending the cost to clients.
     }
     return actionProduceModelUnitOnTile,
-        generateActionsForPublish(actionProduceModelUnitOnTile, modelPlayerManager, action.playerAccount),
+        generateActionsForPublish(actionProduceModelUnitOnTile),
         actionProduceModelUnitOnTile
 end
 
