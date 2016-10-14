@@ -21,6 +21,7 @@ local ActionTranslator = {}
 
 local Producible              = require("src.app.components.Producible")
 local ModelSkillConfiguration = require("src.app.models.common.ModelSkillConfiguration")
+local ActionPublisher         = require("src.app.utilities.ActionPublisher")
 local DamageCalculator        = require("src.app.utilities.DamageCalculator")
 local GameConstantFunctions   = require("src.app.utilities.GameConstantFunctions")
 local GridIndexFunctions      = require("src.app.utilities.GridIndexFunctions")
@@ -29,16 +30,16 @@ local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager"
 local SceneWarManager         = require("src.app.utilities.SceneWarManager")
 local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
 local SingletonGetters        = require("src.app.utilities.SingletonGetters")
-local TableFunctions          = require("src.app.utilities.TableFunctions")
 local VisibilityFunctions     = require("src.app.utilities.VisibilityFunctions")
 local ComponentManager        = require("src.global.components.ComponentManager")
 
-local getLocalizedText      = LocalizationFunctions.getLocalizedText
-local getModelPlayerManager = SingletonGetters.getModelPlayerManager
-local getModelTileMap       = SingletonGetters.getModelTileMap
-local getModelTurnManager   = SingletonGetters.getModelTurnManager
-local getModelUnitMap       = SingletonGetters.getModelUnitMap
-local isModelUnitVisible    = VisibilityFunctions.isModelUnitVisibleToPlayerIndex
+local createActionsForPublish = ActionPublisher.createActionsForPublish
+local getLocalizedText        = LocalizationFunctions.getLocalizedText
+local getModelPlayerManager   = SingletonGetters.getModelPlayerManager
+local getModelTileMap         = SingletonGetters.getModelTileMap
+local getModelTurnManager     = SingletonGetters.getModelTurnManager
+local getModelUnitMap         = SingletonGetters.getModelUnitMap
+local isModelUnitVisible      = VisibilityFunctions.isModelUnitVisibleToPlayerIndex
 
 local GAME_VERSION = GameConstantFunctions.getGameVersion()
 
@@ -203,57 +204,6 @@ local function createActionReloadOrExitWar(sceneWarFileName, playerAccount, mess
             message    = getLocalizedText(81, "InvalidWarFileName"),
         }
     end
-end
-
---------------------------------------------------------------------------------
--- The functions that generate actions for publish.
---------------------------------------------------------------------------------
-local generatorsForPublishActions = {}
-generatorsForPublishActions.generatePublishActionForProduceModelUnitOnTile = function(action, playerIndex)
-    if (GameConstantFunctions.getUnitTypeWithTiledId(action.tiledID) ~= "Submarine") then
-        local publishAction = TableFunctions.clone(action)
-        publishAction.revealedUnits = nil
-        return publishAction
-    else
-        local modelUnitMap = getModelUnitMap(action.fileName)
-        for _, adjacentGridIndex in ipairs(GridIndexFunctions.getAdjacentGrids(action.gridIndex, modelUnitMap:getMapSize())) do
-            local modelUnit = modelUnitMap:getModelUnit(adjacentGridIndex)
-            if ((modelUnit) and (modelUnit:getPlayerIndex() == playerIndex)) then
-                local publishAction = TableFunctions.clone(action)
-                publishAction.revealedUnits = nil
-                return publishAction
-            end
-        end
-
-        return {
-            actionName = "ProduceModelUnitOnTile",
-            actionID   = action.actionID,
-            fileName   = action.fileName,
-            cost       = action.cost,
-        }
-    end
-end
-
-generatorsForPublishActions.generatePublishActionForOthers = function(action, playerIndex)
-    return action
-end
-
-local function generateActionsForPublish(action)
-    local sceneWarFileName   = action.fileName
-    local playerIndexInTurn  = getModelTurnManager(sceneWarFileName):getPlayerIndex()
-    local modelPlayerManager = getModelPlayerManager(sceneWarFileName)
-    local actionsForPublish  = {}
-    local generator          = generatorsForPublishActions["generatePublishActionFor" .. action.actionName]
-        or generatorsForPublishActions.generatePublishActionForOthers
-
-    modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)
-        if ((playerIndex ~= playerIndexInTurn) and
-            (modelPlayer:isAlive()))           then
-            actionsForPublish[modelPlayer:getAccount()] = generator(action, playerIndex)
-        end
-    end)
-
-    return actionsForPublish
 end
 
 --------------------------------------------------------------------------------
@@ -551,9 +501,7 @@ local function translateBeginTurn(action, modelScene)
             or (nil),
     }
 
-    return actionBeginTurn,
-        generateActionsForPublish(actionBeginTurn, modelScene:getModelPlayerManager(), action.playerAccount),
-        actionBeginTurn
+    return actionBeginTurn, createActionsForPublish(actionBeginTurn), actionBeginTurn
 end
 
 local function translateEndTurn(action, modelScene)
@@ -571,7 +519,7 @@ local function translateEndTurn(action, modelScene)
         nextWeather = modelScene:getModelWeatherManager():getNextWeather(),
     }
     return actionEndTurn,
-        generateActionsForPublish(actionEndTurn, modelScene:getModelPlayerManager(), action.playerAccount),
+        createActionsForPublish(actionEndTurn, modelScene:getModelPlayerManager(), action.playerAccount),
         actionEndTurn
 end
 
@@ -588,7 +536,7 @@ local function translateSurrender(action, modelScene)
         fileName   = sceneWarFileName,
     }
     return actionSurrender,
-        generateActionsForPublish(actionSurrender, modelScene:getModelPlayerManager(), action.playerAccount),
+        createActionsForPublish(actionSurrender, modelScene:getModelPlayerManager(), action.playerAccount),
         actionSurrender
 end
 
@@ -611,7 +559,7 @@ local function translateActivateSkillGroup(action, modelScene)
         skillGroupID = skillGroupID,
     }
     return actionActivateSkillGroup,
-        generateActionsForPublish(actionActivateSkillGroup, modelPlayerManager, playerAccount),
+        createActionsForPublish(actionActivateSkillGroup, modelPlayerManager, playerAccount),
         actionActivateSkillGroup
 end
 
@@ -708,7 +656,7 @@ local function translateWait(action, modelScene)
         launchUnitID = launchUnitID,
     }
     return actionWait,
-        generateActionsForPublish(actionWait, modelScene:getModelPlayerManager(), action.playerAccount),
+        createActionsForPublish(actionWait, modelScene:getModelPlayerManager(), action.playerAccount),
         actionWait
 end
 
@@ -752,7 +700,7 @@ local function translateAttack(action, modelScene)
             path       = translatedPath,
         }
         return actionWait,
-            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            createActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
             actionWait
     end
 
@@ -782,7 +730,7 @@ local function translateAttack(action, modelScene)
     }
 
     return actionAttack,
-        generateActionsForPublish(actionAttack, modelPlayerManager, action.playerAccount),
+        createActionsForPublish(actionAttack, modelPlayerManager, action.playerAccount),
         actionAttack
 end
 
@@ -814,7 +762,7 @@ local function translateJoinModelUnit(action, modelScene)
             path       = translatedPath,
         }
         return actionWait,
-            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            createActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
             actionWait
     end
 
@@ -826,7 +774,7 @@ local function translateJoinModelUnit(action, modelScene)
         launchUnitID = launchUnitID,
     }
     return actionJoinModelUnit,
-        generateActionsForPublish(actionJoinModelUnit, modelPlayerManager, action.playerAccount),
+        createActionsForPublish(actionJoinModelUnit, modelPlayerManager, action.playerAccount),
         actionJoinModelUnit
 end
 
@@ -860,7 +808,7 @@ local function translateCaptureModelTile(action, modelScene)
             path       = translatedPath,
         }
         return actionWait,
-            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            createActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
             actionWait
     end
 
@@ -875,7 +823,7 @@ local function translateCaptureModelTile(action, modelScene)
             or  (nil),
     }
     return actionCapture,
-        generateActionsForPublish(actionCapture, modelPlayerManager, action.playerAccount),
+        createActionsForPublish(actionCapture, modelPlayerManager, action.playerAccount),
         actionCapture
 end
 
@@ -911,7 +859,7 @@ local function translateLaunchSilo(action, modelScene)
             path       = translatedPath,
         }
         return actionWait,
-            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            createActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
             actionWait
     end
 
@@ -924,7 +872,7 @@ local function translateLaunchSilo(action, modelScene)
         launchUnitID    = launchUnitID,
     }
     return actionLaunchSilo,
-        generateActionsForPublish(actionLaunchSilo, modelPlayerManager, action.playerAccount),
+        createActionsForPublish(actionLaunchSilo, modelPlayerManager, action.playerAccount),
         actionLaunchSilo
 end
 
@@ -960,7 +908,7 @@ local function translateBuildModelTile(action, modelScene)
             path       = translatedPath,
         }
         return actionWait,
-            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            createActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
             actionWait
     end
 
@@ -972,7 +920,7 @@ local function translateBuildModelTile(action, modelScene)
         launchUnitID = launchUnitID,
     }
     return actionBuildModelTile,
-        generateActionsForPublish(actionBuildModelTile, modelPlayerManager, action.playerAccount),
+        createActionsForPublish(actionBuildModelTile, modelPlayerManager, action.playerAccount),
         actionBuildModelTile
 end
 
@@ -1010,7 +958,7 @@ local function translateProduceModelUnitOnTile(action, modelScene)
         cost          = cost, -- the cost can be calculated by the clients, but that calculations can be eliminated by sending the cost to clients.
     }
     return actionProduceModelUnitOnTile,
-        generateActionsForPublish(actionProduceModelUnitOnTile),
+        createActionsForPublish(actionProduceModelUnitOnTile),
         actionProduceModelUnitOnTile
 end
 
@@ -1045,7 +993,7 @@ local function translateProduceModelUnitOnUnit(action, modelScene)
         cost        = cost,
     }
     return actionProduceModelUnitOnUnit,
-        generateActionsForPublish(actionProduceModelUnitOnUnit, modelPlayerManager, action.playerAccount),
+        createActionsForPublish(actionProduceModelUnitOnUnit, modelPlayerManager, action.playerAccount),
         actionProduceModelUnitOnUnit
 end
 
@@ -1075,7 +1023,7 @@ local function translateSupplyModelUnit(action, modelScene)
             path       = translatedPath,
         }
         return actionWait,
-            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            createActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
             actionWait
     end
 
@@ -1087,7 +1035,7 @@ local function translateSupplyModelUnit(action, modelScene)
         launchUnitID = launchUnitID,
     }
     return actionSupplyModelUnit,
-        generateActionsForPublish(actionSupplyModelUnit, modelScene:getModelPlayerManager(), action.playerAccount),
+        createActionsForPublish(actionSupplyModelUnit, modelScene:getModelPlayerManager(), action.playerAccount),
         actionSupplyModelUnit
 end
 
@@ -1122,7 +1070,7 @@ local function translateLoadModelUnit(action, modelScene)
             path       = translatedPath,
         }
         return actionWait,
-            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            createActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
             actionWait
     end
 
@@ -1134,7 +1082,7 @@ local function translateLoadModelUnit(action, modelScene)
         launchUnitID = launchUnitID,
     }
     return actionLoadModelUnit,
-        generateActionsForPublish(actionLoadModelUnit, modelScene:getModelPlayerManager(), action.playerAccount),
+        createActionsForPublish(actionLoadModelUnit, modelScene:getModelPlayerManager(), action.playerAccount),
         actionLoadModelUnit
 end
 
@@ -1169,7 +1117,7 @@ local function translateDropModelUnit(action, modelScene)
             path       = translatedPath,
         }
         return actionWait,
-            generateActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            createActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
             actionWait
     end
 
@@ -1182,7 +1130,7 @@ local function translateDropModelUnit(action, modelScene)
         launchUnitID     = launchUnitID,
     }
     return actionDropModelUnit,
-        generateActionsForPublish(actionDropModelUnit, modelPlayerManager, action.playerAccount),
+        createActionsForPublish(actionDropModelUnit, modelPlayerManager, action.playerAccount),
         actionDropModelUnit
 end
 
