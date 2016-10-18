@@ -627,37 +627,8 @@ local function translatePath(path, launchUnitID, modelSceneWar)
     end
 
     translatedPath.fuelConsumption = totalFuelConsumption
-    translatedPath.revealedUnits   = VisibilityFunctions.getRevealedUnitsDataWithGridIndex(translatedPath[#translatedPath], sceneWarFileName, playerIndexInTurn)
 
     return translatedPath
-end
-
-local function translateWait(action, modelScene)
-    local rawPath, launchUnitID        = action.path, action.launchUnitID
-    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
-    local sceneWarFileName             = modelScene:getFileName()
-    if (not translatedPath) then
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
-    end
-
-    local existingModelUnit = modelScene:getModelWarField():getModelUnitMap():getModelUnit(rawPath[#rawPath])
-    local playerIndex       = getModelTurnManager(sceneWarFileName):getPlayerIndex()
-    if ((#rawPath ~= 1)                                                         and
-        (existingModelUnit)                                                     and
-        (isModelUnitVisible(existingModelUnit, sceneWarFileName, playerIndex))) then
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
-    end
-
-    local actionWait = {
-        actionName   = "Wait",
-        actionID     = action.actionID,
-        fileName     = sceneWarFileName,
-        path         = translatedPath,
-        launchUnitID = launchUnitID,
-    }
-    return actionWait,
-        createActionsForPublish(actionWait, modelScene:getModelPlayerManager(), action.playerAccount),
-        actionWait
 end
 
 local function translateAttack(action, modelScene)
@@ -1037,6 +1008,35 @@ local function translateSupplyModelUnit(action, modelScene)
     return actionSupplyModelUnit,
         createActionsForPublish(actionSupplyModelUnit, modelScene:getModelPlayerManager(), action.playerAccount),
         actionSupplyModelUnit
+end
+
+local function translateWait(action, modelScene)
+    local rawPath, launchUnitID        = action.path, action.launchUnitID
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
+    local sceneWarFileName             = modelScene:getFileName()
+    if (not translatedPath) then
+        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
+    end
+
+    local existingModelUnit = modelScene:getModelWarField():getModelUnitMap():getModelUnit(rawPath[#rawPath])
+    local playerIndex       = getModelTurnManager(sceneWarFileName):getPlayerIndex()
+    if ((#rawPath ~= 1)                                                         and
+        (existingModelUnit)                                                     and
+        (isModelUnitVisible(existingModelUnit, sceneWarFileName, playerIndex))) then
+        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
+    end
+
+    local actionWait = {
+        actionName    = "Wait",
+        actionID      = action.actionID,
+        fileName      = sceneWarFileName,
+        path          = translatedPath,
+        launchUnitID  = launchUnitID,
+        revealedUnits = VisibilityFunctions.getRevealedUnitsDataWithGridIndex(translatedPath[#translatedPath], sceneWarFileName, playerIndex)
+    }
+    return actionWait,
+        createActionsForPublish(actionWait, modelScene:getModelPlayerManager(), action.playerAccount),
+        actionWait
 end
 
 local function translateLoadModelUnit(action, modelScene)
