@@ -27,6 +27,10 @@ end
 -- The private functions that create actions for publish.
 --------------------------------------------------------------------------------
 local creators = {}
+creators.createActionForActivateSkillGroup = function(action, targetPlayerIndex)
+    return TableFunctions.clone(action, {"revealedUnits"})
+end
+
 creators.createActionForDive = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线完整广播到目标客户端（除非移动前后都对目标玩家不可见）。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
@@ -58,6 +62,30 @@ creators.createActionForDive = function(action, targetPlayerIndex)
             return actionForPublish
         end
     end
+end
+
+creators.createActionForJoinModelUnit = function(action, targetPlayerIndex)
+    -- 为简单起见，目前的代码实现会把移动路线，包括合流的两个部队的数据完整广播到目标客户端（不管对目标玩家是否可见）。客户端自行判断在移动过程中是否隐藏该部队。
+    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除，同时需要计算相关结果数据一并传送（如合流收入）。
+    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
+
+    local sceneWarFileName    = action.fileName
+    local path                = action.path
+    local modelUnitMap        = getModelUnitMap(sceneWarFileName)
+    local beginningGridIndex  = path[1]
+    local endingGridIndex     = path[#path]
+    local focusModelUnit      = modelUnitMap:getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local joiningModelUnit    = modelUnitMap:getModelUnit(endingGridIndex)
+    local unitPlayerIndex     = focusModelUnit:getPlayerIndex()
+
+    local actionForPublish = TableFunctions.clone(action, {"revealedUnits"})
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), unitPlayerIndex, targetPlayerIndex)) then
+        actionForPublish.focusUnitData = focusModelUnit:toSerializableTable()
+    end
+    if (not isUnitVisible(sceneWarFileName, endingGridIndex, isModelUnitDiving(joiningModelUnit), unitPlayerIndex, targetPlayerIndex)) then
+        actionForPublish.joiningUnitData = joiningModelUnit:toSerializableTable()
+    end
+    return actionForPublish
 end
 
 creators.createActionForProduceModelUnitOnTile = function(action, playerIndex)
