@@ -943,6 +943,53 @@ local function translateLaunchSilo(action, modelScene)
         actionLaunchSilo
 end
 
+local function translateLoadModelUnit(action, modelScene)
+    local rawPath, launchUnitID        = action.path, action.launchUnitID
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
+    local sceneWarFileName             = modelScene:getFileName()
+    if (not translatedPath) then
+        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
+    end
+
+    local modelWarField   = modelScene:getModelWarField()
+    local modelUnitMap    = modelWarField:getModelUnitMap()
+    local focusModelUnit  = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
+    local destination     = rawPath[#rawPath]
+    local loaderModelUnit = modelUnitMap:getModelUnit(destination)
+    local tileType        = modelWarField:getModelTileMap():getModelTile(destination):getTileType()
+    if ((#rawPath == 1)                                                   or
+        (not loaderModelUnit)                                             or
+        (not loaderModelUnit.canLoadModelUnit)                            or
+        (not loaderModelUnit:canLoadModelUnit(focusModelUnit, tileType))) then
+        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
+    end
+
+    local modelPlayerManager = modelScene:getModelPlayerManager()
+    local actionID           = action.actionID
+    if (translatedPath.isBlocked) then
+        local actionWait = {
+            actionName = "Wait",
+            actionID   = actionID,
+            fileName   = sceneWarFileName,
+            path       = translatedPath,
+        }
+        return actionWait,
+            createActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
+            actionWait
+    end
+
+    local actionLoadModelUnit = {
+        actionName   = "LoadModelUnit",
+        actionID     = actionID,
+        fileName     = sceneWarFileName,
+        path         = translatedPath,
+        launchUnitID = launchUnitID,
+    }
+    return actionLoadModelUnit,
+        createActionsForPublish(actionLoadModelUnit, modelScene:getModelPlayerManager(), action.playerAccount),
+        actionLoadModelUnit
+end
+
 local function translateBuildModelTile(action, modelScene)
     local rawPath, launchUnitID        = action.path, action.launchUnitID
     local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
@@ -1072,38 +1119,37 @@ local function translateSupplyModelUnit(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
     end
 
-    local modelUnitMap      = modelScene:getModelWarField():getModelUnitMap()
-    local focusModelUnit    = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
-    local existingModelUnit = modelUnitMap:getModelUnit(rawPath[#rawPath])
-    if (((#rawPath ~= 1) and (existingModelUnit) and (isModelUnitVisible(existingModelUnit, sceneWarFileName, focusModelUnit:getPlayerIndex()))) or
-        (not canDoActionSupplyModelUnit(focusModelUnit, rawPath[#rawPath], modelUnitMap)))                                                       then
+    local playerIndexInTurn  = modelScene:getModelTurnManager():getPlayerIndex()
+    local modelUnitMap       = modelScene:getModelWarField():getModelUnitMap()
+    local focusModelUnit     = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
+    local rawEndingGridIndex = rawPath[#rawPath]
+    local existingModelUnit  = modelUnitMap:getModelUnit(rawEndingGridIndex)
+    if (((#rawPath ~= 1) and (existingModelUnit) and (isUnitVisible(sceneWarFileName, rawEndingGridIndex, isModelUnitDiving(existingModelUnit), existingModelUnit:getPlayerIndex(), playerIndexInTurn))) or
+        (not canDoActionSupplyModelUnit(focusModelUnit, rawEndingGridIndex, modelUnitMap)))                                                                                                              then
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
-    local modelPlayerManager = modelScene:getModelPlayerManager()
-    local actionID           = action.actionID
     if (translatedPath.isBlocked) then
         local actionWait = {
-            actionName = "Wait",
-            actionID   = actionID,
-            fileName   = sceneWarFileName,
-            path       = translatedPath,
+            actionName    = "Wait",
+            actionID      = action.actionID,
+            fileName      = sceneWarFileName,
+            path          = translatedPath,
+            launchUnitID  = launchUnitID,
+            revealedUnits = getRevealedUnitsData(translatedPath[#translatedPath], sceneWarFileName, playerIndexInTurn)
         }
-        return actionWait,
-            createActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
-            actionWait
+        return actionWait, createActionsForPublish(actionWait), actionWait
     end
 
     local actionSupplyModelUnit = {
-        actionName   = "SupplyModelUnit",
-        actionID     = actionID,
-        fileName     = sceneWarFileName,
-        path         = translatedPath,
-        launchUnitID = launchUnitID,
+        actionName    = "SupplyModelUnit",
+        actionID      = action.actionID,
+        fileName      = sceneWarFileName,
+        path          = translatedPath,
+        launchUnitID  = launchUnitID,
+        revealedUnits = getRevealedUnitsData(translatedPath[#translatedPath], sceneWarFileName, playerIndexInTurn)
     }
-    return actionSupplyModelUnit,
-        createActionsForPublish(actionSupplyModelUnit, modelScene:getModelPlayerManager(), action.playerAccount),
-        actionSupplyModelUnit
+    return actionSupplyModelUnit, createActionsForPublish(actionSupplyModelUnit), actionSupplyModelUnit
 end
 
 local function translateSurface(action, modelScene)
@@ -1127,11 +1173,11 @@ local function translateSurface(action, modelScene)
 
     if (translatedPath.isBlocked) then
         local actionWait = {
-            actionName   = "Wait",
-            actionID     = action.actionID,
-            fileName     = sceneWarFileName,
-            path         = translatedPath,
-            launchUnitID = launchUnitID,
+            actionName    = "Wait",
+            actionID      = action.actionID,
+            fileName      = sceneWarFileName,
+            path          = translatedPath,
+            launchUnitID  = launchUnitID,
             revealedUnits = getRevealedUnitsData(translatedPath[#translatedPath], sceneWarFileName, playerIndexInTurn)
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
@@ -1173,53 +1219,6 @@ local function translateWait(action, modelScene)
         revealedUnits = getRevealedUnitsData(translatedPath[#translatedPath], sceneWarFileName, playerIndex)
     }
     return actionWait, createActionsForPublish(actionWait), actionWait
-end
-
-local function translateLoadModelUnit(action, modelScene)
-    local rawPath, launchUnitID        = action.path, action.launchUnitID
-    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
-    local sceneWarFileName             = modelScene:getFileName()
-    if (not translatedPath) then
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
-    end
-
-    local modelWarField   = modelScene:getModelWarField()
-    local modelUnitMap    = modelWarField:getModelUnitMap()
-    local focusModelUnit  = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
-    local destination     = rawPath[#rawPath]
-    local loaderModelUnit = modelUnitMap:getModelUnit(destination)
-    local tileType        = modelWarField:getModelTileMap():getModelTile(destination):getTileType()
-    if ((#rawPath == 1)                                                   or
-        (not loaderModelUnit)                                             or
-        (not loaderModelUnit.canLoadModelUnit)                            or
-        (not loaderModelUnit:canLoadModelUnit(focusModelUnit, tileType))) then
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
-    end
-
-    local modelPlayerManager = modelScene:getModelPlayerManager()
-    local actionID           = action.actionID
-    if (translatedPath.isBlocked) then
-        local actionWait = {
-            actionName = "Wait",
-            actionID   = actionID,
-            fileName   = sceneWarFileName,
-            path       = translatedPath,
-        }
-        return actionWait,
-            createActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
-            actionWait
-    end
-
-    local actionLoadModelUnit = {
-        actionName   = "LoadModelUnit",
-        actionID     = actionID,
-        fileName     = sceneWarFileName,
-        path         = translatedPath,
-        launchUnitID = launchUnitID,
-    }
-    return actionLoadModelUnit,
-        createActionsForPublish(actionLoadModelUnit, modelScene:getModelPlayerManager(), action.playerAccount),
-        actionLoadModelUnit
 end
 
 --------------------------------------------------------------------------------
