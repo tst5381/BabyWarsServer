@@ -80,6 +80,25 @@ creators.createActionForJoinModelUnit = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
+creators.createActionForLoadModelUnit = function(action, targetPlayerIndex)
+    -- 为简单起见，目前的代码实现会把移动路线完整广播到目标客户端（除非移动前后都对目标玩家不可见）。客户端自行判断在移动过程中是否隐藏该部队。
+    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
+    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
+
+    local sceneWarFileName   = action.fileName
+    local path               = action.path
+    local beginningGridIndex = path[1]
+    local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
+
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.focusUnitData = generateUnitDataForPublish(sceneWarFileName, focusModelUnit)
+    end
+    -- 不需要传送装载行动单位的单位的数据，因为如果装载前不可见，那么装载后依然不可见。
+
+    return actionForPublish
+end
+
 creators.createActionForProduceModelUnitOnTile = function(action, playerIndex)
     -- 生产了新部队后，生产者自己可能会发现隐藏的敌方部队revealedUnits，但这对生产者以外的玩家都是不可知的，因此广播的action必须删除这些数据。
     local isDiving        = (getUnitTypeWithTiledId(action.tiledID) == "Submarine")
@@ -136,6 +155,10 @@ creators.createActionForSurface = function(action, targetPlayerIndex)
     end
 
     return actionForPublish
+end
+
+creators.createActionForSurrender = function(action, targetPlayerIndex)
+    return action
 end
 
 creators.createActionForWait = function(action, targetPlayerIndex)

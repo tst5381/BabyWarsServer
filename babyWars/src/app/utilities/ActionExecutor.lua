@@ -888,24 +888,47 @@ local function executeLaunchSilo(action)
 end
 
 local function executeLoadModelUnit(action)
-    local path             = action.path
-    local sceneWarFileName = action.fileName
-    local modelUnitMap     = getModelUnitMap(sceneWarFileName)
-    local focusModelUnit   = modelUnitMap:getFocusModelUnit(path[1], action.launchUnitID)
-    local loaderModelUnit  = modelUnitMap:getModelUnit(path[#path])
+    if (not IS_SERVER) then
+        addActorUnitWithUnitData(action.focusUnitData, false)
+    end
+
+    local sceneWarFileName   = action.fileName
+    local path               = action.path
+    local beginningGridIndex = path[1]
+    local endingGridIndex    = path[#path]
+    local modelUnitMap       = getModelUnitMap(sceneWarFileName)
+    local focusModelUnit     = modelUnitMap:getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local loaderModelUnit    = modelUnitMap:getModelUnit(endingGridIndex)
 
     moveModelUnitWithAction(action)
-    loaderModelUnit:addLoadUnitId(focusModelUnit:getUnitId())
-
     focusModelUnit:setStateActioned()
-        :moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
+    if (loaderModelUnit) then
+        loaderModelUnit:addLoadUnitId(focusModelUnit:getUnitId())
+    end
+
+    if (IS_SERVER) then
+        getModelScene(sceneWarFileName):setExecutingAction(false)
+    else
+        local revealedUnits = action.revealedUnits
+        addActorUnitsOnMapWithRevealedUnits(revealedUnits, false)
+        local removedModelUnits = removeHiddenActorUnitOnMapAfterAction(beginningGridIndex, endingGridIndex)
+
+        focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
             focusModelUnit:updateView()
                 :showNormalAnimation()
                 :setViewVisible(false)
-            loaderModelUnit:updateView()
+            if (loaderModelUnit) then
+                loaderModelUnit:updateView()
+            end
+
+            setRevealedUnitsVisible(revealedUnits, true)
+            for _, removedModelUnit in pairs(removedModelUnits or {}) do
+                removedModelUnit:removeViewFromParent()
+            end
 
             getModelScene(sceneWarFileName):setExecutingAction(false)
         end)
+    end
 end
 
 local function executeProduceModelUnitOnTile(action)
@@ -1105,11 +1128,10 @@ local function executeWait(action)
     end
 
     local sceneWarFileName   = action.fileName
-    local launchUnitID       = action.launchUnitID
     local path               = action.path
     local beginningGridIndex = path[1]
     local endingGridIndex    = path[#path]
-    local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, launchUnitID)
+    local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
     moveModelUnitWithAction(action)
     focusModelUnit:setStateActioned()
 
