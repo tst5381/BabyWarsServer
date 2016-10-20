@@ -23,6 +23,13 @@ local function isModelUnitDiving(modelUnit)
     return (modelUnit.isDiving) and (modelUnit:isDiving())
 end
 
+local function generateUnitDataForPublish(sceneWarFileName, modelUnit)
+    local data    = modelUnit:toSerializableTable()
+    data.isLoaded = getModelUnitMap(sceneWarFileName):getLoadedModelUnitWithUnitId(modelUnit:getUnitId()) ~= nil
+
+    return data
+end
+
 --------------------------------------------------------------------------------
 -- The private functions that create actions for publish.
 --------------------------------------------------------------------------------
@@ -32,7 +39,7 @@ creators.createActionForActivateSkillGroup = function(action, targetPlayerIndex)
 end
 
 creators.createActionForDive = function(action, targetPlayerIndex)
-    -- 为简单起见，目前的代码实现会把移动路线完整广播到目标客户端（除非移动前后都对目标玩家不可见）。客户端自行判断在移动过程中是否隐藏该部队。
+    -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
@@ -40,28 +47,13 @@ creators.createActionForDive = function(action, targetPlayerIndex)
     local path               = action.path
     local beginningGridIndex = path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-    local unitPlayerIndex    = focusModelUnit:getPlayerIndex()
+    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
 
-    if (isUnitVisible(sceneWarFileName, beginningGridIndex, false, unitPlayerIndex, targetPlayerIndex)) then
-        -- 行动单位在移动前对目标玩家可见，那么不需要传送该单位的数据给客户端。
-        -- 移动后，该单位可能会从目标玩家的视野中消失，但服务器无法干涉，只能由客户端自行删除相应内存数据。
-        return TableFunctions.clone(action, {"revealedUnits"})
-    else
-        -- 行动单位在移动前对目标玩家不可见。
-        if (not isUnitVisible(sceneWarFileName, path[#path], true, unitPlayerIndex, targetPlayerIndex)) then
-            -- 移动后依然不可见，只需要广播一条TickActionId消息即可。
-            return {
-                actionName = "TickActionId",
-                actionID   = action.actionID,
-                fileName   = sceneWarFileName,
-            }
-        else
-            -- 移动后可见，那么需要发送行动单位的数据给客户端。
-            local actionForPublish = TableFunctions.clone(action, {"revealedUnits"})
-            actionForPublish.focusUnitData = focusModelUnit:toSerializableTable()
-            return actionForPublish
-        end
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.focusUnitData = generateUnitDataForPublish(sceneWarFileName, focusModelUnit)
     end
+
+    return actionForPublish
 end
 
 creators.createActionForJoinModelUnit = function(action, targetPlayerIndex)
@@ -80,10 +72,10 @@ creators.createActionForJoinModelUnit = function(action, targetPlayerIndex)
 
     local actionForPublish = TableFunctions.clone(action, {"revealedUnits"})
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), unitPlayerIndex, targetPlayerIndex)) then
-        actionForPublish.focusUnitData = focusModelUnit:toSerializableTable()
+        actionForPublish.focusUnitData = generateUnitDataForPublish(sceneWarFileName, focusModelUnit)
     end
     if (not isUnitVisible(sceneWarFileName, endingGridIndex, isModelUnitDiving(joiningModelUnit), unitPlayerIndex, targetPlayerIndex)) then
-        actionForPublish.joiningUnitData = joiningModelUnit:toSerializableTable()
+        actionForPublish.joiningUnitData = generateUnitDataForPublish(sceneWarFileName, joiningModelUnit)
     end
     return actionForPublish
 end
@@ -118,53 +110,18 @@ creators.createActionForSupplyModelUnit = function(action, targetPlayerIndex)
     local sceneWarFileName   = action.fileName
     local path               = action.path
     local beginningGridIndex = path[1]
-    local endingGridIndex    = path[#path]
-    local modelUnitMap       = getModelUnitMap(sceneWarFileName)
-    local focusModelUnit     = modelUnitMap:getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-    local unitPlayerIndex    = focusModelUnit:getPlayerIndex()
-    local isDiving           = (focusModelUnit.isDiving) and (focusModelUnit:isDiving())
+    local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
 
-    if (isUnitVisible(sceneWarFileName, beginningGridIndex, isDiving, unitPlayerIndex, targetPlayerIndex)) then
-        -- 行动单位在移动前对目标玩家可见，那么不需要传送该单位的数据给客户端。
-        -- 移动后，该单位可能会从目标玩家的视野中消失，但服务器无法干涉，只能由客户端自行删除相应内存数据。
-        return TableFunctions.clone(action, {"revealedUnits"})
-    else
-        -- 行动单位在移动前对目标玩家不可见。
-        if (isUnitVisible(sceneWarFileName, endingGridIndex, isDiving, unitPlayerIndex, targetPlayerIndex)) then
-            -- 移动后可见，那么需要发送行动单位的数据给客户端。
-            local actionForPublish = TableFunctions.clone(action, {"revealedUnits"})
-            actionForPublish.focusUnitData = focusModelUnit:toSerializableTable()
-            return actionForPublish
-        else
-            -- 移动后依然不可见，那么需要判断接受补给的单位对目标玩家是否可见。
-            for _, adjacentGridIndex in pairs(getAdjacentGrids(endingGridIndex, modelUnitMap:getMapSize())) do
-                local adjacentModelUnit = modelUnitMap:getModelUnit(adjacentGridIndex)
-                if ((adjacentModelUnit)                                                                                                                                and
-                    (focusModelUnit:canSupplyModelUnit(adjacentModelUnit))                                                                                             and
-                    (isUnitVisible(sceneWarFileName, adjacentGridIndex, isModelUnitDiving(adjacentModelUnit), adjacentModelUnit:getPlayerIndex(), targetPlayerIndex))) then
-                    --如果有至少一个可见，那么返回补给action，但隐藏行动单位的数据。
-                    return {
-                        actionName        = "SupplyModelUnit",
-                        actionID          = action.actionID,
-                        launchUnitID      = action.launchUnitID,
-                        fileName          = sceneWarFileName,
-                        supplierGridIndex = endingGridIndex,
-                    }
-                end
-            end
-
-            -- 所有接受补给的单位对目标玩家都不可见，则只广播TickActionId。
-            return {
-                actionName = "TickActionId",
-                actionID   = action.actionID,
-                fileName   = sceneWarFileName,
-            }
-        end
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.focusUnitData = generateUnitDataForPublish(sceneWarFileName, focusModelUnit)
     end
+
+    return actionForPublish
 end
 
 creators.createActionForSurface = function(action, targetPlayerIndex)
-    -- 为简单起见，目前的代码实现会把移动路线完整广播到目标客户端（除非移动前后都对目标玩家不可见）。客户端自行判断在移动过程中是否隐藏该部队。
+    -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
@@ -172,28 +129,13 @@ creators.createActionForSurface = function(action, targetPlayerIndex)
     local path               = action.path
     local beginningGridIndex = path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-    local unitPlayerIndex    = focusModelUnit:getPlayerIndex()
+    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
 
-    if (isUnitVisible(sceneWarFileName, beginningGridIndex, true, unitPlayerIndex, targetPlayerIndex)) then
-        -- 行动单位在移动前对目标玩家可见，那么不需要传送该单位的数据给客户端。
-        -- 移动后，该单位可能会从目标玩家的视野中消失，但服务器无法干涉，只能由客户端自行删除相应内存数据。
-        return TableFunctions.clone(action, {"revealedUnits"})
-    else
-        -- 行动单位在移动前对目标玩家不可见。
-        if (not isUnitVisible(sceneWarFileName, path[#path], false, unitPlayerIndex, targetPlayerIndex)) then
-            -- 移动后依然不可见，只需要广播一条TickActionId消息即可。
-            return {
-                actionName = "TickActionId",
-                actionID   = action.actionID,
-                fileName   = sceneWarFileName,
-            }
-        else
-            -- 移动后可见，那么需要发送行动单位的数据给客户端。
-            local actionForPublish = TableFunctions.clone(action, {"revealedUnits"})
-            actionForPublish.focusUnitData = focusModelUnit:toSerializableTable()
-            return actionForPublish
-        end
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.focusUnitData = generateUnitDataForPublish(sceneWarFileName, focusModelUnit)
     end
+
+    return actionForPublish
 end
 
 creators.createActionForWait = function(action, targetPlayerIndex)
@@ -205,29 +147,13 @@ creators.createActionForWait = function(action, targetPlayerIndex)
     local path               = action.path
     local beginningGridIndex = path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-    local unitPlayerIndex    = focusModelUnit:getPlayerIndex()
-    local isDiving           = (focusModelUnit.isDiving) and (focusModelUnit:isDiving())
+    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
 
-    if (isUnitVisible(sceneWarFileName, beginningGridIndex, isDiving, unitPlayerIndex, targetPlayerIndex)) then
-        -- 行动单位在移动前对目标玩家可见，那么不需要传送该单位的数据给客户端。
-        -- 移动后，该单位可能会从目标玩家的视野中消失，但服务器无法干涉，只能由客户端自行删除相应内存数据。
-        return TableFunctions.clone(action, {"revealedUnits"})
-    else
-        -- 行动单位在移动前对目标玩家不可见。
-        if (not isUnitVisible(sceneWarFileName, path[#path], isDiving, unitPlayerIndex, targetPlayerIndex)) then
-            -- 移动后依然不可见，只需要广播一条TickActionId消息即可。
-            return {
-                actionName = "TickActionId",
-                actionID   = action.actionID,
-                fileName   = sceneWarFileName,
-            }
-        else
-            -- 移动后可见，那么需要发送行动单位的数据给客户端。
-            local actionForPublish = TableFunctions.clone(action, {"revealedUnits"})
-            actionForPublish.focusUnitData = focusModelUnit:toSerializableTable()
-            return actionForPublish
-        end
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.focusUnitData = generateUnitDataForPublish(sceneWarFileName, focusModelUnit)
     end
+
+    return actionForPublish
 end
 
 creators.createActionForOthers = function(action, playerIndex)
