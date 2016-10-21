@@ -9,6 +9,7 @@ local LocalizationFunctions  = require("src.app.utilities.LocalizationFunctions"
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
 local SingletonGetters       = require("src.app.utilities.SingletonGetters")
 local SkillModifierFunctions = require("src.app.utilities.SkillModifierFunctions")
+local TableFunctions         = require("src.app.utilities.TableFunctions")
 local VisibilityFunctions    = require("src.app.utilities.VisibilityFunctions")
 local Actor                  = require("src.global.actors.Actor")
 
@@ -17,6 +18,7 @@ local IS_SERVER             = GameConstantFunctions.isServer()
 local WebSocketManager      = (not IS_SERVER) and (require("src.app.utilities.WebSocketManager")) or (nil)
 local ActorManager          = (not IS_SERVER) and (require("src.global.actors.ActorManager"))     or (nil)
 
+local appendList               = TableFunctions.appendList
 local getAdjacentGrids         = GridIndexFunctions.getAdjacentGrids
 local getLocalizedText         = LocalizationFunctions.getLocalizedText
 local getModelGridEffect       = SingletonGetters.getModelGridEffect
@@ -438,11 +440,12 @@ local function executeAttack(action)
         dispatchEvtModelPlayerUpdated(sceneWarFileName, attackerModelPlayer, attacker:getPlayerIndex())
     end
 
-    local attackerNewHP = math.max(0, attacker:getCurrentHP() - (counterDamage or 0))
+    local destroyedModelUnits = {}
+    local attackerNewHP       = math.max(0, attacker:getCurrentHP() - (counterDamage or 0))
     attacker:setCurrentHP(attackerNewHP)
     if (attackerNewHP == 0) then
         attackTarget:setCurrentPromotion(math.min(attackTarget:getMaxPromotion(), attackTarget:getCurrentPromotion() + 1))
-        Destroyers.destroyModelUnitWithGridIndex(sceneWarFileName, attackerGridIndex, false)
+        appendList(destroyedModelUnits, Destroyers.destroyActorUnitOnMap(sceneWarFileName, attackerGridIndex, false))
     end
 
     local plasmaGridIndexes
@@ -451,7 +454,7 @@ local function executeAttack(action)
     if (targetNewHP == 0) then
         if (attackTarget.getUnitType) then
             attacker:setCurrentPromotion(math.min(attacker:getMaxPromotion(), attacker:getCurrentPromotion() + 1))
-            Destroyers.destroyModelUnitWithGridIndex(sceneWarFileName, targetGridIndex, false)
+            appendList(destroyedModelUnits, Destroyers.destroyActorUnitOnMap(sceneWarFileName, targetGridIndex, false))
         else
             attackTarget:updateWithObjectAndBaseId(0)
             plasmaGridIndexes = getAdjacentPlasmaGridIndexes(targetGridIndex, modelTileMap)
@@ -468,9 +471,14 @@ local function executeAttack(action)
             :showNormalAnimation()
         attackTarget:updateView()
 
+        if (not IS_SERVER) then
+            for _, destroyedModelUnit in pairs(destroyedModelUnits) do
+                destroyedModelUnit:removeViewFromParent()
+            end
+        end
+
         if (attackerNewHP == 0) then
             dispatchEvtDestroyViewUnit(sceneWarFileName, attackerGridIndex)
-            attacker:removeViewFromParent()
         elseif ((counterDamage) and (targetNewHP > 0)) then
             dispatchEvtAttackViewUnit(sceneWarFileName, attackerGridIndex)
         end
@@ -478,7 +486,6 @@ local function executeAttack(action)
         if (targetNewHP == 0) then
             if (attackTarget.getUnitType) then
                 dispatchEvtDestroyViewUnit(sceneWarFileName, targetGridIndex)
-                attackTarget:removeViewFromParent()
             else
                 dispatchEvtDestroyViewTile(sceneWarFileName, targetGridIndex)
                 attackTarget:updateView()
