@@ -30,11 +30,9 @@ local function generateSingleUnitDataForPublish(modelUnitMap, modelUnit)
     return data
 end
 
-local function generateUnitsDataForPublish(sceneWarFileName, gridIndex)
+local function generateUnitsDataForPublish(sceneWarFileName, modelUnit)
     local modelUnitMap = getModelUnitMap(sceneWarFileName)
-    local modelUnit    = modelUnitMap:getModelUnit(gridIndex)
     local data         = {[modelUnit:getUnitId()] = generateSingleUnitDataForPublish(modelUnitMap, modelUnit)}
-
     for _, loadedModelUnit in pairs(modelUnitMap:getLoadedModelUnitsWithLoader(modelUnit, true) or {}) do
         data[loadedModelUnit:getUnitId()] = generateSingleUnitDataForPublish(modelUnitMap, loadedModelUnit)
     end
@@ -56,13 +54,12 @@ creators.createActionForDive = function(action, targetPlayerIndex)
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
     local sceneWarFileName   = action.fileName
-    local path               = action.path
-    local beginningGridIndex = path[1]
+    local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
     local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
 
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, beginningGridIndex)
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
 
     return actionForPublish
@@ -85,10 +82,10 @@ creators.createActionForJoinModelUnit = function(action, targetPlayerIndex)
     local actionForPublish = TableFunctions.clone(action, {"revealedUnits"})
     local actingUnitsData
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), unitPlayerIndex, targetPlayerIndex)) then
-        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(sceneWarFileName, beginningGridIndex))
+        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(sceneWarFileName, focusModelUnit))
     end
     if (not isUnitVisible(sceneWarFileName, endingGridIndex, isModelUnitDiving(joiningModelUnit), unitPlayerIndex, targetPlayerIndex)) then
-        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(sceneWarFileName, endingGridIndex))
+        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(sceneWarFileName, joiningModelUnit))
     end
     actionForPublish.actingUnitsData = actingUnitsData
 
@@ -101,23 +98,13 @@ creators.createActionForLoadModelUnit = function(action, targetPlayerIndex)
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
     local sceneWarFileName   = action.fileName
-    local path               = action.path
-    local beginningGridIndex = path[1]
-    local endingGridIndex    = path[#path]
-    local modelUnitMap       = getModelUnitMap(sceneWarFileName)
-    local focusModelUnit     = modelUnitMap:getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-    local loaderModelUnit    = modelUnitMap:getModelUnit(endingGridIndex)
-    local unitPlayerIndex    = focusModelUnit:getPlayerIndex()
+    local beginningGridIndex = action.path[1]
+    local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
-    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
-    local actingUnitsData
-    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), unitPlayerIndex, targetPlayerIndex)) then
-        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(sceneWarFileName, beginningGridIndex))
+    local actionForPublish = TableFunctions.clone(action, {"revealedUnits"})
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
-    if (not isUnitVisible(sceneWarFileName, endingGridIndex, isModelUnitDiving(loaderModelUnit), unitPlayerIndex, targetPlayerIndex)) then
-        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(sceneWarFileName, endingGridIndex))
-    end
-    actionForPublish.actingUnitsData = actingUnitsData
 
     return actionForPublish
 end
@@ -150,13 +137,12 @@ creators.createActionForSupplyModelUnit = function(action, targetPlayerIndex)
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
     local sceneWarFileName   = action.fileName
-    local path               = action.path
-    local beginningGridIndex = path[1]
+    local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
 
+    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, beginningGridIndex)
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
 
     return actionForPublish
@@ -168,13 +154,12 @@ creators.createActionForSurface = function(action, targetPlayerIndex)
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
     local sceneWarFileName   = action.fileName
-    local path               = action.path
-    local beginningGridIndex = path[1]
+    local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
 
+    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, beginningGridIndex)
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
 
     return actionForPublish
@@ -190,13 +175,12 @@ creators.createActionForWait = function(action, targetPlayerIndex)
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
     local sceneWarFileName   = action.fileName
-    local path               = action.path
-    local beginningGridIndex = path[1]
+    local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
 
+    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, beginningGridIndex)
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
 
     return actionForPublish
