@@ -940,31 +940,28 @@ local function translateLaunchSilo(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
-    local modelPlayerManager = modelScene:getModelPlayerManager()
-    local actionID           = action.actionID
     if (translatedPath.isBlocked) then
         local actionWait = {
-            actionName = "Wait",
-            actionID   = actionID,
-            fileName   = sceneWarFileName,
-            path       = translatedPath,
+            actionName    = "Wait",
+            actionID      = action.actionID,
+            fileName      = sceneWarFileName,
+            path          = translatedPath,
+            launchUnitID  = launchUnitID,
+            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
         }
-        return actionWait,
-            createActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
-            actionWait
+        return actionWait, createActionsForPublish(actionWait), actionWait
+    else
+        local actionLaunchSilo = {
+            actionName      = "LaunchSilo",
+            actionID        = action.actionID,
+            fileName        = sceneWarFileName,
+            path            = translatedPath,
+            targetGridIndex = targetGridIndex,
+            launchUnitID    = launchUnitID,
+            revealedUnits   = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+        }
+        return actionLaunchSilo, createActionsForPublish(actionLaunchSilo), actionLaunchSilo
     end
-
-    local actionLaunchSilo = {
-        actionName      = "LaunchSilo",
-        actionID        = actionID,
-        fileName        = sceneWarFileName,
-        path            = translatedPath,
-        targetGridIndex = targetGridIndex,
-        launchUnitID    = launchUnitID,
-    }
-    return actionLaunchSilo,
-        createActionsForPublish(actionLaunchSilo, modelPlayerManager, action.playerAccount),
-        actionLaunchSilo
 end
 
 local function translateLoadModelUnit(action, modelScene)

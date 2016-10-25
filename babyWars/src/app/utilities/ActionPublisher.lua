@@ -109,6 +109,23 @@ creators.createActionForJoinModelUnit = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
+creators.createActionForLaunchSilo = function(action, targetPlayerIndex)
+    -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
+    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
+    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
+
+    local sceneWarFileName   = action.fileName
+    local beginningGridIndex = action.path[1]
+    local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
+
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
+    end
+
+    return actionForPublish
+end
+
 creators.createActionForLoadModelUnit = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线完整广播到目标客户端（除非移动前后都对目标玩家不可见）。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。

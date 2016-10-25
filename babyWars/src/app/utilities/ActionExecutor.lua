@@ -892,6 +892,10 @@ local function executeJoinModelUnit(action)
 end
 
 local function executeLaunchSilo(action)
+    if (not IS_SERVER) then
+        addActorUnitsWithUnitsData(action.actingUnitsData, false)
+    end
+
     local path              = action.path
     local sceneWarFileName  = action.fileName
     local modelUnitMap      = getModelUnitMap(sceneWarFileName)
@@ -914,27 +918,34 @@ local function executeLaunchSilo(action)
             end
         end
     end
-
     focusModelUnit:setStateActioned()
-        :moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
+
+    if (IS_SERVER) then
+        getModelScene(sceneWarFileName):setExecutingAction(false)
+    else
+        local revealedUnits = action.revealedUnits
+        addActorUnitsOnMapWithRevealedUnits(revealedUnits, false)
+        local removedModelUnits = removeHiddenActorUnitsAfterAction(action)
+
+        focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
             focusModelUnit:updateView()
                 :showNormalAnimation()
             modelTile:updateView()
-
             for _, modelUnit in ipairs(targetModelUnits) do
                 modelUnit:updateView()
             end
 
-            local dispatcher = getScriptEventDispatcher(sceneWarFileName)
+            local modelGridEffect = getModelGridEffect()
             for _, gridIndex in ipairs(targetGridIndexes) do
-                dispatcher:dispatchEvent({
-                    name      = "EvtSiloAttackGrid",
-                    gridIndex = gridIndex,
-                })
+                modelGridEffect:showAnimationSiloAttack(gridIndex)
             end
+
+            setRevealedUnitsVisible(revealedUnits, true)
+            removeViewUnits(removedModelUnits)
 
             getModelScene(sceneWarFileName):setExecutingAction(false)
         end)
+    end
 end
 
 local function executeLoadModelUnit(action)
