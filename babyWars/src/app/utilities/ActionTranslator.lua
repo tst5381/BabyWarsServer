@@ -742,33 +742,30 @@ local function translateCaptureModelTile(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
-    local modelPlayerManager = modelScene:getModelPlayerManager()
-    local actionID           = action.actionID
     if (translatedPath.isBlocked) then
         local actionWait = {
-            actionName = "Wait",
-            actionID   = actionID,
-            fileName   = sceneWarFileName,
-            path       = translatedPath,
+            actionName    = "Wait",
+            actionID      = action.actionID,
+            fileName      = sceneWarFileName,
+            path          = translatedPath,
+            launchUnitID  = launchUnitID,
+            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
         }
-        return actionWait,
-            createActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
-            actionWait
+        return actionWait, createActionsForPublish(actionWait), actionWait
+    else
+        local actionCapture = {
+            actionName      = "CaptureModelTile",
+            actionID        = action.actionID,
+            fileName        = sceneWarFileName,
+            path            = translatedPath,
+            launchUnitID    = launchUnitID,
+            revealedUnits   = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            lostPlayerIndex = ((capturer:getCaptureAmount() >= captureTarget:getCurrentCapturePoint()) and (captureTarget:isDefeatOnCapture()))
+                and (captureTarget:getPlayerIndex())
+                or  (nil),
+        }
+        return actionCapture, createActionsForPublish(actionCapture), actionCapture
     end
-
-    local actionCapture     = {
-        actionName   = "CaptureModelTile",
-        actionID     = actionID,
-        fileName     = sceneWarFileName,
-        path         = translatedPath,
-        launchUnitID = launchUnitID,
-        lostPlayerIndex = ((capturer:getCaptureAmount() >= captureTarget:getCurrentCapturePoint()) and (captureTarget:isDefeatOnCapture()))
-            and (captureTarget:getPlayerIndex())
-            or  (nil),
-    }
-    return actionCapture,
-        createActionsForPublish(actionCapture, modelPlayerManager, action.playerAccount),
-        actionCapture
 end
 
 local function translateDive(action, modelScene)
