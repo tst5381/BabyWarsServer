@@ -30,6 +30,7 @@ local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions
 local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
 local SceneWarManager         = require("src.app.utilities.SceneWarManager")
 local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
+local SkillModifierFunctions  = require("src.app.utilities.SkillModifierFunctions")
 local SingletonGetters        = require("src.app.utilities.SingletonGetters")
 local TableFunctions          = require("src.app.utilities.TableFunctions")
 local VisibilityFunctions     = require("src.app.utilities.VisibilityFunctions")
@@ -92,10 +93,107 @@ local function countModelUnitOnMapWithPlayerIndex(modelUnitMap, playerIndex)
     return count
 end
 
-local function areAllUnitsOutOfFuelAndDestroyed(modelUnitMap, modelTileMap, playerIndex)
+local function getIncome(sceneWarFileName)
+    local playerIndex = getModelTurnManager(sceneWarFileName):getPlayerIndex()
+    local income      = 0
+    getModelTileMap(sceneWarFileName):forEachModelTile(function(modelTile)
+        if ((modelTile.getIncomeAmount) and (modelTile:getPlayerIndex() == playerIndex)) then
+            income = income + (modelTile:getIncomeAmount() or 0)
+        end
+    end)
+
+    return income
+end
+
+local function getRepairableModelUnits(sceneWarFileName)
+    local playerIndex  = getModelTurnManager(sceneWarFileName):getPlayerIndex()
+    local modelUnitMap = getModelUnitMap(sceneWarFileName)
+    local modelTileMap = getModelTileMap(sceneWarFileName)
+    local units        = {}
+
+    modelUnitMap:forEachModelUnitOnMap(function(modelUnit)
+            if (modelUnit:getPlayerIndex() == playerIndex) then
+                local modelTile = modelTileMap:getModelTile(modelUnit:getGridIndex())
+                if ((modelTile.canRepairTarget) and (modelTile:canRepairTarget(modelUnit))) then
+                    units[#units + 1] = modelUnit
+                end
+            end
+        end)
+        :forEachModelUnitLoaded(function(modelUnit)
+            if (modelUnit:getPlayerIndex() == playerIndex) then
+                local loader = modelUnitMap:getModelUnit(modelUnit:getGridIndex())
+                if ((loader:canRepairLoadedModelUnit()) and (loader:hasLoadUnitId(modelUnit:getUnitId()))) then
+                    units[#units + 1] = modelUnit
+                end
+            end
+        end)
+
+    table.sort(units, function(unit1, unit2)
+        local cost1, cost2 = unit1:getProductionCost(), unit2:getProductionCost()
+        return (cost1 > cost2)                                             or
+            ((cost1 == cost2) and (unit1:getUnitId() < unit2:getUnitId()))
+    end)
+
+    return units
+end
+
+local function getRepairAmountAndCost(modelUnit, fund, maxNormalizedRepairAmount, costModifier)
+    local productionCost         = math.floor(modelUnit:getProductionCost() * costModifier)
+    local normalizedCurrentHP    = modelUnit:getNormalizedCurrentHP()
+    local normalizedRepairAmount = math.min(
+        10 - normalizedCurrentHP,
+        maxNormalizedRepairAmount,
+        math.floor(fund * 10 / productionCost)
+    )
+
+    return (normalizedRepairAmount + normalizedCurrentHP) * 10 - modelUnit:getCurrentHP(),
+        math.floor(normalizedRepairAmount * productionCost / 10)
+end
+
+local function generateRepairData(sceneWarFileName, income)
+    local modelUnitMap              = getModelUnitMap(sceneWarFileName)
+    local modelPlayer               = getModelPlayerManager(sceneWarFileName):getModelPlayer(getModelTurnManager(sceneWarFileName):getPlayerIndex())
+    local skillConfiguration        = modelPlayer:getModelSkillConfiguration()
+    local fund                      = modelPlayer:getFund() + income
+    local maxNormalizedRepairAmount = GameConstantFunctions.getBaseNormalizedRepairAmount() + SkillModifierFunctions.getRepairAmountModifier(skillConfiguration)
+    local costModifier              = SkillModifierFunctions.getRepairCostModifier(skillConfiguration)
+    if (costModifier >= 0) then
+        costModifier = (100 + costModifier) / 100
+    else
+        costModifier = 100 / (100 - costModifier)
+    end
+
+    local onMapData  = {}
+    local loadedData = {}
+    for _, modelUnit in ipairs(getRepairableModelUnits(sceneWarFileName)) do
+        local repairAmount, repairCost = getRepairAmountAndCost(modelUnit, fund, maxNormalizedRepairAmount, costModifier)
+        local unitID                   = modelUnit:getUnitId()
+        if (modelUnitMap:getLoadedModelUnitWithUnitId(unitID)) then
+            loadedData[unitID] = {repairAmount = repairAmount}
+        else
+            onMapData[unitID] = {
+                repairAmount = repairAmount,
+                gridIndex    = modelUnit:getGridIndex(),
+            }
+        end
+        fund = fund - repairCost
+    end
+
+    return {
+        onMapData     = onMapData,
+        loadedData    = loadedData,
+        remainingFund = fund,
+    }
+end
+
+local function areAllUnitsOutOfFuelAndDestroyed(sceneWarFileName)
+    local playerIndex   = getModelTurnManager(sceneWarFileName):getPlayerIndex()
+    local modelTileMap  = getModelTileMap(sceneWarFileName)
+    local modelUnitMap  = getModelUnitMap(sceneWarFileName)
     local mapSize       = modelUnitMap:getMapSize()
     local width, height = mapSize.width, mapSize.height
     local hasUnit       = false
+
     for x = 1, width do
         for y = 1, height do
             local gridIndex = {x = x, y = y}
@@ -670,20 +768,18 @@ local function translateBeginTurn(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
-    local modelWarField   = modelScene:getModelWarField()
-    local modelUnitMap    = modelWarField:getModelUnitMap()
-    local modelTileMap    = modelWarField:getModelTileMap()
-    local playerIndex     = modelTurnManager:getPlayerIndex()
-    local turnIndex       = modelTurnManager:getTurnIndex()
+    local income          = getIncome(sceneWarFileName)
     local actionBeginTurn = {
-        actionName      = "BeginTurn",
-        actionID        = action.actionID,
-        fileName        = sceneWarFileName,
-        lostPlayerIndex = ((turnIndex > 1) and (areAllUnitsOutOfFuelAndDestroyed(modelUnitMap, modelTileMap, playerIndex)))
-            and (playerIndex)
-            or (nil),
+        actionName = "BeginTurn",
+        actionID   = action.actionID,
+        fileName   = sceneWarFileName,
     }
-
+    if (modelTurnManager:getTurnIndex() == 1) then
+        actionBeginTurn.income = income
+    else
+        actionBeginTurn.lostPlayerIndex = (areAllUnitsOutOfFuelAndDestroyed(sceneWarFileName)) and (playerIndex) or (nil)
+        actionBeginTurn.repairData      = generateRepairData(sceneWarFileName, income)
+    end
     return actionBeginTurn, createActionsForPublish(actionBeginTurn), actionBeginTurn
 end
 
