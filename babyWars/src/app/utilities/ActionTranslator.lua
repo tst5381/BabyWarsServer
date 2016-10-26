@@ -31,6 +31,7 @@ local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager"
 local SceneWarManager         = require("src.app.utilities.SceneWarManager")
 local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
 local SingletonGetters        = require("src.app.utilities.SingletonGetters")
+local TableFunctions          = require("src.app.utilities.TableFunctions")
 local VisibilityFunctions     = require("src.app.utilities.VisibilityFunctions")
 local ComponentManager        = require("src.global.components.ComponentManager")
 
@@ -815,12 +816,10 @@ local function translateDropModelUnit(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
     end
 
-    local modelWarField     = modelScene:getModelWarField()
-    local modelUnitMap      = modelWarField:getModelUnitMap()
-    local destination       = rawPath[#rawPath]
-    local existingModelUnit = modelUnitMap:getModelUnit(destination)
-    local loaderModelUnit   = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
-    local tileType          = modelWarField:getModelTileMap():getModelTile(destination):getTileType()
+    local modelUnitMap    = getModelUnitMap(sceneWarFileName)
+    local endingGridIndex = rawPath[#rawPath]
+    local loaderModelUnit = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
+    local tileType        = getModelTileMap(sceneWarFileName):getModelTile(endingGridIndex):getTileType()
     if ((not loaderModelUnit.canDropModelUnit)                                                                 or
         (not loaderModelUnit:canDropModelUnit(tileType))                                                       or
         (not validateDropDestinations(action, modelScene))                                                     or
@@ -835,17 +834,26 @@ local function translateDropModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, loaderModelUnit),
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
+        local dropDestinations = translateDropDestinations(action.dropDestinations, modelUnitMap, loaderModelUnit)
+        local revealedUnits    = getRevealedUnitsData(sceneWarFileName, translatedPath, loaderModelUnit)
+        for _, dropDestination in ipairs(dropDestinations) do
+            local dropPath = {destination, dropDestination.gridIndex}
+            local dropModelUnit = modelUnitMap:getLoadedModelUnitWithUnitId(dropDestination.unitID)
+            revealedUnits = TableFunctions.union(revealedUnits, getRevealedUnitsData(sceneWarFileName, dropPath, dropModelUnit))
+        end
+
         local actionDropModelUnit = {
             actionName       = "DropModelUnit",
             actionID         = action.actionID,
             fileName         = sceneWarFileName,
             path             = translatedPath,
-            dropDestinations = translateDropDestinations(action.dropDestinations, modelUnitMap, loaderModelUnit),
+            dropDestinations = dropDestinations,
             launchUnitID     = launchUnitID,
+            revealedUnits    = revealedUnits,
         }
         return actionDropModelUnit, createActionsForPublish(actionDropModelUnit), actionDropModelUnit
     end
