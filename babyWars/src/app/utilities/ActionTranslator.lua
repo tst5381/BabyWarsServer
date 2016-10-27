@@ -672,11 +672,10 @@ local function translatePath(path, launchUnitID, modelSceneWar)
         end
 
         if (not translatedPath.isBlocked) then
+            translatedPath.fuelConsumption      = totalFuelConsumption
             translatedPath[#translatedPath + 1] = clone(gridIndex)
         end
     end
-
-    translatedPath.fuelConsumption = totalFuelConsumption
 
     return translatedPath
 end
