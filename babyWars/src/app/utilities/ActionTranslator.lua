@@ -43,7 +43,6 @@ local getModelTileMap         = SingletonGetters.getModelTileMap
 local getModelTurnManager     = SingletonGetters.getModelTurnManager
 local getModelUnitMap         = SingletonGetters.getModelUnitMap
 local getRevealedUnitsData    = VisibilityFunctions.getRevealedUnitsDataWithPath
-local isModelUnitVisible      = VisibilityFunctions.isModelUnitVisibleToPlayerIndex
 local isUnitVisible           = VisibilityFunctions.isUnitOnMapVisibleToPlayerIndex
 
 local GAME_VERSION = GameConstantFunctions.getGameVersion()
@@ -304,6 +303,23 @@ local function translateDropDestinations(rawDestinations, modelUnitMap, loaderMo
     end
 
     return translatedDestinations
+end
+
+local function getLostPlayerIndexForActionAttack(attacker, target, attackDamage, counterDamage)
+    local modelUnitMap = getModelUnitMap(attacker:getSceneWarFileName())
+    if ((target.getUnitType) and (attackDamage >= target:getCurrentHP())) then
+        local playerIndex = target:getPlayerIndex()
+        if (countModelUnitOnMapWithPlayerIndex(modelUnitMap, playerIndex) == 1) then
+            return playerIndex
+        end
+    elseif ((counterDamage) and (counterDamage >= attacker:getCurrentHP())) then
+        local playerIndex = attacker:getPlayerIndex()
+        if (countModelUnitOnMapWithPlayerIndex(modelUnitMap, playerIndex) == 1) then
+            return playerIndex
+        end
+    else
+        return nil
+    end
 end
 
 local function createActionReloadOrExitWar(sceneWarFileName, playerAccount, message)
@@ -704,10 +720,10 @@ local function translateAttack(action, modelScene)
     local targetTile          = modelTileMap:getModelTile(targetGridIndex)
     local attackTarget        = modelUnitMap:getModelUnit(targetGridIndex) or targetTile
     local attackerPlayerIndex = attacker:getPlayerIndex()
-    if ((not ComponentManager.getComponent(attacker, "AttackDoer"))                                                                   or
-        (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))                                              or
-        ((attackTarget.getUnitType) and (not isModelUnitVisible(attackTarget, sceneWarFileName, attackerPlayerIndex)))                or
-        ((#rawPath ~= 1) and (existingModelUnit) and (isModelUnitVisible(existingModelUnit, sceneWarFileName, attackerPlayerIndex)))) then
+    if ((not ComponentManager.getComponent(attacker, "AttackDoer"))                                                                                                                   or
+        (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))                                                                                              or
+        (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, attackerPlayerIndex))                                                                                      or
+        ((attackTarget.getUnitType) and (not isUnitVisible(sceneWarFileName, targetGridIndex, isModelUnitDiving(attackTarget), attackTarget:getPlayerIndex(), attackerPlayerIndex)))) then
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
@@ -716,48 +732,31 @@ local function translateAttack(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
-    local modelPlayerManager = modelScene:getModelPlayerManager()
-    local actionID           = action.actionID
     if (translatedPath.isBlocked) then
         local actionWait = {
-            actionName = "Wait",
-            actionID   = actionID,
-            fileName   = sceneWarFileName,
-            path       = translatedPath,
+            actionName    = "Wait",
+            actionID      = action.actionID,
+            fileName      = sceneWarFileName,
+            path          = translatedPath,
+            launchUnitID  = launchUnitID,
+            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, attacker),
         }
-        return actionWait,
-            createActionsForPublish(actionWait, modelPlayerManager, action.playerAccount),
-            actionWait
+        return actionWait, createActionsForPublish(actionWait), actionWait
+    else
+        local actionAttack = {
+            actionName      = "Attack",
+            actionID        = action.actionID,
+            fileName        = sceneWarFileName,
+            path            = translatedPath,
+            launchUnitID    = launchUnitID,
+            revealedUnits   = getRevealedUnitsData(sceneWarFileName, translatedPath, attacker, ((counterDamage) and (counterDamage >= attacker:getCurrentHP()))),
+            targetGridIndex = targetGridIndex,
+            attackDamage    = attackDamage,
+            counterDamage   = counterDamage,
+            lostPlayerIndex = getLostPlayerIndexForActionAttack(attacker, attackTarget, attackDamage, counterDamage),
+        }
+        return actionAttack, createActionsForPublish(actionAttack), actionAttack
     end
-
-    local lostPlayerIndex
-    if ((attackDamage >= attackTarget:getCurrentHP()) and (attackTarget.getUnitType)) then
-        local playerIndex = attackTarget:getPlayerIndex()
-        if (countModelUnitOnMapWithPlayerIndex(modelUnitMap, playerIndex) == 1) then
-            lostPlayerIndex = playerIndex
-        end
-    elseif ((counterDamage) and (counterDamage >= attacker:getCurrentHP())) then
-        local playerIndex = attacker:getPlayerIndex()
-        if (countModelUnitOnMapWithPlayerIndex(modelUnitMap, playerIndex) == 1) then
-            lostPlayerIndex = playerIndex
-        end
-    end
-
-    local actionAttack = {
-        actionName      = "Attack",
-        actionID        = actionID,
-        fileName        = sceneWarFileName,
-        path            = translatedPath,
-        targetGridIndex = GridIndexFunctions.clone(targetGridIndex),
-        attackDamage    = attackDamage,
-        counterDamage   = counterDamage,
-        launchUnitID    = launchUnitID,
-        lostPlayerIndex = lostPlayerIndex,
-    }
-
-    return actionAttack,
-        createActionsForPublish(actionAttack, modelPlayerManager, action.playerAccount),
-        actionAttack
 end
 
 local function translateBeginTurn(action, modelScene)
