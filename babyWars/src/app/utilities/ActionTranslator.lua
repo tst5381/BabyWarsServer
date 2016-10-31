@@ -845,7 +845,7 @@ local function translateCaptureModelTile(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, capturer),
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -855,7 +855,7 @@ local function translateCaptureModelTile(action, modelScene)
             fileName        = sceneWarFileName,
             path            = translatedPath,
             launchUnitID    = launchUnitID,
-            revealedUnits   = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits   = getRevealedUnitsData(sceneWarFileName, translatedPath, capturer),
             lostPlayerIndex = ((capturer:getCaptureAmount() >= captureTarget:getCurrentCapturePoint()) and (captureTarget:isDefeatOnCapture()))
                 and (captureTarget:getPlayerIndex())
                 or  (nil),
