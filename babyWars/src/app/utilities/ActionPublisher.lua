@@ -61,11 +61,11 @@ creators.createActionForAttack = function(action, targetPlayerIndex)
     local targetModelUnit    = modelUnitMap:getModelUnit(targetGridIndex)
 
     local actingUnitsData
-    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(sceneWarFileName, focusModelUnit))
     end
     if ((targetModelUnit)                                                                                                                                and
-        (not isUnitVisible(sceneWarFileName, targetGridIndex, isModelUnitDiving(targetModelUnit), targetModelUnit:getPlayerIndex(), targetPlayerIndex))) then
+        (not isUnitVisible(sceneWarFileName, targetGridIndex, targetModelUnit:getUnitType(), isModelUnitDiving(targetModelUnit), targetModelUnit:getPlayerIndex(), targetPlayerIndex))) then
         actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(sceneWarFileName, targetModelUnit))
     end
 
@@ -87,7 +87,7 @@ creators.createActionForBeginTurn = function(action, targetPlayerIndex)
     for unitID, data in pairs(repairData.onMapData) do
         local gridIndex = data.gridIndex
         local modelUnit = modelUnitMap:getModelUnit(gridIndex)
-        if (not isUnitVisible(sceneWarFileName, gridIndex, isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        if (not isUnitVisible(sceneWarFileName, gridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
             ignoredUnitIDsOnMap[#ignoredUnitIDsOnMap + 1] = unitID
         end
     end
@@ -96,7 +96,7 @@ creators.createActionForBeginTurn = function(action, targetPlayerIndex)
     for unitID, data in pairs(repairData.loadedData) do
         local gridIndex = modelUnitMap:getLoadedModelUnitWithUnitId(unitID)
         local modelUnit = modelUnitMap:getModelUnit(gridIndex)
-        if (not isUnitVisible(sceneWarFileName, gridIndex, isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        if (not isUnitVisible(sceneWarFileName, gridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
             ignoredUnitIDsLoaded[#ignoredUnitIDsLoaded + 1] = unitID
         end
     end
@@ -120,7 +120,7 @@ creators.createActionForBuildModelTile = function(action, targetPlayerIndex)
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
     local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
 
-    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
 
@@ -137,7 +137,7 @@ creators.createActionForCaptureModelTile = function(action, targetPlayerIndex)
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
     local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
 
-    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
 
@@ -154,7 +154,7 @@ creators.createActionForDive = function(action, targetPlayerIndex)
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
     local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
 
-    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
 
@@ -171,7 +171,7 @@ creators.createActionForDropModelUnit = function(action, targetPlayerIndex)
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
     local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
 
-    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
 
@@ -197,10 +197,10 @@ creators.createActionForJoinModelUnit = function(action, targetPlayerIndex)
     local unitPlayerIndex     = focusModelUnit:getPlayerIndex()
 
     local actingUnitsData
-    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), unitPlayerIndex, targetPlayerIndex)) then
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), unitPlayerIndex, targetPlayerIndex)) then
         actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(sceneWarFileName, focusModelUnit))
     end
-    if (not isUnitVisible(sceneWarFileName, endingGridIndex, isModelUnitDiving(joiningModelUnit), unitPlayerIndex, targetPlayerIndex)) then
+    if (not isUnitVisible(sceneWarFileName, endingGridIndex, joiningModelUnit:getUnitType(), isModelUnitDiving(joiningModelUnit), unitPlayerIndex, targetPlayerIndex)) then
         actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(sceneWarFileName, joiningModelUnit))
     end
 
@@ -220,7 +220,7 @@ creators.createActionForLaunchSilo = function(action, targetPlayerIndex)
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
     local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
 
-    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
 
@@ -237,7 +237,7 @@ creators.createActionForLoadModelUnit = function(action, targetPlayerIndex)
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
     local actionForPublish = TableFunctions.clone(action, {"revealedUnits"})
-    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
 
@@ -248,7 +248,7 @@ creators.createActionForProduceModelUnitOnTile = function(action, playerIndex)
     -- 生产了新部队后，生产者自己可能会发现隐藏的敌方部队revealedUnits，但这对生产者以外的玩家都是不可知的，因此广播的action必须删除这些数据。
     local isDiving        = (getUnitTypeWithTiledId(action.tiledID) == "Submarine")
     local unitPlayerIndex = getPlayerIndexWithTiledId(action.tiledID)
-    if (isUnitVisible(action.fileName, action.gridIndex, isDiving, unitPlayerIndex, playerIndex)) then
+    if (isUnitVisible(action.fileName, action.gridIndex, "Submarine", isDiving, unitPlayerIndex, playerIndex)) then
         return TableFunctions.clone(action, {"revealedUnits"})
     else
         -- 其他玩家没有部队能够看到潜艇，那么要隐藏潜艇数据。
@@ -276,7 +276,7 @@ creators.createActionForSupplyModelUnit = function(action, targetPlayerIndex)
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
     local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
-    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
 
@@ -293,7 +293,7 @@ creators.createActionForSurface = function(action, targetPlayerIndex)
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
     local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
-    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
 
@@ -314,7 +314,7 @@ creators.createActionForWait = function(action, targetPlayerIndex)
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
     local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
-    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
 

@@ -73,7 +73,7 @@ local function isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, path, pl
     local destination = path[pathLength]
     local modelUnit   = getModelUnitMap(sceneWarFileName):getModelUnit(destination)
     return (modelUnit) and
-        (isUnitVisible(sceneWarFileName, destination, isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), playerIndex))
+        (isUnitVisible(sceneWarFileName, destination, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), playerIndex))
 end
 
 local function isDropBlocked(destination, modelUnitMap, loaderModelUnit)
@@ -274,7 +274,7 @@ local function validateDropDestinations(action, modelSceneWar)
             local existingModelUnit = modelUnitMap:getModelUnit(droppingGridIndex)
             if ((existingModelUnit)                                                                                                                          and
                 (existingModelUnit ~= loaderModelUnit)                                                                                                       and
-                (isUnitVisible(sceneWarFileName, droppingGridIndex, isModelUnitDiving(existingModelUnit), existingModelUnit:getPlayerIndex(), playerIndex))) then
+                (isUnitVisible(sceneWarFileName, droppingGridIndex, existingModelUnit:getUnitType(), isModelUnitDiving(existingModelUnit), existingModelUnit:getPlayerIndex(), playerIndex))) then
                 return false
             end
         end
@@ -654,7 +654,7 @@ local function translatePath(path, launchUnitID, modelSceneWar)
 
         local existingModelUnit = modelUnitMap:getModelUnit(gridIndex)
         if ((existingModelUnit) and (existingModelUnit:getPlayerIndex() ~= playerIndexInTurn)) then
-            if (isUnitVisible(sceneWarFileName, gridIndex, isModelUnitDiving(existingModelUnit), existingModelUnit:getPlayerIndex(), playerIndexInTurn)) then
+            if (isUnitVisible(sceneWarFileName, gridIndex, existingModelUnit:getUnitType(), isModelUnitDiving(existingModelUnit), existingModelUnit:getPlayerIndex(), playerIndexInTurn)) then
                 return nil, "ActionTranslator-translatePath() the path is invalid because it is blocked by a visible enemy unit."
             else
                 translatedPath.isBlocked = true
@@ -722,7 +722,7 @@ local function translateAttack(action, modelScene)
     if ((not ComponentManager.getComponent(attacker, "AttackDoer"))                                                                                                                   or
         (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))                                                                                              or
         (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, attackerPlayerIndex))                                                                                      or
-        ((attackTarget.getUnitType) and (not isUnitVisible(sceneWarFileName, targetGridIndex, isModelUnitDiving(attackTarget), attackTarget:getPlayerIndex(), attackerPlayerIndex)))) then
+        ((attackTarget.getUnitType) and (not isUnitVisible(sceneWarFileName, attackTarget:getUnitType(), targetGridIndex, isModelUnitDiving(attackTarget), attackTarget:getPlayerIndex(), attackerPlayerIndex)))) then
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
