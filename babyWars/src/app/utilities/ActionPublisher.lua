@@ -16,6 +16,8 @@ local getPlayerIndexWithTiledId = GameConstantFunctions.getPlayerIndexWithTiledI
 local getUnitTypeWithTiledId    = GameConstantFunctions.getUnitTypeWithTiledId
 local isUnitVisible             = VisibilityFunctions.isUnitOnMapVisibleToPlayerIndex
 
+local IGNORED_KEYS_IN_PUBLISHING = {"revealedTiles", "revealedUnits"}
+
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
@@ -275,7 +277,7 @@ creators.createActionForSupplyModelUnit = function(action, targetPlayerIndex)
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
-    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
+    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_IN_PUBLISHING)
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
@@ -292,7 +294,7 @@ creators.createActionForSurface = function(action, targetPlayerIndex)
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
-    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
+    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_IN_PUBLISHING)
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
@@ -313,7 +315,7 @@ creators.createActionForWait = function(action, targetPlayerIndex)
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
-    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits", "revealedTiles"})
+    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_IN_PUBLISHING)
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end

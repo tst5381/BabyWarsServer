@@ -1103,29 +1103,29 @@ end
 local function executeSupplyModelUnit(action)
     if (not IS_SERVER) then
         addActorUnitsWithUnitsData(action.actingUnitsData, false)
+        addActorUnitsWithUnitsData(action.revealedUnits,   false)
+        updateModelTilesWithTilesData(action.revealedTiles, false)
     end
 
     local sceneWarFileName = action.fileName
     local launchUnitID     = action.launchUnitID
     local path             = action.path
     local focusModelUnit   = getModelUnitMap(sceneWarFileName):getFocusModelUnit(path[1], launchUnitID)
-
+    local targetModelUnits = getAndSupplyAdjacentModelUnits(sceneWarFileName, path[#path], focusModelUnit:getPlayerIndex())
     moveModelUnitWithAction(action)
     focusModelUnit:setStateActioned()
-    local targetModelUnits = getAndSupplyAdjacentModelUnits(sceneWarFileName, path[#path], focusModelUnit:getPlayerIndex())
 
     if (IS_SERVER) then
         getModelScene(sceneWarFileName):setExecutingAction(false)
     else
-        local revealedUnits = action.revealedUnits
-        addActorUnitsOnMapWithRevealedUnits(revealedUnits, false)
         local removedModelUnits = removeHiddenActorUnitsAfterAction(action)
 
         focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
             focusModelUnit:updateView()
                 :showNormalAnimation()
 
-            setRevealedUnitsVisible(revealedUnits, true)
+            setRevealedUnitsVisible(action.revealedUnits, true)
+            updateRevealedViewTiles()
             removeViewUnits(removedModelUnits)
 
             local modelGridEffect = getModelGridEffect()
@@ -1142,6 +1142,8 @@ end
 local function executeSurface(action)
     if (not IS_SERVER) then
         addActorUnitsWithUnitsData(action.actingUnitsData, false)
+        addActorUnitsWithUnitsData(action.revealedUnits,   false)
+        updateModelTilesWithTilesData(action.revealedTiles, false)
     end
 
     local sceneWarFileName = action.fileName
@@ -1156,8 +1158,6 @@ local function executeSurface(action)
         getModelScene(sceneWarFileName):setExecutingAction(false)
     else
         local endingGridIndex   = path[#path]
-        local revealedUnits     = action.revealedUnits
-        addActorUnitsOnMapWithRevealedUnits(revealedUnits, false)
         local removedModelUnits = removeHiddenActorUnitsAfterAction(action)
 
         focusModelUnit:moveViewAlongPath(path, true, function()
@@ -1165,10 +1165,11 @@ local function executeSurface(action)
                 :showNormalAnimation()
                 :setViewVisible(isUnitVisible(sceneWarFileName, endingGridIndex, focusModelUnit:getUnitType(), false, focusModelUnit:getPlayerIndex(), getPlayerIndexLoggedIn()))
 
-            getModelGridEffect():showAnimationSurface(endingGridIndex)
-
-            setRevealedUnitsVisible(revealedUnits, true)
+            setRevealedUnitsVisible(action.revealedUnits, true)
+            updateRevealedViewTiles()
             removeViewUnits(removedModelUnits)
+
+            getModelGridEffect():showAnimationSurface(endingGridIndex)
 
             getModelScene(sceneWarFileName):setExecutingAction(false)
         end)
