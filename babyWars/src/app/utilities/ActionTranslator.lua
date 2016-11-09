@@ -1163,12 +1163,15 @@ local function translateProduceModelUnitOnUnit(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     local actionProduceModelUnitOnUnit = {
-        actionName  = "ProduceModelUnitOnUnit",
-        actionID    = action.actionID,
-        fileName    = sceneWarFileName,
-        path        = translatedPath,
-        cost        = cost,
+        actionName    = "ProduceModelUnitOnUnit",
+        actionID      = action.actionID,
+        fileName      = sceneWarFileName,
+        path          = translatedPath,
+        cost          = cost,
+        revealedTiles = revealedTiles,
+        revealedUnits = revealedUnits,
     }
     return actionProduceModelUnitOnUnit, createActionsForPublish(actionProduceModelUnitOnUnit), actionProduceModelUnitOnUnit
 end
