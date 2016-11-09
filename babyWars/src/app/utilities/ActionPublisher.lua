@@ -313,7 +313,7 @@ creators.createActionForWait = function(action, targetPlayerIndex)
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
-    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
+    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits", "revealedTiles"})
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end

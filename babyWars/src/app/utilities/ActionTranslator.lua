@@ -36,14 +36,14 @@ local TableFunctions          = require("src.app.utilities.TableFunctions")
 local VisibilityFunctions     = require("src.app.utilities.VisibilityFunctions")
 local ComponentManager        = require("src.global.components.ComponentManager")
 
-local createActionsForPublish = ActionPublisher.createActionsForPublish
-local getLocalizedText        = LocalizationFunctions.getLocalizedText
-local getModelPlayerManager   = SingletonGetters.getModelPlayerManager
-local getModelTileMap         = SingletonGetters.getModelTileMap
-local getModelTurnManager     = SingletonGetters.getModelTurnManager
-local getModelUnitMap         = SingletonGetters.getModelUnitMap
-local getRevealedUnitsData    = VisibilityFunctions.getRevealedUnitsDataWithPath
-local isUnitVisible           = VisibilityFunctions.isUnitOnMapVisibleToPlayerIndex
+local createActionsForPublish      = ActionPublisher.createActionsForPublish
+local getLocalizedText             = LocalizationFunctions.getLocalizedText
+local getModelPlayerManager        = SingletonGetters.getModelPlayerManager
+local getModelTileMap              = SingletonGetters.getModelTileMap
+local getModelTurnManager          = SingletonGetters.getModelTurnManager
+local getModelUnitMap              = SingletonGetters.getModelUnitMap
+local getRevealedTilesAndUnitsData = VisibilityFunctions.getRevealedTilesAndUnitsData
+local isUnitVisible                = VisibilityFunctions.isUnitOnMapVisibleToPlayerIndex
 
 local GAME_VERSION = GameConstantFunctions.getGameVersion()
 
@@ -738,7 +738,7 @@ local function translateAttack(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, attacker),
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, attacker),
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -748,7 +748,7 @@ local function translateAttack(action, modelScene)
             fileName        = sceneWarFileName,
             path            = translatedPath,
             launchUnitID    = launchUnitID,
-            revealedUnits   = getRevealedUnitsData(sceneWarFileName, translatedPath, attacker, ((counterDamage) and (counterDamage >= attacker:getCurrentHP()))),
+            revealedUnits   = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, attacker, ((counterDamage) and (counterDamage >= attacker:getCurrentHP()))),
             targetGridIndex = targetGridIndex,
             attackDamage    = attackDamage,
             counterDamage   = counterDamage,
@@ -806,7 +806,7 @@ local function translateBuildModelTile(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -816,7 +816,7 @@ local function translateBuildModelTile(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
         }
         return actionBuildModelTile, createActionsForPublish(actionBuildModelTile), actionBuildModelTile
     end
@@ -845,7 +845,7 @@ local function translateCaptureModelTile(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, capturer),
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, capturer),
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -855,7 +855,7 @@ local function translateCaptureModelTile(action, modelScene)
             fileName        = sceneWarFileName,
             path            = translatedPath,
             launchUnitID    = launchUnitID,
-            revealedUnits   = getRevealedUnitsData(sceneWarFileName, translatedPath, capturer),
+            revealedUnits   = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, capturer),
             lostPlayerIndex = ((capturer:getCaptureAmount() >= captureTarget:getCurrentCapturePoint()) and (captureTarget:isDefeatOnCapture()))
                 and (captureTarget:getPlayerIndex())
                 or  (nil),
@@ -886,7 +886,7 @@ local function translateDive(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit)
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit)
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -896,7 +896,7 @@ local function translateDive(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit)
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit)
         }
         return actionDive, createActionsForPublish(actionDive), actionDive
     end
@@ -928,16 +928,16 @@ local function translateDropModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, loaderModelUnit),
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, loaderModelUnit),
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
         local dropDestinations = translateDropDestinations(action.dropDestinations, modelUnitMap, loaderModelUnit)
-        local revealedUnits    = getRevealedUnitsData(sceneWarFileName, translatedPath, loaderModelUnit)
+        local revealedUnits    = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, loaderModelUnit)
         for _, dropDestination in ipairs(dropDestinations) do
             local dropPath = {destination, dropDestination.gridIndex}
             local dropModelUnit = modelUnitMap:getLoadedModelUnitWithUnitId(dropDestination.unitID)
-            revealedUnits = TableFunctions.union(revealedUnits, getRevealedUnitsData(sceneWarFileName, dropPath, dropModelUnit))
+            revealedUnits = TableFunctions.union(revealedUnits, getRevealedTilesAndUnitsData(sceneWarFileName, dropPath, dropModelUnit))
         end
 
         local actionDropModelUnit = {
@@ -995,7 +995,7 @@ local function translateJoinModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -1005,7 +1005,7 @@ local function translateJoinModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
         }
         return actionJoinModelUnit, createActionsForPublish(actionJoinModelUnit), actionJoinModelUnit
     end
@@ -1037,7 +1037,7 @@ local function translateLaunchSilo(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -1048,7 +1048,7 @@ local function translateLaunchSilo(action, modelScene)
             path            = translatedPath,
             targetGridIndex = targetGridIndex,
             launchUnitID    = launchUnitID,
-            revealedUnits   = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits   = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
         }
         return actionLaunchSilo, createActionsForPublish(actionLaunchSilo), actionLaunchSilo
     end
@@ -1081,7 +1081,7 @@ local function translateLoadModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -1091,7 +1091,7 @@ local function translateLoadModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
         }
         return actionLoadModelUnit, createActionsForPublish(actionLoadModelUnit), actionLoadModelUnit
     end
@@ -1134,7 +1134,7 @@ local function translateProduceModelUnitOnTile(action, modelScene)
         fileName      = sceneWarFileName,
         gridIndex     = gridIndex,
         tiledID       = tiledID,
-        revealedUnits = getRevealedUnitsData(sceneWarFileName, {gridIndex}, focusModelUnit),
+        revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, {gridIndex}, focusModelUnit),
         cost          = cost, -- the cost can be calculated by the clients, but that calculations can be eliminated by sending the cost to clients.
     }
     return actionProduceModelUnitOnTile, createActionsForPublish(actionProduceModelUnitOnTile), actionProduceModelUnitOnTile
@@ -1195,7 +1195,7 @@ local function translateSupplyModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -1205,7 +1205,7 @@ local function translateSupplyModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
         }
         return actionSupplyModelUnit, createActionsForPublish(actionSupplyModelUnit), actionSupplyModelUnit
     end
@@ -1233,7 +1233,7 @@ local function translateSurface(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -1243,7 +1243,7 @@ local function translateSurface(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
         }
         return actionSurface, createActionsForPublish(actionSurface), actionSurface
     end
@@ -1277,13 +1277,15 @@ local function translateWait(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     local actionWait = {
         actionName    = "Wait",
         actionID      = action.actionID,
         fileName      = sceneWarFileName,
         path          = translatedPath,
         launchUnitID  = launchUnitID,
-        revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+        revealedTiles = revealedTiles,
+        revealedUnits = revealedUnits,
     }
     return actionWait, createActionsForPublish(actionWait), actionWait
 end
