@@ -960,7 +960,7 @@ local function translateEndTurn(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
-    -- TODO: enable the fog of war.
+    -- TODO: enable the weather.
     local actionEndTurn = {
         actionName  = "EndTurn",
         actionID    = action.actionID,
@@ -988,6 +988,7 @@ local function translateJoinModelUnit(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -995,7 +996,8 @@ local function translateJoinModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -1005,7 +1007,8 @@ local function translateJoinModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionJoinModelUnit, createActionsForPublish(actionJoinModelUnit), actionJoinModelUnit
     end
@@ -1030,6 +1033,7 @@ local function translateLaunchSilo(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -1037,7 +1041,8 @@ local function translateLaunchSilo(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -1048,7 +1053,8 @@ local function translateLaunchSilo(action, modelScene)
             path            = translatedPath,
             targetGridIndex = targetGridIndex,
             launchUnitID    = launchUnitID,
-            revealedUnits   = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles   = revealedTiles,
+            revealedUnits   = revealedUnits,
         }
         return actionLaunchSilo, createActionsForPublish(actionLaunchSilo), actionLaunchSilo
     end
