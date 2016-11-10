@@ -838,6 +838,7 @@ local function translateCaptureModelTile(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, capturer, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -845,18 +846,27 @@ local function translateCaptureModelTile(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, capturer),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
+        local isCaptureFinished = capturer:getCaptureAmount() >= captureTarget:getCurrentCapturePoint()
+        if (isCaptureFinished) then
+            local tiles, units = VisibilityFunctions.getRevealedTilesAndUnitsDataForCapture(sceneWarFileName, gridIndex, playerIndex)
+            revealedTiles = TableFunctions.union(revealedTiles, tiles)
+            revealedUnits = TableFunctions.union(revealedUnits, units)
+        end
+
         local actionCapture = {
             actionName      = "CaptureModelTile",
             actionID        = action.actionID,
             fileName        = sceneWarFileName,
             path            = translatedPath,
             launchUnitID    = launchUnitID,
-            revealedUnits   = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, capturer),
-            lostPlayerIndex = ((capturer:getCaptureAmount() >= captureTarget:getCurrentCapturePoint()) and (captureTarget:isDefeatOnCapture()))
+            revealedTiles   = revealedTiles,
+            revealedUnits   = revealedUnits,
+            lostPlayerIndex = ((isCaptureFinished) and (captureTarget:isDefeatOnCapture()))
                 and (captureTarget:getPlayerIndex())
                 or  (nil),
         }

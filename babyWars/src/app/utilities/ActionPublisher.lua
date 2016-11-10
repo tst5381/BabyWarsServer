@@ -14,6 +14,7 @@ local getModelTurnManager       = SingletonGetters.getModelTurnManager
 local getModelUnitMap           = SingletonGetters.getModelUnitMap
 local getPlayerIndexWithTiledId = GameConstantFunctions.getPlayerIndexWithTiledId
 local getUnitTypeWithTiledId    = GameConstantFunctions.getUnitTypeWithTiledId
+local isTileVisible             = VisibilityFunctions.isTileVisibleToPlayerIndex
 local isUnitVisible             = VisibilityFunctions.isUnitOnMapVisibleToPlayerIndex
 
 local IGNORED_KEYS_FOR_PUBLISHING = {"revealedTiles", "revealedUnits"}
@@ -23,6 +24,16 @@ local IGNORED_KEYS_FOR_PUBLISHING = {"revealedTiles", "revealedUnits"}
 --------------------------------------------------------------------------------
 local function isModelUnitDiving(modelUnit)
     return (modelUnit.isDiving) and (modelUnit:isDiving())
+end
+
+local function generateTilesDataForPublish(modelTile, mapSize)
+    local data = modelTile:toSerializableTable()
+    if (not data) then
+        return nil
+    else
+        local gridIndex = modelTile:getGridIndex()
+        return {[(gridIndex.x - 1) * mapSize.height + gridIndex.y] = data}
+    end
 end
 
 local function generateSingleUnitDataForPublish(modelUnitMap, modelUnit)
@@ -135,10 +146,16 @@ creators.createActionForCaptureModelTile = function(action, targetPlayerIndex)
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
     local sceneWarFileName   = action.fileName
-    local beginningGridIndex = action.path[1]
+    local path               = action.path
+    local beginningGridIndex = path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
 
+    local actionForPublish = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
+    local endingGridIndex  = path[#path]
+    if (not isTileVisible(sceneWarFileName, endingGridIndex, targetPlayerIndex)) then
+        local modelTileMap = getModelTileMap(sceneWarFileName)
+        actionForPublish.actingTilesData = generateTilesDataForPublish(modelTileMap:getModelTile(endingGridIndex), modelTileMap:getMapSize())
+    end
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
