@@ -27,6 +27,16 @@ local function isUnitHiddenByTileToPlayerIndex(sceneWarFileName, modelUnit, play
         (modelTile:canHideUnitType(modelUnit:getUnitType()))
 end
 
+local function generateSingleTileData(modelTile, mapSize)
+    local data = modelTile:toSerializableTable()
+    if (not data) then
+        return nil
+    else
+        local gridIndex = modelTile:getGridIndex()
+        return {[(gridIndex.x - 1) * mapSize.height + gridIndex.y] = data}
+    end
+end
+
 local function generateSingleUnitData(modelUnitMap, modelUnit)
     local data    = modelUnit:toSerializableTable()
     data.isLoaded = modelUnitMap:getLoadedModelUnitWithUnitId(modelUnit:getUnitId()) ~= nil
@@ -155,8 +165,7 @@ function VisibilityFunctions.getRevealedTilesAndUnitsData(sceneWarFileName, path
     local mapSize       = modelUnitMap:getMapSize()
     local playerIndex   = modelUnit:getPlayerIndex()
     local visibilityMap = createVisibilityMapWithPath(sceneWarFileName, path, modelUnit)
-    local revealedTiles = {}
-    local revealedUnits
+    local revealedTiles, revealedUnits
 
     for x = 1, mapSize.width do
         for y = 1, mapSize.height do
@@ -166,7 +175,7 @@ function VisibilityFunctions.getRevealedTilesAndUnitsData(sceneWarFileName, path
                 if (not isTileVisible(sceneWarFileName, gridIndex, playerIndex)) then
                     local modelTile = modelTileMap:getModelTile(gridIndex)
                     if ((visibility == 2) or (not modelTile.canHideUnitType)) then
-                        revealedTiles[#revealedTiles + 1] = modelTile:toSerializableTable()
+                        revealedTiles = TableFunctions.union(revealedTiles, generateSingleTileData(modelTile, mapSize))
                     end
                 end
 
@@ -193,7 +202,6 @@ function VisibilityFunctions.getRevealedTilesAndUnitsData(sceneWarFileName, path
         end
     end
 
-    revealedTiles = (#revealedTiles > 0) and (revealedTiles) or (nil)
     return revealedTiles, revealedUnits
 end
 

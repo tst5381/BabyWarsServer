@@ -879,6 +879,7 @@ local function translateDive(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -886,7 +887,8 @@ local function translateDive(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit)
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -896,7 +898,8 @@ local function translateDive(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit)
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionDive, createActionsForPublish(actionDive), actionDive
     end
@@ -921,6 +924,7 @@ local function translateDropModelUnit(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, loaderModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -928,16 +932,18 @@ local function translateDropModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, loaderModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
         local dropDestinations = translateDropDestinations(action.dropDestinations, modelUnitMap, loaderModelUnit)
-        local revealedUnits    = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, loaderModelUnit)
         for _, dropDestination in ipairs(dropDestinations) do
-            local dropPath = {destination, dropDestination.gridIndex}
+            local dropPath      = {destination, dropDestination.gridIndex}
             local dropModelUnit = modelUnitMap:getLoadedModelUnitWithUnitId(dropDestination.unitID)
-            revealedUnits = TableFunctions.union(revealedUnits, getRevealedTilesAndUnitsData(sceneWarFileName, dropPath, dropModelUnit))
+            local tiles, units  = getRevealedTilesAndUnitsData(sceneWarFileName, dropPath, dropModelUnit, false)
+            revealedTiles = TableFunctions.union(revealedTiles, tiles)
+            revealedUnits = TableFunctions.union(revealedUnits, units)
         end
 
         local actionDropModelUnit = {
@@ -947,6 +953,7 @@ local function translateDropModelUnit(action, modelScene)
             path             = translatedPath,
             dropDestinations = dropDestinations,
             launchUnitID     = launchUnitID,
+            revealedTiles    = revealedTiles,
             revealedUnits    = revealedUnits,
         }
         return actionDropModelUnit, createActionsForPublish(actionDropModelUnit), actionDropModelUnit
