@@ -16,7 +16,7 @@ local getPlayerIndexWithTiledId = GameConstantFunctions.getPlayerIndexWithTiledI
 local getUnitTypeWithTiledId    = GameConstantFunctions.getUnitTypeWithTiledId
 local isUnitVisible             = VisibilityFunctions.isUnitOnMapVisibleToPlayerIndex
 
-local IGNORED_KEYS_IN_PUBLISHING = {"revealedTiles", "revealedUnits"}
+local IGNORED_KEYS_FOR_PUBLISHING = {"revealedTiles", "revealedUnits"}
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -238,7 +238,7 @@ creators.createActionForLoadModelUnit = function(action, targetPlayerIndex)
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
-    local actionForPublish = TableFunctions.clone(action, {"revealedUnits"})
+    local actionForPublish = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
@@ -247,13 +247,11 @@ creators.createActionForLoadModelUnit = function(action, targetPlayerIndex)
 end
 
 creators.createActionForProduceModelUnitOnTile = function(action, playerIndex)
-    -- 生产了新部队后，生产者自己可能会发现隐藏的敌方部队revealedUnits，但这对生产者以外的玩家都是不可知的，因此广播的action必须删除这些数据。
-    local isDiving        = (getUnitTypeWithTiledId(action.tiledID) == "Submarine")
-    local unitPlayerIndex = getPlayerIndexWithTiledId(action.tiledID)
-    if (isUnitVisible(action.fileName, action.gridIndex, "Submarine", isDiving, unitPlayerIndex, playerIndex)) then
-        return TableFunctions.clone(action, {"revealedUnits"})
+    local tiledID  = action.tiledID
+    local unitType = getUnitTypeWithTiledId(tiledID)
+    if (isUnitVisible(action.fileName, action.gridIndex, unitType, unitType == "Submarine", getPlayerIndexWithTiledId(tiledID), playerIndex)) then
+        return TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     else
-        -- 其他玩家没有部队能够看到潜艇，那么要隐藏潜艇数据。
         return {
             actionName = "ProduceModelUnitOnTile",
             actionID   = action.actionID,
@@ -272,7 +270,7 @@ creators.createActionForProduceModelUnitOnUnit = function(action, playerIndex)
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_IN_PUBLISHING)
+    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
@@ -289,7 +287,7 @@ creators.createActionForSupplyModelUnit = function(action, targetPlayerIndex)
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_IN_PUBLISHING)
+    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
@@ -306,7 +304,7 @@ creators.createActionForSurface = function(action, targetPlayerIndex)
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_IN_PUBLISHING)
+    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
@@ -327,7 +325,7 @@ creators.createActionForWait = function(action, targetPlayerIndex)
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_IN_PUBLISHING)
+    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end

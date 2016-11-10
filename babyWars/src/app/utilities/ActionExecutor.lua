@@ -80,6 +80,35 @@ local function isModelUnitDiving(modelUnit)
     return (modelUnit.isDiving) and (modelUnit:isDiving())
 end
 
+local function promoteModelUnitOnProduce(modelUnit, sceneWarFileName)
+    local modelPlayer = getModelPlayerManager(sceneWarFileName):getModelPlayer(modelUnit:getPlayerIndex())
+    local modifier    = SkillModifierFunctions.getPassivePromotionModifier(modelPlayer:getModelSkillConfiguration())
+    if ((modifier > 0) and (modelUnit.setCurrentPromotion)) then
+        modelUnit:setCurrentPromotion(modifier)
+    end
+end
+
+local function updateFundWithCost(sceneWarFileName, playerIndex, cost)
+    local modelPlayer = getModelPlayerManager(sceneWarFileName):getModelPlayer(playerIndex)
+    modelPlayer:setFund(modelPlayer:getFund() - cost)
+    dispatchEvtModelPlayerUpdated(sceneWarFileName, modelPlayer, playerIndex)
+end
+
+local function produceActorUnit(sceneWarFileName, tiledID, unitID, gridIndex)
+    local actorData = {
+        tiledID       = tiledID,
+        unitID        = unitID,
+        GridIndexable = {gridIndex = gridIndex},
+    }
+    local actorUnit = Actor.createWithModelAndViewName("sceneWar.ModelUnit", actorData, "sceneWar.ViewUnit")
+    local modelUnit = actorUnit:getModel()
+    promoteModelUnitOnProduce(modelUnit, sceneWarFileName)
+    modelUnit:setStateActioned()
+        :onStartRunning(sceneWarFileName)
+
+    return actorUnit
+end
+
 local function getAndSupplyAdjacentModelUnits(sceneWarFileName, supplierGridIndex, playerIndex)
     assert(type(playerIndex) == "number", "ActionExecutor-getAndSupplyAdjacentModelUnits() invalid playerIndex: " .. (playerIndex or ""))
 
@@ -302,14 +331,6 @@ local function moveModelUnitWithAction(action)
         if (modelTile.setCurrentCapturePoint) then
             modelTile:setCurrentCapturePoint(modelTile:getMaxCapturePoint())
         end
-    end
-end
-
-local function promoteModelUnitOnProduce(modelUnit, sceneWarFileName)
-    local modelPlayer = getModelPlayerManager(sceneWarFileName):getModelPlayer(modelUnit:getPlayerIndex())
-    local modifier    = SkillModifierFunctions.getPassivePromotionModifier(modelPlayer:getModelSkillConfiguration())
-    if ((modifier > 0) and (modelUnit.setCurrentPromotion)) then
-        modelUnit:setCurrentPromotion(modifier)
     end
 end
 
@@ -992,17 +1013,13 @@ local function executeLaunchSilo(action)
 end
 
 local function executeLoadModelUnit(action)
-    if (not IS_SERVER) then
-        addActorUnitsWithUnitsData(action.actingUnitsData, false)
-    end
+    updateTilesAndUnitsBeforeExecutingAction(action)
 
-    local sceneWarFileName   = action.fileName
-    local path               = action.path
-    local endingGridIndex    = path[#path]
-    local modelUnitMap       = getModelUnitMap(sceneWarFileName)
-    local focusModelUnit     = modelUnitMap:getFocusModelUnit(path[1], action.launchUnitID)
-    local loaderModelUnit    = modelUnitMap:getModelUnit(endingGridIndex)
-
+    local sceneWarFileName = action.fileName
+    local path             = action.path
+    local modelUnitMap     = getModelUnitMap(sceneWarFileName)
+    local focusModelUnit   = modelUnitMap:getFocusModelUnit(path[1], action.launchUnitID)
+    local loaderModelUnit  = modelUnitMap:getModelUnit(path[#path])
     moveModelUnitWithAction(action)
     focusModelUnit:setStateActioned()
     if (loaderModelUnit) then
@@ -1014,8 +1031,6 @@ local function executeLoadModelUnit(action)
     if (IS_SERVER) then
         getModelScene(sceneWarFileName):setExecutingAction(false)
     else
-        local revealedUnits = action.revealedUnits
-        addActorUnitsOnMapWithRevealedUnits(revealedUnits, false)
         local removedModelUnits = removeHiddenActorUnitsAfterAction(action)
 
         focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
@@ -1026,7 +1041,8 @@ local function executeLoadModelUnit(action)
                 loaderModelUnit:updateView()
             end
 
-            setRevealedUnitsVisible(revealedUnits, true)
+            setRevealedUnitsVisible(action.revealedUnits, true)
+            updateRevealedViewTiles()
             removeViewUnits(removedModelUnits)
 
             getModelScene(sceneWarFileName):setExecutingAction(false)
@@ -1035,36 +1051,34 @@ local function executeLoadModelUnit(action)
 end
 
 local function executeProduceModelUnitOnTile(action)
+    updateTilesAndUnitsBeforeExecutingAction(action)
+
     local sceneWarFileName = action.fileName
     local modelUnitMap     = getModelUnitMap(sceneWarFileName)
-    local availableUnitID  = modelUnitMap:getAvailableUnitId()
+    local producedUnitID   = modelUnitMap:getAvailableUnitId()
+    local playerIndex      = getModelTurnManager(sceneWarFileName):getPlayerIndex()
 
     if (action.tiledID) then
-        local actorData = {
-            tiledID       = action.tiledID,
-            unitID        = availableUnitID,
-            GridIndexable = {gridIndex = action.gridIndex},
-        }
-        local actorUnit = Actor.createWithModelAndViewName("sceneWar.ModelUnit", actorData, "sceneWar.ViewUnit")
-        local modelUnit = actorUnit:getModel()
+        local gridIndex         = action.gridIndex
+        local producedActorUnit = produceActorUnit(sceneWarFileName, action.tiledID, producedUnitID, gridIndex)
+        modelUnitMap:addActorUnitOnMap(producedActorUnit)
 
-        promoteModelUnitOnProduce(modelUnit, sceneWarFileName)
-        modelUnit:setStateActioned()
-            :onStartRunning(sceneWarFileName)
-
-        modelUnitMap:addActorUnitOnMap(actorUnit)
-        if (not IS_SERVER) then
-            addActorUnitsOnMapWithRevealedUnits(action.revealedUnits, true)
+        if ((IS_SERVER) or (playerIndex == getPlayerIndexLoggedIn())) then
+            getModelFogMap(sceneWarFileName):updateMapForUnitsWithPath({gridIndex})
         end
     end
 
-    local playerIndex = getModelTurnManager(sceneWarFileName):getPlayerIndex()
-    local modelPlayer = getModelPlayerManager(sceneWarFileName):getModelPlayer(playerIndex)
-    modelPlayer:setFund(modelPlayer:getFund() - action.cost)
-    dispatchEvtModelPlayerUpdated(sceneWarFileName, modelPlayer, playerIndex)
+    modelUnitMap:setAvailableUnitId(producedUnitID + 1)
+    updateFundWithCost(sceneWarFileName, playerIndex, action.cost)
 
-    modelUnitMap:setAvailableUnitId(availableUnitID + 1)
-    getModelScene(sceneWarFileName):setExecutingAction(false)
+    if (IS_SERVER) then
+        getModelScene(sceneWarFileName):setExecutingAction(false)
+    else
+        setRevealedUnitsVisible(action.revealedUnits, true)
+        updateRevealedViewTiles()
+
+        getModelScene(sceneWarFileName):setExecutingAction(false)
+    end
 end
 
 local function executeProduceModelUnitOnUnit(action)
@@ -1077,29 +1091,15 @@ local function executeProduceModelUnitOnUnit(action)
     moveModelUnitWithAction(action)
     producer:setStateActioned()
 
-    local availableUnitID = modelUnitMap:getAvailableUnitId()
-    local actorData       = {
-        tiledID       = producer:getMovableProductionTiledId(),
-        unitID        = availableUnitID,
-        GridIndexable = {gridIndex = path[#path]},
-    }
-    local actorUnit = Actor.createWithModelAndViewName("sceneWar.ModelUnit", actorData, "sceneWar.ViewUnit")
-    local modelUnit = actorUnit:getModel()
-    promoteModelUnitOnProduce(modelUnit, sceneWarFileName)
-    modelUnit:setStateActioned()
-        :onStartRunning(sceneWarFileName)
-
-    modelUnitMap:addActorUnitLoaded(actorUnit)
-        :setAvailableUnitId(availableUnitID + 1)
-    producer:addLoadUnitId(availableUnitID)
+    local producedUnitID    = modelUnitMap:getAvailableUnitId()
+    local producedActorUnit = produceActorUnit(sceneWarFileName, producer:getMovableProductionTiledId(), producedUnitID, path[#path])
+    modelUnitMap:addActorUnitLoaded(producedActorUnit)
+        :setAvailableUnitId(producedUnitID + 1)
+    producer:addLoadUnitId(producedUnitID)
     if (producer.setCurrentMaterial) then
         producer:setCurrentMaterial(producer:getCurrentMaterial() - 1)
     end
-
-    local playerIndex = producer:getPlayerIndex()
-    local modelPlayer = getModelPlayerManager(sceneWarFileName):getModelPlayer(playerIndex)
-    modelPlayer:setFund(modelPlayer:getFund() - action.cost)
-    dispatchEvtModelPlayerUpdated(sceneWarFileName, modelPlayer, playerIndex)
+    updateFundWithCost(sceneWarFileName, producer:getPlayerIndex(), action.cost)
 
     if (IS_SERVER) then
         getModelScene(sceneWarFileName):setExecutingAction(false)

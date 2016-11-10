@@ -1074,6 +1074,7 @@ local function translateLoadModelUnit(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -1081,7 +1082,8 @@ local function translateLoadModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -1091,7 +1093,8 @@ local function translateLoadModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionLoadModelUnit, createActionsForPublish(actionLoadModelUnit), actionLoadModelUnit
     end
@@ -1128,14 +1131,16 @@ local function translateProduceModelUnitOnTile(action, modelScene)
     })
     focusModelUnit:onStartRunning(sceneWarFileName)
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, {gridIndex}, focusModelUnit)
     local actionProduceModelUnitOnTile = {
         actionName    = "ProduceModelUnitOnTile",
         actionID      = action.actionID,
         fileName      = sceneWarFileName,
         gridIndex     = gridIndex,
         tiledID       = tiledID,
-        revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, {gridIndex}, focusModelUnit),
         cost          = cost, -- the cost can be calculated by the clients, but that calculations can be eliminated by sending the cost to clients.
+        revealedTiles = revealedTiles,
+        revealedUnits = revealedUnits,
     }
     return actionProduceModelUnitOnTile, createActionsForPublish(actionProduceModelUnitOnTile), actionProduceModelUnitOnTile
 end
