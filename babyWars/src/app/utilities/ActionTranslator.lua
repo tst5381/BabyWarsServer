@@ -830,8 +830,9 @@ local function translateCaptureModelTile(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
     end
 
-    local capturer      = getModelUnitMap(sceneWarFileName):getFocusModelUnit(rawPath[1], launchUnitID)
-    local captureTarget = getModelTileMap(sceneWarFileName):getModelTile(rawPath[#rawPath])
+    local endingGridIndex = rawPath[#rawPath]
+    local capturer        = getModelUnitMap(sceneWarFileName):getFocusModelUnit(rawPath[1], launchUnitID)
+    local captureTarget   = getModelTileMap(sceneWarFileName):getModelTile(endingGridIndex)
     if ((not capturer.canCaptureModelTile)                                                              or
         (not capturer:canCaptureModelTile(captureTarget))                                               or
         (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, capturer:getPlayerIndex()))) then
@@ -853,7 +854,7 @@ local function translateCaptureModelTile(action, modelScene)
     else
         local isCaptureFinished = capturer:getCaptureAmount() >= captureTarget:getCurrentCapturePoint()
         if (isCaptureFinished) then
-            local tiles, units = VisibilityFunctions.getRevealedTilesAndUnitsDataForCapture(sceneWarFileName, gridIndex, playerIndex)
+            local tiles, units = VisibilityFunctions.getRevealedTilesAndUnitsDataForCapture(sceneWarFileName, endingGridIndex, capturer:getPlayerIndex())
             revealedTiles = TableFunctions.union(revealedTiles, tiles)
             revealedUnits = TableFunctions.union(revealedUnits, units)
         end

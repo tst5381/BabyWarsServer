@@ -234,12 +234,14 @@ function VisibilityFunctions.getRevealedTilesAndUnitsDataForCapture(sceneWarFile
         end
 
         local modelUnit = modelUnitMap:getModelUnit(gridIndex)
-        local unitType  = modelUnit:getUnitType()
-        if (not isUnitVisible(sceneWarFileName, gridIndex, unitType, isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), playerIndex)) then
-            if ((canRevealHidingPlaces)                    or
-                (not modelTile.canHideUnitType)            or
-                (not modelTile:canHideUnitType(unitType))) then
-                revealedUnits = TableFunctions.union(revealedUnits, generateUnitsData(sceneWarFileName, modelUnit))
+        if (modelUnit) then
+            local unitType = modelUnit:getUnitType()
+            if (not isUnitVisible(sceneWarFileName, gridIndex, unitType, isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), playerIndex)) then
+                if ((canRevealHidingPlaces)                    or
+                    (not modelTile.canHideUnitType)            or
+                    (not modelTile:canHideUnitType(unitType))) then
+                    revealedUnits = TableFunctions.union(revealedUnits, generateUnitsData(sceneWarFileName, modelUnit))
+                end
             end
         end
     end
