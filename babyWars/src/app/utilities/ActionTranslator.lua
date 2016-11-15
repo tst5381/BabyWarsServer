@@ -950,7 +950,7 @@ local function translateDropModelUnit(action, modelScene)
     else
         local dropDestinations = translateDropDestinations(action.dropDestinations, modelUnitMap, loaderModelUnit)
         for _, dropDestination in ipairs(dropDestinations) do
-            local dropPath      = {destination, dropDestination.gridIndex}
+            local dropPath      = {endingGridIndex, dropDestination.gridIndex}
             local dropModelUnit = modelUnitMap:getLoadedModelUnitWithUnitId(dropDestination.unitID)
             local tiles, units  = getRevealedTilesAndUnitsData(sceneWarFileName, dropPath, dropModelUnit, false)
             revealedTiles = TableFunctions.union(revealedTiles, tiles)

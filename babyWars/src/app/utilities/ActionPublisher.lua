@@ -251,12 +251,20 @@ creators.createActionForLoadModelUnit = function(action, targetPlayerIndex)
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
-    local sceneWarFileName   = action.fileName
-    local beginningGridIndex = action.path[1]
-    local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-
+    local sceneWarFileName = action.fileName
+    local path             = action.path
+    local modelUnitMap     = getModelUnitMap(sceneWarFileName)
+    local endingGridIndex  = path[#path]
+    local loaderModelUnit  = modelUnitMap:getModelUnit(endingGridIndex)
+    local playerIndex      = loaderModelUnit:getPlayerIndex()
     local actionForPublish = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+    if (not isUnitVisible(sceneWarFileName, endingGridIndex, loaderModelUnit:getUnitType(), isModelUnitDiving(loaderModelUnit), playerIndex, targetPlayerIndex)) then
+        actionForPublish.actionName = "Wait"
+    end
+
+    local beginningGridIndex = path[1]
+    local focusModelUnit     = modelUnitMap:getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), playerIndex, targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
 
