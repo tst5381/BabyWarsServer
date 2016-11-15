@@ -19,6 +19,8 @@ local WebSocketManager      = (not IS_SERVER) and (require("src.app.utilities.We
 local ActorManager          = (not IS_SERVER) and (require("src.global.actors.ActorManager"))     or (nil)
 
 local appendList               = TableFunctions.appendList
+local destroyActorUnitLoaded   = Destroyers.destroyActorUnitLoaded
+local destroyActorUnitOnMap    = Destroyers.destroyActorUnitOnMap
 local getAdjacentGrids         = GridIndexFunctions.getAdjacentGrids
 local getGridsWithinDistance   = GridIndexFunctions.getGridsWithinDistance
 local getLocalizedText         = LocalizationFunctions.getLocalizedText
@@ -241,7 +243,7 @@ local function removeHiddenActorUnitsAfterAction(action)
                 local adjacentModelUnit = modelUnitMap:getModelUnit(adjacentGridIndex)
                 if ((adjacentModelUnit)                                                                                                                                      and
                     (not isUnitVisible(sceneWarFileName, adjacentGridIndex, adjacentModelUnit:getUnitType(), isModelUnitDiving(adjacentModelUnit), adjacentModelUnit:getPlayerIndex(), playerIndexLoggedIn))) then
-                    appendList(removedModelUnits, Destroyers.destroyActorUnitOnMap(sceneWarFileName, adjacentGridIndex, false))
+                    appendList(removedModelUnits, destroyActorUnitOnMap(sceneWarFileName, adjacentGridIndex, false))
                 end
             end
             return removedModelUnits
@@ -258,9 +260,9 @@ local function removeHiddenActorUnitsAfterAction(action)
             -- 该部队可见，所以直接返回即可。
             return {}
         elseif (modelUnitMap:getModelUnit(endingGridIndex)) then
-            return Destroyers.destroyActorUnitOnMap(sceneWarFileName, endingGridIndex, false)
+            return destroyActorUnitOnMap(sceneWarFileName, endingGridIndex, false)
         else
-            return Destroyers.destroyActorUnitLoaded(sceneWarFileName, launchUnitID, false)
+            return destroyActorUnitLoaded(sceneWarFileName, launchUnitID, false)
         end
     end
 end
@@ -521,7 +523,7 @@ local function executeAttack(action)
     attacker:setCurrentHP(attackerNewHP)
     if (attackerNewHP == 0) then
         attackTarget:setCurrentPromotion(math.min(attackTarget:getMaxPromotion(), attackTarget:getCurrentPromotion() + 1))
-        appendList(removedModelUnitsForAttack, Destroyers.destroyActorUnitOnMap(sceneWarFileName, attackerGridIndex, false))
+        appendList(removedModelUnitsForAttack, destroyActorUnitOnMap(sceneWarFileName, attackerGridIndex, false))
     end
 
     local plasmaGridIndexes
@@ -530,7 +532,7 @@ local function executeAttack(action)
     if (targetNewHP == 0) then
         if (attackTarget.getUnitType) then
             attacker:setCurrentPromotion(math.min(attacker:getMaxPromotion(), attacker:getCurrentPromotion() + 1))
-            appendList(removedModelUnitsForAttack, Destroyers.destroyActorUnitOnMap(sceneWarFileName, targetGridIndex, false))
+            appendList(removedModelUnitsForAttack, destroyActorUnitOnMap(sceneWarFileName, targetGridIndex, false))
         else
             attackTarget:updateWithObjectAndBaseId(0)
             plasmaGridIndexes = getAdjacentPlasmaGridIndexes(targetGridIndex, modelTileMap)
@@ -867,7 +869,7 @@ local function executeDropModelUnit(action)
                 local gridIndex = dropModelUnit:getGridIndex()
                 local isVisible = isUnitVisible(sceneWarFileName, gridIndex, dropModelUnit:getUnitType(), isDiving, playerIndex, playerIndexLoggedIn)
                 if (not isVisible) then
-                    Destroyers.destroyActorUnitOnMap(sceneWarFileName, gridIndex, false)
+                    destroyActorUnitOnMap(sceneWarFileName, gridIndex, false)
                 end
 
                 dropModelUnit:moveViewAlongPath({endingGridIndex, gridIndex}, isDiving, function()
