@@ -293,7 +293,7 @@ local function moveModelUnitWithAction(action)
     local shouldUpdateFogMap = (IS_SERVER) or (playerIndex == getPlayerIndexLoggedIn())
 
     if (shouldUpdateFogMap) then
-        modelFogMap:updateMapForPathsWithPath(path, launchUnitID)
+        modelFogMap:updateMapForPathsWithModelUnitAndPath(focusModelUnit, path)
         if (not launchUnitID) then
             modelFogMap:updateMapForUnitsForPlayerIndexOnUnitLeave(playerIndex, beginningGridIndex, focusModelUnit:getVisionForPlayerIndex(playerIndex))
         end
@@ -834,11 +834,6 @@ local function executeDropModelUnit(action)
         local gridIndex     = dropDestination.gridIndex
         local unitID        = dropDestination.unitID
         local dropModelUnit = modelUnitMap:getLoadedModelUnitWithUnitId(unitID)
-        if (shouldUpdateFogMap) then
-            modelFogMap:updateMapForPathsWithPath({endingGridIndex, gridIndex}, unitID)
-                :updateMapForUnitsForPlayerIndexOnUnitArrive(playerIndex, gridIndex, dropModelUnit:getVisionForPlayerIndex(playerIndex))
-        end
-
         modelUnitMap:setActorUnitUnloaded(unitID, gridIndex)
         focusModelUnit:removeLoadUnitId(unitID)
 
@@ -849,6 +844,11 @@ local function executeDropModelUnit(action)
             for _, loadedModelUnit in pairs(modelUnitMap:getLoadedModelUnitsWithLoader(dropModelUnit, true)) do
                 loadedModelUnit:setGridIndex(gridIndex, false)
             end
+        end
+
+        if (shouldUpdateFogMap) then
+            modelFogMap:updateMapForPathsWithModelUnitAndPath(dropModelUnit, {endingGridIndex, gridIndex})
+                :updateMapForUnitsForPlayerIndexOnUnitArrive(playerIndex, gridIndex, dropModelUnit:getVisionForPlayerIndex(playerIndex))
         end
     end
 
