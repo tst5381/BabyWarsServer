@@ -129,10 +129,16 @@ creators.createActionForBuildModelTile = function(action, targetPlayerIndex)
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
     local sceneWarFileName   = action.fileName
-    local beginningGridIndex = action.path[1]
+    local path               = action.path
+    local beginningGridIndex = path[1]
+    local endingGridIndex    = path[#path]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-    local actionForPublish   = TableFunctions.clone(action, {"revealedUnits"})
+    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
 
+    if (not isTileVisible(sceneWarFileName, endingGridIndex, targetPlayerIndex)) then
+        local modelTileMap = getModelTileMap(sceneWarFileName)
+        actionForPublish.actingTilesData = generateTilesDataForPublish(modelTileMap:getModelTile(endingGridIndex), modelTileMap:getMapSize())
+    end
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
     end
@@ -148,10 +154,10 @@ creators.createActionForCaptureModelTile = function(action, targetPlayerIndex)
     local sceneWarFileName   = action.fileName
     local path               = action.path
     local beginningGridIndex = path[1]
+    local endingGridIndex    = path[#path]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
 
-    local actionForPublish = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    local endingGridIndex  = path[#path]
     if (not isTileVisible(sceneWarFileName, endingGridIndex, targetPlayerIndex)) then
         local modelTileMap = getModelTileMap(sceneWarFileName)
         actionForPublish.actingTilesData = generateTilesDataForPublish(modelTileMap:getModelTile(endingGridIndex), modelTileMap:getMapSize())

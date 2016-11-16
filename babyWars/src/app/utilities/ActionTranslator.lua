@@ -789,16 +789,18 @@ local function translateBuildModelTile(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
     end
 
-    local focusModelUnit    = getModelUnitMap(sceneWarFileName):getFocusModelUnit(rawPath[1], launchUnitID)
-    local tileType          = getModelTileMap(sceneWarFileName):getModelTile(rawPath[#rawPath]):getTileType()
+    local endingGridIndex = rawPath[#rawPath]
+    local focusModelUnit  = getModelUnitMap(sceneWarFileName):getFocusModelUnit(rawPath[1], launchUnitID)
+    local modelTile       = getModelTileMap(sceneWarFileName):getModelTile(endingGridIndex)
     if ((not focusModelUnit.canBuildOnTileType)                                                               or
-        (not focusModelUnit:canBuildOnTileType(tileType))                                                     or
+        (not focusModelUnit:canBuildOnTileType(modelTile:getTileType()))                                      or
         (not focusModelUnit.getCurrentMaterial)                                                               or
         (focusModelUnit:getCurrentMaterial() < 1)                                                             or
         (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, focusModelUnit:getPlayerIndex()))) then
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -806,17 +808,24 @@ local function translateBuildModelTile(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
+        if (focusModelUnit:getBuildAmount() >= modelTile:getCurrentBuildPoint()) then
+            local tiles, units = VisibilityFunctions.getRevealedTilesAndUnitsDataForBuild(sceneWarFileName, endingGridIndex, focusModelUnit)
+            revealedTiles = TableFunctions.union(revealedTiles, tiles)
+            revealedUnits = TableFunctions.union(revealedUnits, units)
+        end
         local actionBuildModelTile = {
             actionName    = "BuildModelTile",
             actionID      = action.actionID,
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionBuildModelTile, createActionsForPublish(actionBuildModelTile), actionBuildModelTile
     end

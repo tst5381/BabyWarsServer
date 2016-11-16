@@ -666,17 +666,17 @@ local function executeBeginTurn(action)
 end
 
 local function executeBuildModelTile(action)
-    if (not IS_SERVER) then
-        addActorUnitsWithUnitsData(action.actingUnitsData, false)
-    end
+    updateTilesAndUnitsBeforeExecutingAction(action)
 
     local path             = action.path
     local sceneWarFileName = action.fileName
+    local endingGridIndex  = path[#path]
     local focusModelUnit   = getModelUnitMap(sceneWarFileName):getFocusModelUnit(path[1], action.launchUnitID)
-    local modelTile        = getModelTileMap(sceneWarFileName):getModelTile(path[#path])
+    local modelTile        = getModelTileMap(sceneWarFileName):getModelTile(endingGridIndex)
     local buildPoint       = modelTile:getCurrentBuildPoint() - focusModelUnit:getBuildAmount()
-
     moveModelUnitWithAction(action)
+    focusModelUnit:setStateActioned()
+
     if (buildPoint > 0) then
         focusModelUnit:setBuildingModelTile(true)
         modelTile:setCurrentBuildPoint(buildPoint)
@@ -684,14 +684,16 @@ local function executeBuildModelTile(action)
         focusModelUnit:setBuildingModelTile(false)
             :setCurrentMaterial(focusModelUnit:getCurrentMaterial() - 1)
         modelTile:updateWithObjectAndBaseId(focusModelUnit:getBuildTiledIdWithTileType(modelTile:getTileType()))
+
+        local playerIndex = focusModelUnit:getPlayerIndex()
+        if ((IS_SERVER) or (playerIndex == getPlayerIndexLoggedIn())) then
+            getModelFogMap(sceneWarFileName):updateMapForTilesForPlayerIndexOnGettingOwnership(playerIndex, endingGridIndex, modelTile:getVisionForPlayerIndex(playerIndex))
+        end
     end
-    focusModelUnit:setStateActioned()
 
     if (IS_SERVER) then
         getModelScene(sceneWarFileName):setExecutingAction(false)
     else
-        local revealedUnits = action.revealedUnits
-        addActorUnitsOnMapWithRevealedUnits(revealedUnits, false)
         local removedModelUnits = removeHiddenActorUnitsAfterAction(action)
 
         focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
@@ -699,7 +701,8 @@ local function executeBuildModelTile(action)
                 :showNormalAnimation()
             modelTile:updateView()
 
-            setRevealedUnitsVisible(revealedUnits, true)
+            setRevealedUnitsVisible(action.revealedUnits, true)
+            updateViewTileMapOnVisibilityChanged()
             removeViewUnits(removedModelUnits)
 
             getModelScene(sceneWarFileName):setExecutingAction(false)
@@ -710,12 +713,13 @@ end
 local function executeCaptureModelTile(action)
     updateTilesAndUnitsBeforeExecutingAction(action)
 
-    local path             = action.path
-    local sceneWarFileName = action.fileName
-    local focusModelUnit   = getModelUnitMap(sceneWarFileName):getFocusModelUnit(path[1], action.launchUnitID)
-    local endingGridIndex  = path[#path]
-    local modelTile        = getModelTileMap(sceneWarFileName):getModelTile(endingGridIndex)
-    local capturePoint     = modelTile:getCurrentCapturePoint() - focusModelUnit:getCaptureAmount()
+    local path                = action.path
+    local sceneWarFileName    = action.fileName
+    local focusModelUnit      = getModelUnitMap(sceneWarFileName):getFocusModelUnit(path[1], action.launchUnitID)
+    local endingGridIndex     = path[#path]
+    local modelTile           = getModelTileMap(sceneWarFileName):getModelTile(endingGridIndex)
+    local capturePoint        = modelTile:getCurrentCapturePoint() - focusModelUnit:getCaptureAmount()
+    local playerIndexLoggedIn = (not IS_SERVER) and (getPlayerIndexLoggedIn()) or (nil)
     moveModelUnitWithAction(action)
     focusModelUnit:setStateActioned()
 
@@ -723,9 +727,21 @@ local function executeCaptureModelTile(action)
         focusModelUnit:setCapturingModelTile(true)
         modelTile:setCurrentCapturePoint(capturePoint)
     else
+        local modelFogMap         = getModelFogMap(sceneWarFileName)
+        local playerIndexCaptured = modelTile:getPlayerIndex()
+        if (((IS_SERVER) and (playerIndexCaptured > 0))   or
+            (playerIndexCaptured == playerIndexLoggedIn)) then
+            modelFogMap:updateMapForTilesForPlayerIndexOnLosingOwnership(playerIndexCaptured, endingGridIndex, modelTile:getVisionForPlayerIndex(playerIndexCaptured))
+        end
+
+        local playerIndexActing = focusModelUnit:getPlayerIndex()
         focusModelUnit:setCapturingModelTile(false)
         modelTile:setCurrentCapturePoint(modelTile:getMaxCapturePoint())
-            :updateWithPlayerIndex(focusModelUnit:getPlayerIndex())
+            :updateWithPlayerIndex(playerIndexActing)
+
+        if ((IS_SERVER) or (playerIndexActing == playerIndexLoggedIn)) then
+            modelFogMap:updateMapForTilesForPlayerIndexOnGettingOwnership(playerIndexActing, endingGridIndex, modelTile:getVisionForPlayerIndex(playerIndexActing))
+        end
     end
 
     local modelSceneWar      = getModelScene(sceneWarFileName)
@@ -738,9 +754,6 @@ local function executeCaptureModelTile(action)
         end
         modelSceneWar:setExecutingAction(false)
     else
-        if (not isTileVisible(sceneWarFileName, endingGridIndex, getPlayerIndexLoggedIn())) then
-            modelTile:updateAsFogEnabled()
-        end
         local removedModelUnits = removeHiddenActorUnitsAfterAction(action)
 
         if (not lostPlayerIndex) then
