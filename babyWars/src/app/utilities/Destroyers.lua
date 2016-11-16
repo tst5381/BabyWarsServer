@@ -58,7 +58,7 @@ function Destroyers.destroyActorUnitLoaded(sceneWarFileName, unitID, shouldRemov
     return destroyedUnits
 end
 
-function Destroyers.destroyActorUnitOnMap(sceneWarFileName, gridIndex, shouldRemoveView)
+function Destroyers.destroyActorUnitOnMap(sceneWarFileName, gridIndex, shouldRemoveView, shouldRetainVisibility)
     resetModelTile(sceneWarFileName, gridIndex)
 
     local modelUnitMap   = getModelUnitMap(sceneWarFileName)
@@ -74,9 +74,11 @@ function Destroyers.destroyActorUnitOnMap(sceneWarFileName, gridIndex, shouldRem
         destroyedUnits[#destroyedUnits + 1] = destroySingleActorUnitLoaded(modelUnitMap, modelUnitLoaded, true)
     end
 
-    local playerIndex = modelUnit:getPlayerIndex()
-    if ((IS_SERVER) or (playerIndex == getPlayerIndexLoggedIn())) then
-        getModelFogMap(sceneWarFileName):updateMapForUnitsForPlayerIndexOnUnitLeave(playerIndex, gridIndex, modelUnit:getVisionForPlayerIndex(playerIndex))
+    if (not shouldRetainVisibility) then
+        local playerIndex = modelUnit:getPlayerIndex()
+        if ((IS_SERVER) or (playerIndex == getPlayerIndexLoggedIn())) then
+            getModelFogMap(sceneWarFileName):updateMapForUnitsForPlayerIndexOnUnitLeave(playerIndex, gridIndex, modelUnit:getVisionForPlayerIndex(playerIndex))
+        end
     end
 
     return destroyedUnits
@@ -87,7 +89,7 @@ function Destroyers.destroyPlayerForce(sceneWarFileName, playerIndex)
     getModelUnitMap(sceneWarFileName):forEachModelUnitOnMap(function(modelUnit)
         if (modelUnit:getPlayerIndex() == playerIndex) then
             local gridIndex = modelUnit:getGridIndex()
-            Destroyers.destroyActorUnitOnMap(sceneWarFileName, gridIndex, true)
+            Destroyers.destroyActorUnitOnMap(sceneWarFileName, gridIndex, true, true)
 
             if (not IS_SERVER) then
                 modelGridEffect:showAnimationExplosion(gridIndex)

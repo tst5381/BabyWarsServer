@@ -465,16 +465,18 @@ end
 local function executeAttack(action)
     updateTilesAndUnitsBeforeExecutingAction(action)
 
-    local path               = action.path
-    local sceneWarFileName   = action.fileName
-    local attackDamage       = action.attackDamage
-    local counterDamage      = action.counterDamage
-    local attackerGridIndex  = path[#path]
-    local targetGridIndex    = action.targetGridIndex
-    local modelUnitMap       = getModelUnitMap(sceneWarFileName)
-    local modelTileMap       = getModelTileMap(sceneWarFileName)
-    local attacker           = modelUnitMap:getFocusModelUnit(path[1], action.launchUnitID)
-    local attackTarget       = modelUnitMap:getModelUnit(targetGridIndex) or modelTileMap:getModelTile(targetGridIndex)
+    local path                = action.path
+    local sceneWarFileName    = action.fileName
+    local attackDamage        = action.attackDamage
+    local counterDamage       = action.counterDamage
+    local attackerGridIndex   = path[#path]
+    local targetGridIndex     = action.targetGridIndex
+    local modelUnitMap        = getModelUnitMap(sceneWarFileName)
+    local modelTileMap        = getModelTileMap(sceneWarFileName)
+    local attacker            = modelUnitMap:getFocusModelUnit(path[1], action.launchUnitID)
+    local attackTarget        = modelUnitMap:getModelUnit(targetGridIndex) or modelTileMap:getModelTile(targetGridIndex)
+    local attackerPlayerIndex = attacker:getPlayerIndex()
+    local targetPlayerIndex   = attackTarget:getPlayerIndex()
     moveModelUnitWithAction(action)
     attacker:setStateActioned()
 
@@ -489,15 +491,15 @@ local function executeAttack(action)
     if (attackTarget.getUnitType) then
         local attackerDamageCost  = getBaseDamageCostWithTargetAndDamage(attacker,     counterDamage or 0)
         local targetDamageCost    = getBaseDamageCostWithTargetAndDamage(attackTarget, attackDamage)
-        local attackerModelPlayer = modelPlayerManager:getModelPlayer(attacker    :getPlayerIndex())
-        local targetModelPlayer   = modelPlayerManager:getModelPlayer(attackTarget:getPlayerIndex())
+        local attackerModelPlayer = modelPlayerManager:getModelPlayer(attackerPlayerIndex)
+        local targetModelPlayer   = modelPlayerManager:getModelPlayer(targetPlayerIndex)
 
         attackerModelPlayer:addDamageCost(getSkillModifiedDamageCost(attackerDamageCost * 2 + targetDamageCost,     attackerModelPlayer))
         targetModelPlayer  :addDamageCost(getSkillModifiedDamageCost(attackerDamageCost     + targetDamageCost * 2, targetModelPlayer))
         attackerModelPlayer:setFund(attackerModelPlayer:getFund() + getIncomeWithDamageCost(targetDamageCost,   attackerModelPlayer))
         targetModelPlayer  :setFund(targetModelPlayer  :getFund() + getIncomeWithDamageCost(attackerDamageCost, targetModelPlayer))
 
-        dispatchEvtModelPlayerUpdated(sceneWarFileName, attackerModelPlayer, attacker:getPlayerIndex())
+        dispatchEvtModelPlayerUpdated(sceneWarFileName, attackerModelPlayer, attackerPlayerIndex)
     end
 
     local attackerNewHP = math.max(0, attacker:getCurrentHP() - (counterDamage or 0))
@@ -507,13 +509,15 @@ local function executeAttack(action)
         destroyActorUnitOnMap(sceneWarFileName, attackerGridIndex, false)
     end
 
-    local plasmaGridIndexes
     local targetNewHP = math.max(0, attackTarget:getCurrentHP() - attackDamage)
+    local targetVision, plasmaGridIndexes
     attackTarget:setCurrentHP(targetNewHP)
     if (targetNewHP == 0) then
         if (attackTarget.getUnitType) then
+            targetVision = attackTarget:getVisionForPlayerIndex(targetPlayerIndex)
+
             attacker:setCurrentPromotion(math.min(attacker:getMaxPromotion(), attacker:getCurrentPromotion() + 1))
-            destroyActorUnitOnMap(sceneWarFileName, targetGridIndex, false)
+            destroyActorUnitOnMap(sceneWarFileName, targetGridIndex, false, true)
         else
             attackTarget:updateWithObjectAndBaseId(0)
             plasmaGridIndexes = getAdjacentPlasmaGridIndexes(targetGridIndex, modelTileMap)
@@ -526,9 +530,13 @@ local function executeAttack(action)
     local modelSceneWar      = getModelScene(sceneWarFileName)
     local modelTurnManager   = getModelTurnManager(sceneWarFileName)
     local lostPlayerIndex    = action.lostPlayerIndex
-    local isInTurnPlayerLost = (lostPlayerIndex == modelTurnManager:getPlayerIndex())
+    local isInTurnPlayerLost = (lostPlayerIndex == attackerPlayerIndex)
     if (IS_SERVER) then
-        if (lostPlayerIndex) then
+        if (not lostPlayerIndex) then
+            if (targetVision) then
+                getModelFogMap(sceneWarFileName):updateMapForUnitsForPlayerIndexOnUnitLeave(targetPlayerIndex, targetGridIndex, targetVision)
+            end
+        else
             Destroyers.destroyPlayerForce(sceneWarFileName, lostPlayerIndex)
             if (modelPlayerManager:getAlivePlayersCount() <= 1) then
                 modelSceneWar:setEnded(true)
@@ -538,6 +546,7 @@ local function executeAttack(action)
         end
         modelSceneWar:setExecutingAction(false)
     else
+        local playerIndexLoggedIn = getPlayerIndexLoggedIn()
         local callbackAfterMoveAnimation = function()
             attacker:updateView()
                 :showNormalAnimation()
@@ -548,6 +557,9 @@ local function executeAttack(action)
                 attackTarget:removeViewFromParent()
             end
 
+            if ((targetVision) and (targetPlayerIndex == playerIndexLoggedIn) and (not lostPlayerIndex)) then
+                getModelFogMap(sceneWarFileName):updateMapForUnitsForPlayerIndexOnUnitLeave(targetPlayerIndex, targetGridIndex, targetVision)
+            end
             updateTileAndUnitMapOnVisibilityChanged()
 
             local modelGridEffect = getModelGridEffect()
@@ -576,7 +588,7 @@ local function executeAttack(action)
             end)
         else
             local lostModelPlayer      = modelPlayerManager:getModelPlayer(lostPlayerIndex)
-            local isLoggedInPlayerLost = lostModelPlayer:getAccount() == WebSocketManager.getLoggedInAccountAndPassword()
+            local isLoggedInPlayerLost = (lostPlayerIndex == playerIndexLoggedIn)
             modelSceneWar:setEnded((isLoggedInPlayerLost) or (modelPlayerManager:getAlivePlayersCount() <= 2))
 
             attacker:moveViewAlongPathAndFocusOnTarget(path, isModelUnitDiving(attacker), targetGridIndex, function()
@@ -656,6 +668,9 @@ local function executeBuildModelTile(action)
     local focusModelUnit   = getModelUnitMap(sceneWarFileName):getFocusModelUnit(path[1], action.launchUnitID)
     local modelTile        = getModelTileMap(sceneWarFileName):getModelTile(endingGridIndex)
     local buildPoint       = modelTile:getCurrentBuildPoint() - focusModelUnit:getBuildAmount()
+    if ((not IS_SERVER) and (modelTile:isFogEnabledOnClient())) then
+        modelTile:updateAsFogDisabled()
+    end
     moveModelUnitWithAction(action)
     focusModelUnit:setStateActioned()
 
@@ -679,7 +694,6 @@ local function executeBuildModelTile(action)
         focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
             focusModelUnit:updateView()
                 :showNormalAnimation()
-            modelTile:updateView()
 
             updateTileAndUnitMapOnVisibilityChanged()
 
@@ -693,11 +707,15 @@ local function executeCaptureModelTile(action)
 
     local path                = action.path
     local sceneWarFileName    = action.fileName
-    local focusModelUnit      = getModelUnitMap(sceneWarFileName):getFocusModelUnit(path[1], action.launchUnitID)
     local endingGridIndex     = path[#path]
     local modelTile           = getModelTileMap(sceneWarFileName):getModelTile(endingGridIndex)
-    local capturePoint        = modelTile:getCurrentCapturePoint() - focusModelUnit:getCaptureAmount()
     local playerIndexLoggedIn = (not IS_SERVER) and (getPlayerIndexLoggedIn()) or (nil)
+    local focusModelUnit      = getModelUnitMap(sceneWarFileName):getFocusModelUnit(path[1], action.launchUnitID)
+    local capturePoint        = modelTile:getCurrentCapturePoint() - focusModelUnit:getCaptureAmount()
+    local modelFogMap, previousVision, previousPlayerIndex
+    if ((not IS_SERVER) and (modelTile:isFogEnabledOnClient())) then
+        modelTile:updateAsFogDisabled()
+    end
     moveModelUnitWithAction(action)
     focusModelUnit:setStateActioned()
 
@@ -705,12 +723,9 @@ local function executeCaptureModelTile(action)
         focusModelUnit:setCapturingModelTile(true)
         modelTile:setCurrentCapturePoint(capturePoint)
     else
-        local modelFogMap         = getModelFogMap(sceneWarFileName)
-        local playerIndexCaptured = modelTile:getPlayerIndex()
-        if (((IS_SERVER) and (playerIndexCaptured > 0))   or
-            (playerIndexCaptured == playerIndexLoggedIn)) then
-            modelFogMap:updateMapForTilesForPlayerIndexOnLosingOwnership(playerIndexCaptured, endingGridIndex, modelTile:getVisionForPlayerIndex(playerIndexCaptured))
-        end
+        modelFogMap         = getModelFogMap(sceneWarFileName)
+        previousPlayerIndex = modelTile:getPlayerIndex()
+        previousVision      = (previousPlayerIndex > 0) and (modelTile:getVisionForPlayerIndex(previousPlayerIndex)) or (nil)
 
         local playerIndexActing = focusModelUnit:getPlayerIndex()
         focusModelUnit:setCapturingModelTile(false)
@@ -726,6 +741,9 @@ local function executeCaptureModelTile(action)
     local modelPlayerManager = getModelPlayerManager(sceneWarFileName)
     local lostPlayerIndex    = action.lostPlayerIndex
     if (IS_SERVER) then
+        if (previousVision) then
+            modelFogMap:updateMapForTilesForPlayerIndexOnLosingOwnership(previousPlayerIndex, endingGridIndex, previousVision)
+        end
         if (lostPlayerIndex) then
             Destroyers.destroyPlayerForce(sceneWarFileName, lostPlayerIndex)
             modelSceneWar:setEnded(modelPlayerManager:getAlivePlayersCount() < 2)
@@ -736,8 +754,10 @@ local function executeCaptureModelTile(action)
             focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
                 focusModelUnit:updateView()
                     :showNormalAnimation()
-                modelTile:updateView()
 
+                if (previousPlayerIndex == playerIndexLoggedIn) then
+                    modelFogMap:updateMapForTilesForPlayerIndexOnLosingOwnership(previousPlayerIndex, endingGridIndex, previousVision)
+                end
                 updateTileAndUnitMapOnVisibilityChanged()
 
                 modelSceneWar:setExecutingAction(false)
@@ -750,7 +770,6 @@ local function executeCaptureModelTile(action)
             focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
                 focusModelUnit:updateView()
                     :showNormalAnimation()
-                modelTile:updateView()
 
                 getModelMessageIndicator(sceneWarFileName):showMessage(getLocalizedText(76, lostModelPlayer:getNickname()))
                 Destroyers.destroyPlayerForce(sceneWarFileName, lostPlayerIndex)
@@ -1048,8 +1067,7 @@ local function executeProduceModelUnitOnTile(action)
         modelUnitMap:addActorUnitOnMap(producedActorUnit)
 
         if ((IS_SERVER) or (playerIndex == getPlayerIndexLoggedIn())) then
-            local vision = producedActorUnit:getModel():getVisionForPlayerIndex(playerIndex)
-            getModelFogMap(sceneWarFileName):updateMapForUnitsForPlayerIndexOnUnitArrive(playerIndex, gridIndex, vision)
+            getModelFogMap(sceneWarFileName):updateMapForUnitsForPlayerIndexOnUnitArrive(playerIndex, gridIndex, producedActorUnit:getModel():getVisionForPlayerIndex(playerIndex))
         end
     end
 
@@ -1178,6 +1196,8 @@ local function executeSurrender(action)
             modelTurnManager:endTurnPhaseMain()
         end
     else
+        updateTileAndUnitMapOnVisibilityChanged()
+
         getModelMessageIndicator(sceneWarFileName):showMessage(getLocalizedText(77, modelPlayer:getNickname()))
         if (modelPlayer:getAccount() == WebSocketManager.getLoggedInAccountAndPassword()) then
             modelSceneWar:setEnded(true)
