@@ -719,10 +719,10 @@ local function translateAttack(action, modelScene)
     local targetTile          = modelTileMap:getModelTile(targetGridIndex)
     local attackTarget        = modelUnitMap:getModelUnit(targetGridIndex) or targetTile
     local attackerPlayerIndex = attacker:getPlayerIndex()
-    if ((not ComponentManager.getComponent(attacker, "AttackDoer"))                                                                                                                   or
-        (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))                                                                                              or
-        (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, attackerPlayerIndex))                                                                                      or
-        ((attackTarget.getUnitType) and (not isUnitVisible(sceneWarFileName, attackTarget:getUnitType(), targetGridIndex, isModelUnitDiving(attackTarget), attackTarget:getPlayerIndex(), attackerPlayerIndex)))) then
+    if ((not ComponentManager.getComponent(attacker, "AttackDoer"))                                                                                                                                               or
+        (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))                                                                                                                          or
+        (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, attackerPlayerIndex))                                                                                                                  or
+        ((attackTarget.getUnitType) and (not isUnitVisible(sceneWarFileName, targetGridIndex, attackTarget:getUnitType(), isModelUnitDiving(attackTarget), attackTarget:getPlayerIndex(), attackerPlayerIndex)))) then
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
@@ -731,6 +731,7 @@ local function translateAttack(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, attacker, (counterDamage) and (counterDamage >= attacker:getCurrentHP()))
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -738,7 +739,8 @@ local function translateAttack(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, attacker),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -748,10 +750,11 @@ local function translateAttack(action, modelScene)
             fileName        = sceneWarFileName,
             path            = translatedPath,
             launchUnitID    = launchUnitID,
-            revealedUnits   = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, attacker, ((counterDamage) and (counterDamage >= attacker:getCurrentHP()))),
             targetGridIndex = targetGridIndex,
             attackDamage    = attackDamage,
             counterDamage   = counterDamage,
+            revealedTiles   = revealedTiles,
+            revealedUnits   = revealedUnits,
             lostPlayerIndex = getLostPlayerIndexForActionAttack(attacker, attackTarget, attackDamage, counterDamage),
         }
         return actionAttack, createActionsForPublish(actionAttack), actionAttack

@@ -58,7 +58,7 @@ end
 --------------------------------------------------------------------------------
 local creators = {}
 creators.createActionForActivateSkillGroup = function(action, targetPlayerIndex)
-    return TableFunctions.clone(action, {"revealedUnits"})
+    return TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
 end
 
 creators.createActionForAttack = function(action, targetPlayerIndex)
@@ -77,12 +77,12 @@ creators.createActionForAttack = function(action, targetPlayerIndex)
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(sceneWarFileName, focusModelUnit))
     end
-    if ((targetModelUnit)                                                                                                                                and
+    if ((targetModelUnit)                                                                                                                                                               and
         (not isUnitVisible(sceneWarFileName, targetGridIndex, targetModelUnit:getUnitType(), isModelUnitDiving(targetModelUnit), targetModelUnit:getPlayerIndex(), targetPlayerIndex))) then
         actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(sceneWarFileName, targetModelUnit))
     end
 
-    local actionForPublish = TableFunctions.clone(action, {"revealedUnits"})
+    local actionForPublish = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     actionForPublish.actingUnitsData = actingUnitsData
 
     return actionForPublish

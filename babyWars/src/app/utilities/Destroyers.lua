@@ -71,7 +71,7 @@ function Destroyers.destroyActorUnitOnMap(sceneWarFileName, gridIndex, shouldRem
         modelUnit:removeViewFromParent()
     end
     for _, modelUnitLoaded in pairs(modelUnitMap:getLoadedModelUnitsWithLoader(modelUnit, true) or {}) do
-        destroyedUnits[#destroyedUnits + 1] = destroySingleActorUnitLoaded(modelUnitMap, modelUnitLoaded, shouldRemoveView)
+        destroyedUnits[#destroyedUnits + 1] = destroySingleActorUnitLoaded(modelUnitMap, modelUnitLoaded, true)
     end
 
     local playerIndex = modelUnit:getPlayerIndex()
@@ -101,6 +101,12 @@ function Destroyers.destroyPlayerForce(sceneWarFileName, playerIndex)
                 :updateView()
         end
     end)
+
+    if ((IS_SERVER) or (playerIndex == getPlayerIndexLoggedIn())) then
+        getModelFogMap(sceneWarFileName):resetMapForPathsForPlayerIndex(playerIndex)
+            :resetMapForTilesForPlayerIndex(playerIndex)
+            :resetMapForUnitsForPlayerIndex(playerIndex)
+    end
 
     getModelPlayerManager(sceneWarFileName):getModelPlayer(playerIndex):setAlive(false)
 end
