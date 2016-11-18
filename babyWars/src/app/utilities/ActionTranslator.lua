@@ -682,22 +682,23 @@ local function translatePath(path, launchUnitID, modelSceneWar)
 end
 
 local function translateActivateSkillGroup(action, modelScene)
-    local playerAccount      = action.playerAccount
-    local modelPlayerManager = modelScene:getModelPlayerManager()
-    local modelPlayer        = modelPlayerManager:getModelPlayerWithAccount(playerAccount)
-    local energy, req1, req2 = modelPlayer:getEnergy()
-    local skillGroupID       = action.skillGroupID
-    local sceneWarFileName   = modelScene:getFileName()
+    local skillGroupID     = action.skillGroupID
+    local playerAccount    = action.playerAccount
+    local modelPlayer      = modelScene:getModelPlayerManager():getModelPlayerWithAccount(playerAccount)
+    local sceneWarFileName = modelScene:getFileName()
     if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main") or
         (not modelPlayer:canActivateSkillGroup(skillGroupID)))      then
         return createActionReloadOrExitWar(sceneWarFileName, playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = VisibilityFunctions.getRevealedTilesAndUnitsDataForSkillActivation(sceneWarFileName, skillGroupID)
     local actionActivateSkillGroup = {
-        actionName   = "ActivateSkillGroup",
-        actionID     = action.actionID,
-        fileName     = sceneWarFileName,
-        skillGroupID = skillGroupID,
+        actionName    = "ActivateSkillGroup",
+        actionID      = action.actionID,
+        fileName      = sceneWarFileName,
+        skillGroupID  = skillGroupID,
+        revealedTiles = revealedTiles,
+        revealedUnits = revealedUnits,
     }
     return actionActivateSkillGroup, createActionsForPublish(actionActivateSkillGroup), actionActivateSkillGroup
 end
