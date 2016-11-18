@@ -36,14 +36,15 @@ local TableFunctions          = require("src.app.utilities.TableFunctions")
 local VisibilityFunctions     = require("src.app.utilities.VisibilityFunctions")
 local ComponentManager        = require("src.global.components.ComponentManager")
 
-local createActionsForPublish = ActionPublisher.createActionsForPublish
-local getLocalizedText        = LocalizationFunctions.getLocalizedText
-local getModelPlayerManager   = SingletonGetters.getModelPlayerManager
-local getModelTileMap         = SingletonGetters.getModelTileMap
-local getModelTurnManager     = SingletonGetters.getModelTurnManager
-local getModelUnitMap         = SingletonGetters.getModelUnitMap
-local getRevealedUnitsData    = VisibilityFunctions.getRevealedUnitsDataWithPath
-local isUnitVisible           = VisibilityFunctions.isUnitOnMapVisibleToPlayerIndex
+local createActionsForPublish      = ActionPublisher.createActionsForPublish
+local getLocalizedText             = LocalizationFunctions.getLocalizedText
+local getModelFogMap               = SingletonGetters.getModelFogMap
+local getModelPlayerManager        = SingletonGetters.getModelPlayerManager
+local getModelTileMap              = SingletonGetters.getModelTileMap
+local getModelTurnManager          = SingletonGetters.getModelTurnManager
+local getModelUnitMap              = SingletonGetters.getModelUnitMap
+local getRevealedTilesAndUnitsData = VisibilityFunctions.getRevealedTilesAndUnitsData
+local isUnitVisible                = VisibilityFunctions.isUnitOnMapVisibleToPlayerIndex
 
 local GAME_VERSION = GameConstantFunctions.getGameVersion()
 
@@ -73,7 +74,7 @@ local function isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, path, pl
     local destination = path[pathLength]
     local modelUnit   = getModelUnitMap(sceneWarFileName):getModelUnit(destination)
     return (modelUnit) and
-        (isUnitVisible(sceneWarFileName, destination, isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), playerIndex))
+        (isUnitVisible(sceneWarFileName, destination, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), playerIndex))
 end
 
 local function isDropBlocked(destination, modelUnitMap, loaderModelUnit)
@@ -274,7 +275,7 @@ local function validateDropDestinations(action, modelSceneWar)
             local existingModelUnit = modelUnitMap:getModelUnit(droppingGridIndex)
             if ((existingModelUnit)                                                                                                                          and
                 (existingModelUnit ~= loaderModelUnit)                                                                                                       and
-                (isUnitVisible(sceneWarFileName, droppingGridIndex, isModelUnitDiving(existingModelUnit), existingModelUnit:getPlayerIndex(), playerIndex))) then
+                (isUnitVisible(sceneWarFileName, droppingGridIndex, existingModelUnit:getUnitType(), isModelUnitDiving(existingModelUnit), existingModelUnit:getPlayerIndex(), playerIndex))) then
                 return false
             end
         end
@@ -654,7 +655,7 @@ local function translatePath(path, launchUnitID, modelSceneWar)
 
         local existingModelUnit = modelUnitMap:getModelUnit(gridIndex)
         if ((existingModelUnit) and (existingModelUnit:getPlayerIndex() ~= playerIndexInTurn)) then
-            if (isUnitVisible(sceneWarFileName, gridIndex, isModelUnitDiving(existingModelUnit), existingModelUnit:getPlayerIndex(), playerIndexInTurn)) then
+            if (isUnitVisible(sceneWarFileName, gridIndex, existingModelUnit:getUnitType(), isModelUnitDiving(existingModelUnit), existingModelUnit:getPlayerIndex(), playerIndexInTurn)) then
                 return nil, "ActionTranslator-translatePath() the path is invalid because it is blocked by a visible enemy unit."
             else
                 translatedPath.isBlocked = true
@@ -681,22 +682,23 @@ local function translatePath(path, launchUnitID, modelSceneWar)
 end
 
 local function translateActivateSkillGroup(action, modelScene)
-    local playerAccount      = action.playerAccount
-    local modelPlayerManager = modelScene:getModelPlayerManager()
-    local modelPlayer        = modelPlayerManager:getModelPlayerWithAccount(playerAccount)
-    local energy, req1, req2 = modelPlayer:getEnergy()
-    local skillGroupID       = action.skillGroupID
-    local sceneWarFileName   = modelScene:getFileName()
+    local skillGroupID     = action.skillGroupID
+    local playerAccount    = action.playerAccount
+    local modelPlayer      = modelScene:getModelPlayerManager():getModelPlayerWithAccount(playerAccount)
+    local sceneWarFileName = modelScene:getFileName()
     if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main") or
         (not modelPlayer:canActivateSkillGroup(skillGroupID)))      then
         return createActionReloadOrExitWar(sceneWarFileName, playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = VisibilityFunctions.getRevealedTilesAndUnitsDataForSkillActivation(sceneWarFileName, skillGroupID)
     local actionActivateSkillGroup = {
-        actionName   = "ActivateSkillGroup",
-        actionID     = action.actionID,
-        fileName     = sceneWarFileName,
-        skillGroupID = skillGroupID,
+        actionName    = "ActivateSkillGroup",
+        actionID      = action.actionID,
+        fileName      = sceneWarFileName,
+        skillGroupID  = skillGroupID,
+        revealedTiles = revealedTiles,
+        revealedUnits = revealedUnits,
     }
     return actionActivateSkillGroup, createActionsForPublish(actionActivateSkillGroup), actionActivateSkillGroup
 end
@@ -719,10 +721,10 @@ local function translateAttack(action, modelScene)
     local targetTile          = modelTileMap:getModelTile(targetGridIndex)
     local attackTarget        = modelUnitMap:getModelUnit(targetGridIndex) or targetTile
     local attackerPlayerIndex = attacker:getPlayerIndex()
-    if ((not ComponentManager.getComponent(attacker, "AttackDoer"))                                                                                                                   or
-        (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))                                                                                              or
-        (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, attackerPlayerIndex))                                                                                      or
-        ((attackTarget.getUnitType) and (not isUnitVisible(sceneWarFileName, targetGridIndex, isModelUnitDiving(attackTarget), attackTarget:getPlayerIndex(), attackerPlayerIndex)))) then
+    if ((not ComponentManager.getComponent(attacker, "AttackDoer"))                                                                                                                                               or
+        (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))                                                                                                                          or
+        (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, attackerPlayerIndex))                                                                                                                  or
+        ((attackTarget.getUnitType) and (not isUnitVisible(sceneWarFileName, targetGridIndex, attackTarget:getUnitType(), isModelUnitDiving(attackTarget), attackTarget:getPlayerIndex(), attackerPlayerIndex)))) then
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
@@ -731,6 +733,7 @@ local function translateAttack(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, attacker, (counterDamage) and (counterDamage >= attacker:getCurrentHP()))
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -738,7 +741,8 @@ local function translateAttack(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, attacker),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -748,10 +752,11 @@ local function translateAttack(action, modelScene)
             fileName        = sceneWarFileName,
             path            = translatedPath,
             launchUnitID    = launchUnitID,
-            revealedUnits   = getRevealedUnitsData(sceneWarFileName, translatedPath, attacker, ((counterDamage) and (counterDamage >= attacker:getCurrentHP()))),
             targetGridIndex = targetGridIndex,
             attackDamage    = attackDamage,
             counterDamage   = counterDamage,
+            revealedTiles   = revealedTiles,
+            revealedUnits   = revealedUnits,
             lostPlayerIndex = getLostPlayerIndexForActionAttack(attacker, attackTarget, attackDamage, counterDamage),
         }
         return actionAttack, createActionsForPublish(actionAttack), actionAttack
@@ -789,16 +794,18 @@ local function translateBuildModelTile(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
     end
 
-    local focusModelUnit    = getModelUnitMap(sceneWarFileName):getFocusModelUnit(rawPath[1], launchUnitID)
-    local tileType          = getModelTileMap(sceneWarFileName):getModelTile(rawPath[#rawPath]):getTileType()
+    local endingGridIndex = rawPath[#rawPath]
+    local focusModelUnit  = getModelUnitMap(sceneWarFileName):getFocusModelUnit(rawPath[1], launchUnitID)
+    local modelTile       = getModelTileMap(sceneWarFileName):getModelTile(endingGridIndex)
     if ((not focusModelUnit.canBuildOnTileType)                                                               or
-        (not focusModelUnit:canBuildOnTileType(tileType))                                                     or
+        (not focusModelUnit:canBuildOnTileType(modelTile:getTileType()))                                      or
         (not focusModelUnit.getCurrentMaterial)                                                               or
         (focusModelUnit:getCurrentMaterial() < 1)                                                             or
         (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, focusModelUnit:getPlayerIndex()))) then
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -806,17 +813,24 @@ local function translateBuildModelTile(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
+        if (focusModelUnit:getBuildAmount() >= modelTile:getCurrentBuildPoint()) then
+            local tiles, units = VisibilityFunctions.getRevealedTilesAndUnitsDataForBuild(sceneWarFileName, endingGridIndex, focusModelUnit)
+            revealedTiles = TableFunctions.union(revealedTiles, tiles)
+            revealedUnits = TableFunctions.union(revealedUnits, units)
+        end
         local actionBuildModelTile = {
             actionName    = "BuildModelTile",
             actionID      = action.actionID,
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionBuildModelTile, createActionsForPublish(actionBuildModelTile), actionBuildModelTile
     end
@@ -830,14 +844,16 @@ local function translateCaptureModelTile(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
     end
 
-    local capturer      = getModelUnitMap(sceneWarFileName):getFocusModelUnit(rawPath[1], launchUnitID)
-    local captureTarget = getModelTileMap(sceneWarFileName):getModelTile(rawPath[#rawPath])
+    local endingGridIndex = rawPath[#rawPath]
+    local capturer        = getModelUnitMap(sceneWarFileName):getFocusModelUnit(rawPath[1], launchUnitID)
+    local captureTarget   = getModelTileMap(sceneWarFileName):getModelTile(endingGridIndex)
     if ((not capturer.canCaptureModelTile)                                                              or
         (not capturer:canCaptureModelTile(captureTarget))                                               or
         (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, capturer:getPlayerIndex()))) then
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, capturer, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -845,18 +861,27 @@ local function translateCaptureModelTile(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, capturer),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
+        local isCaptureFinished = capturer:getCaptureAmount() >= captureTarget:getCurrentCapturePoint()
+        if (isCaptureFinished) then
+            local tiles, units = VisibilityFunctions.getRevealedTilesAndUnitsDataForCapture(sceneWarFileName, endingGridIndex, capturer:getPlayerIndex())
+            revealedTiles = TableFunctions.union(revealedTiles, tiles)
+            revealedUnits = TableFunctions.union(revealedUnits, units)
+        end
+
         local actionCapture = {
             actionName      = "CaptureModelTile",
             actionID        = action.actionID,
             fileName        = sceneWarFileName,
             path            = translatedPath,
             launchUnitID    = launchUnitID,
-            revealedUnits   = getRevealedUnitsData(sceneWarFileName, translatedPath, capturer),
-            lostPlayerIndex = ((capturer:getCaptureAmount() >= captureTarget:getCurrentCapturePoint()) and (captureTarget:isDefeatOnCapture()))
+            revealedTiles   = revealedTiles,
+            revealedUnits   = revealedUnits,
+            lostPlayerIndex = ((isCaptureFinished) and (captureTarget:isDefeatOnCapture()))
                 and (captureTarget:getPlayerIndex())
                 or  (nil),
         }
@@ -879,6 +904,7 @@ local function translateDive(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -886,7 +912,8 @@ local function translateDive(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit)
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -896,7 +923,8 @@ local function translateDive(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit)
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionDive, createActionsForPublish(actionDive), actionDive
     end
@@ -921,6 +949,7 @@ local function translateDropModelUnit(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, loaderModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -928,16 +957,18 @@ local function translateDropModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, loaderModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
         local dropDestinations = translateDropDestinations(action.dropDestinations, modelUnitMap, loaderModelUnit)
-        local revealedUnits    = getRevealedUnitsData(sceneWarFileName, translatedPath, loaderModelUnit)
         for _, dropDestination in ipairs(dropDestinations) do
-            local dropPath = {destination, dropDestination.gridIndex}
+            local dropPath      = {endingGridIndex, dropDestination.gridIndex}
             local dropModelUnit = modelUnitMap:getLoadedModelUnitWithUnitId(dropDestination.unitID)
-            revealedUnits = TableFunctions.union(revealedUnits, getRevealedUnitsData(sceneWarFileName, dropPath, dropModelUnit))
+            local tiles, units  = getRevealedTilesAndUnitsData(sceneWarFileName, dropPath, dropModelUnit, false)
+            revealedTiles = TableFunctions.union(revealedTiles, tiles)
+            revealedUnits = TableFunctions.union(revealedUnits, units)
         end
 
         local actionDropModelUnit = {
@@ -947,6 +978,7 @@ local function translateDropModelUnit(action, modelScene)
             path             = translatedPath,
             dropDestinations = dropDestinations,
             launchUnitID     = launchUnitID,
+            revealedTiles    = revealedTiles,
             revealedUnits    = revealedUnits,
         }
         return actionDropModelUnit, createActionsForPublish(actionDropModelUnit), actionDropModelUnit
@@ -960,7 +992,7 @@ local function translateEndTurn(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
-    -- TODO: enable the fog of war.
+    -- TODO: enable the weather.
     local actionEndTurn = {
         actionName  = "EndTurn",
         actionID    = action.actionID,
@@ -988,6 +1020,7 @@ local function translateJoinModelUnit(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -995,7 +1028,8 @@ local function translateJoinModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -1005,9 +1039,60 @@ local function translateJoinModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionJoinModelUnit, createActionsForPublish(actionJoinModelUnit), actionJoinModelUnit
+    end
+end
+
+local function translateLaunchFlare(action, modelScene)
+    local rawPath, launchUnitID        = action.path, action.launchUnitID
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
+    local sceneWarFileName             = modelScene:getFileName()
+    if (not translatedPath) then
+        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
+    end
+
+    local modelUnitMap    = getModelUnitMap(sceneWarFileName)
+    local targetGridIndex = action.targetGridIndex
+    local focusModelUnit  = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
+    local playerIndex     = focusModelUnit:getPlayerIndex()
+    if ((#rawPath > 1)                                                                                           or
+        (not focusModelUnit.getCurrentFlareAmmo)                                                                 or
+        (focusModelUnit:getCurrentFlareAmmo() == 0)                                                              or
+        (not getModelFogMap(sceneWarFileName):isFogOfWarCurrently())                                             or
+        (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize())                          or
+        (GridIndexFunctions.getDistance(targetGridIndex, rawPath[#rawPath]) > focusModelUnit:getMaxFlareRange()) or
+        (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, playerIndex))))                       then
+        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
+    end
+
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
+    if (translatedPath.isBlocked) then
+        local actionWait = {
+            actionName    = "Wait",
+            actionID      = action.actionID,
+            fileName      = sceneWarFileName,
+            path          = translatedPath,
+            launchUnitID  = launchUnitID,
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
+        }
+        return actionWait, createActionsForPublish(actionWait), actionWait
+    else
+        local tiles, units = VisibilityFunctions.getRevealedTilesAndUnitsDataForFlare(sceneWarFileName, targetGridIndex, focusModelUnit:getFlareAreaRadius(), playerIndex)
+        local actionLaunchFlare = {
+            actionName      = "LaunchFlare",
+            actionID        = action.actionID,
+            fileName        = sceneWarFileName,
+            path            = translatedPath,
+            targetGridIndex = targetGridIndex,
+            launchUnitID    = launchUnitID,
+            revealedTiles   = TableFunctions.union(revealedTiles, tiles),
+            revealedUnits   = TableFunctions.union(revealedUnits, units),
+        }
+        return actionLaunchFlare, createActionsForPublish(actionLaunchFlare), actionLaunchFlare
     end
 end
 
@@ -1030,6 +1115,7 @@ local function translateLaunchSilo(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -1037,7 +1123,8 @@ local function translateLaunchSilo(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -1048,7 +1135,8 @@ local function translateLaunchSilo(action, modelScene)
             path            = translatedPath,
             targetGridIndex = targetGridIndex,
             launchUnitID    = launchUnitID,
-            revealedUnits   = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles   = revealedTiles,
+            revealedUnits   = revealedUnits,
         }
         return actionLaunchSilo, createActionsForPublish(actionLaunchSilo), actionLaunchSilo
     end
@@ -1074,6 +1162,7 @@ local function translateLoadModelUnit(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -1081,7 +1170,8 @@ local function translateLoadModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -1091,7 +1181,8 @@ local function translateLoadModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionLoadModelUnit, createActionsForPublish(actionLoadModelUnit), actionLoadModelUnit
     end
@@ -1128,14 +1219,16 @@ local function translateProduceModelUnitOnTile(action, modelScene)
     })
     focusModelUnit:onStartRunning(sceneWarFileName)
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, {gridIndex}, focusModelUnit)
     local actionProduceModelUnitOnTile = {
         actionName    = "ProduceModelUnitOnTile",
         actionID      = action.actionID,
         fileName      = sceneWarFileName,
         gridIndex     = gridIndex,
         tiledID       = tiledID,
-        revealedUnits = getRevealedUnitsData(sceneWarFileName, {gridIndex}, focusModelUnit),
         cost          = cost, -- the cost can be calculated by the clients, but that calculations can be eliminated by sending the cost to clients.
+        revealedTiles = revealedTiles,
+        revealedUnits = revealedUnits,
     }
     return actionProduceModelUnitOnTile, createActionsForPublish(actionProduceModelUnitOnTile), actionProduceModelUnitOnTile
 end
@@ -1163,12 +1256,15 @@ local function translateProduceModelUnitOnUnit(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     local actionProduceModelUnitOnUnit = {
-        actionName  = "ProduceModelUnitOnUnit",
-        actionID    = action.actionID,
-        fileName    = sceneWarFileName,
-        path        = translatedPath,
-        cost        = cost,
+        actionName    = "ProduceModelUnitOnUnit",
+        actionID      = action.actionID,
+        fileName      = sceneWarFileName,
+        path          = translatedPath,
+        cost          = cost,
+        revealedTiles = revealedTiles,
+        revealedUnits = revealedUnits,
     }
     return actionProduceModelUnitOnUnit, createActionsForPublish(actionProduceModelUnitOnUnit), actionProduceModelUnitOnUnit
 end
@@ -1188,6 +1284,7 @@ local function translateSupplyModelUnit(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -1195,7 +1292,8 @@ local function translateSupplyModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -1205,7 +1303,8 @@ local function translateSupplyModelUnit(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionSupplyModelUnit, createActionsForPublish(actionSupplyModelUnit), actionSupplyModelUnit
     end
@@ -1226,6 +1325,7 @@ local function translateSurface(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
             actionName    = "Wait",
@@ -1233,7 +1333,8 @@ local function translateSurface(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), actionWait
     else
@@ -1243,7 +1344,8 @@ local function translateSurface(action, modelScene)
             fileName      = sceneWarFileName,
             path          = translatedPath,
             launchUnitID  = launchUnitID,
-            revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+            revealedTiles = revealedTiles,
+            revealedUnits = revealedUnits,
         }
         return actionSurface, createActionsForPublish(actionSurface), actionSurface
     end
@@ -1277,13 +1379,15 @@ local function translateWait(action, modelScene)
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
     local actionWait = {
         actionName    = "Wait",
         actionID      = action.actionID,
         fileName      = sceneWarFileName,
         path          = translatedPath,
         launchUnitID  = launchUnitID,
-        revealedUnits = getRevealedUnitsData(sceneWarFileName, translatedPath, focusModelUnit),
+        revealedTiles = revealedTiles,
+        revealedUnits = revealedUnits,
     }
     return actionWait, createActionsForPublish(actionWait), actionWait
 end
@@ -1341,6 +1445,7 @@ function ActionTranslator.translate(action)
     elseif (actionName == "DropModelUnit")          then return translateDropModelUnit(         action, modelSceneWar)
     elseif (actionName == "EndTurn")                then return translateEndTurn(               action, modelSceneWar)
     elseif (actionName == "JoinModelUnit")          then return translateJoinModelUnit(         action, modelSceneWar)
+    elseif (actionName == "LaunchFlare")            then return translateLaunchFlare(           action, modelSceneWar)
     elseif (actionName == "LaunchSilo")             then return translateLaunchSilo(            action, modelSceneWar)
     elseif (actionName == "LoadModelUnit")          then return translateLoadModelUnit(         action, modelSceneWar)
     elseif (actionName == "ProduceModelUnitOnTile") then return translateProduceModelUnitOnTile(action, modelSceneWar)

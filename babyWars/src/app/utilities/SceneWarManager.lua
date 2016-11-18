@@ -58,13 +58,13 @@ local function generateWarConfiguration(warData)
     end
 
     return {
-        warFieldFileName = warData.warField.tileMap.template,
-        warPassword      = warData.warPassword,
-        maxSkillPoints   = warData.maxSkillPoints,
-        players          = players,
+        warFieldFileName    = warData.warField.tileMap.template,
+        warPassword         = warData.warPassword,
+        maxSkillPoints      = warData.maxSkillPoints,
+        isFogOfWarByDefault = warData.isFogOfWarByDefault,
+        players             = players,
 
         -- TODO: add code to generate the real configuration of the weather/fog.
-        fog              = false,
         weather          = "Clear",
     }
 end
@@ -198,16 +198,17 @@ end
 
 local function generateSceneWarData(fileName, param)
     return {
-        fileName       = fileName,
-        warPassword    = param.warPassword,
-        maxSkillPoints = param.maxSkillPoints,
-        isEnded        = false,
-        actionID       = 0,
+        fileName            = fileName,
+        warPassword         = param.warPassword,
+        maxSkillPoints      = param.maxSkillPoints,
+        isFogOfWarByDefault = param.isFogOfWarByDefault,
+        isEnded             = false,
+        actionID            = 0,
 
-        warField       = generateWarFieldData(param.warFieldFileName),
-        turn           = DEFAULT_TURN_DATA,
-        players        = generatePlayersData(param.playerIndex, param.playerAccount, param.skillConfigurationID),
-        weather        = generateWeatherData(),
+        warField = generateWarFieldData(param.warFieldFileName),
+        turn     = DEFAULT_TURN_DATA,
+        players  = generatePlayersData(param.playerIndex, param.playerAccount, param.skillConfigurationID),
+        weather  = generateWeatherData(),
     }, toFullFileName(fileName)
 end
 
@@ -373,6 +374,10 @@ function SceneWarManager.joinWar(param)
     if (not isWarReadyForStart(configuration)) then
         return LocalizationFunctions.getLocalizedText(55)
     else
+        -- The ModelFogMap must be initialized before the players can get the war data.
+        -- The ModelFogMap is initialized when the modelSceneWar:onStartRunning() is called.
+        -- modelSceneWar:onStartRunning() is called when the SceneWarManager.getOngoingModelSceneWar() is called, so it's ok to do it here.
+        serialize(toFullFileName(sceneWarFileName), SceneWarManager.getOngoingModelSceneWar(sceneWarFileName):toSerializableTable())
         PlayerProfileManager.updateProfilesWithBeginningWar(sceneWarFileName, configuration)
 
         s_JoinableWarList[sceneWarFileName]     = nil
@@ -388,12 +393,7 @@ function SceneWarManager.updateModelSceneWarWithAction(action)
     local modelSceneWar    = SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
     assert(modelSceneWar, "SceneWarManager.updateModelSceneWarWithAction() the param sceneWarFileName is invalid:" .. (sceneWarFileName or ""))
 
-    local cloneAction = {}
-    for k, v in pairs(action) do
-        cloneAction[k] = v
-    end
-
-    serialize(toFullFileName(sceneWarFileName), modelSceneWar:executeAction(cloneAction):toSerializableTable())
+    serialize(toFullFileName(sceneWarFileName), modelSceneWar:executeAction(action):toSerializableTable())
     PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
     if (modelSceneWar:isEnded()) then
