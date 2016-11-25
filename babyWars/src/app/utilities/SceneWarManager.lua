@@ -32,6 +32,15 @@ local function getPlayersCount(warFieldFileName)
     return require("res.data.templateWarField." .. warFieldFileName).playersCount
 end
 
+local function isRandomWarField(warFieldFileName)
+    return string.find(warFieldFileName, "Random", 1, true) == 1
+end
+
+local function pickRandomWarField(warFieldFileName)
+    local list = require("res.data.templateWarField." .. warFieldFileName).list
+    return list[math.random(#list)]
+end
+
 local function serialize(fullFileName, data)
     local file = io.open(fullFileName, "w")
     file:write("return ")
@@ -62,6 +71,7 @@ local function generateWarConfiguration(warData)
         warPassword         = warData.warPassword,
         maxSkillPoints      = warData.maxSkillPoints,
         isFogOfWarByDefault = warData.isFogOfWarByDefault,
+        isRandomWarField    = warData.isRandomWarField,
         players             = players,
 
         -- TODO: add code to generate the real configuration of the weather/fog.
@@ -152,6 +162,7 @@ end
 -- The functions for generating the new game data.
 --------------------------------------------------------------------------------
 local function generateWarFieldData(warFieldFileName)
+    assert(type(warFieldFileName) == "string", "SceneWarManager-generateWarFieldData() invalid warFieldFileName.")
     return {
         tileMap = {
             template = warFieldFileName,
@@ -197,15 +208,22 @@ local function generatePlayersData(playerIndex, account, skillConfigurationID)
 end
 
 local function generateSceneWarData(fileName, param)
+    local warFieldFileName = param.warFieldFileName
+    local isRandom         = isRandomWarField(warFieldFileName)
+    if (isRandom) then
+        warFieldFileName = pickRandomWarField(warFieldFileName)
+    end
+
     return {
         fileName            = fileName,
         warPassword         = param.warPassword,
         maxSkillPoints      = param.maxSkillPoints,
         isFogOfWarByDefault = param.isFogOfWarByDefault,
+        isRandomWarField    = isRandom,
         isEnded             = false,
         actionID            = 0,
 
-        warField = generateWarFieldData(param.warFieldFileName),
+        warField = generateWarFieldData(warFieldFileName),
         turn     = DEFAULT_TURN_DATA,
         players  = generatePlayersData(param.playerIndex, param.playerAccount, param.skillConfigurationID),
         weather  = generateWeatherData(),
