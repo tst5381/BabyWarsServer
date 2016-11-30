@@ -46,7 +46,8 @@ local getModelUnitMap              = SingletonGetters.getModelUnitMap
 local getRevealedTilesAndUnitsData = VisibilityFunctions.getRevealedTilesAndUnitsData
 local isUnitVisible                = VisibilityFunctions.isUnitOnMapVisibleToPlayerIndex
 
-local GAME_VERSION = GameConstantFunctions.getGameVersion()
+local GAME_VERSION                   = GameConstantFunctions.getGameVersion()
+local IGNORED_ACTION_KEYS_FOR_SERVER = {"revealedTiles", "revealedUnits"}
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -339,6 +340,10 @@ local function createActionReloadOrExitWar(sceneWarFileName, playerAccount, mess
             message    = getLocalizedText(81, "InvalidWarFileName"),
         }
     end
+end
+
+local function createActionForServer(action)
+    return TableFunctions.clone(action, IGNORED_ACTION_KEYS_FOR_SERVER)
 end
 
 --------------------------------------------------------------------------------
@@ -700,7 +705,7 @@ local function translateActivateSkillGroup(action, modelScene)
         revealedTiles = revealedTiles,
         revealedUnits = revealedUnits,
     }
-    return actionActivateSkillGroup, createActionsForPublish(actionActivateSkillGroup), actionActivateSkillGroup
+    return actionActivateSkillGroup, createActionsForPublish(actionActivateSkillGroup), createActionForServer(actionActivateSkillGroup)
 end
 
 local function translateAttack(action, modelScene)
@@ -745,7 +750,7 @@ local function translateAttack(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionWait, createActionsForPublish(actionWait), actionWait
+        return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
     else
         local actionAttack = {
             actionName      = "Attack",
@@ -760,7 +765,7 @@ local function translateAttack(action, modelScene)
             revealedUnits   = revealedUnits,
             lostPlayerIndex = getLostPlayerIndexForActionAttack(attacker, attackTarget, attackDamage, counterDamage),
         }
-        return actionAttack, createActionsForPublish(actionAttack), actionAttack
+        return actionAttack, createActionsForPublish(actionAttack), createActionForServer(actionAttack)
     end
 end
 
@@ -784,7 +789,7 @@ local function translateBeginTurn(action, modelScene)
         actionBeginTurn.lostPlayerIndex = (areAllUnitsOutOfFuelAndDestroyed(sceneWarFileName)) and (playerIndex) or (nil)
         actionBeginTurn.repairData      = generateRepairData(sceneWarFileName, income)
     end
-    return actionBeginTurn, createActionsForPublish(actionBeginTurn), actionBeginTurn
+    return actionBeginTurn, createActionsForPublish(actionBeginTurn), createActionForServer(actionBeginTurn)
 end
 
 local function translateBuildModelTile(action, modelScene)
@@ -818,7 +823,7 @@ local function translateBuildModelTile(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionWait, createActionsForPublish(actionWait), actionWait
+        return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
     else
         if (focusModelUnit:getBuildAmount() >= modelTile:getCurrentBuildPoint()) then
             local tiles, units = VisibilityFunctions.getRevealedTilesAndUnitsDataForBuild(sceneWarFileName, endingGridIndex, focusModelUnit)
@@ -834,7 +839,7 @@ local function translateBuildModelTile(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionBuildModelTile, createActionsForPublish(actionBuildModelTile), actionBuildModelTile
+        return actionBuildModelTile, createActionsForPublish(actionBuildModelTile), createActionForServer(actionBuildModelTile)
     end
 end
 
@@ -867,7 +872,7 @@ local function translateCaptureModelTile(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionWait, createActionsForPublish(actionWait), actionWait
+        return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
     else
         local isCaptureFinished = capturer:getCaptureAmount() >= captureTarget:getCurrentCapturePoint()
         if (isCaptureFinished) then
@@ -888,7 +893,7 @@ local function translateCaptureModelTile(action, modelScene)
                 and (captureTarget:getPlayerIndex())
                 or  (nil),
         }
-        return actionCapture, createActionsForPublish(actionCapture), actionCapture
+        return actionCapture, createActionsForPublish(actionCapture), createActionForServer(actionCapture)
     end
 end
 
@@ -919,7 +924,7 @@ local function translateDive(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionWait, createActionsForPublish(actionWait), actionWait
+        return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
     else
         local actionDive = {
             actionName    = "Dive",
@@ -930,7 +935,7 @@ local function translateDive(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionDive, createActionsForPublish(actionDive), actionDive
+        return actionDive, createActionsForPublish(actionDive), createActionForServer(actionDive)
     end
 end
 
@@ -965,7 +970,7 @@ local function translateDropModelUnit(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionWait, createActionsForPublish(actionWait), actionWait
+        return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
     else
         local dropDestinations = translateDropDestinations(action.dropDestinations, modelUnitMap, loaderModelUnit)
         for _, dropDestination in ipairs(dropDestinations) do
@@ -986,7 +991,7 @@ local function translateDropModelUnit(action, modelScene)
             revealedTiles    = revealedTiles,
             revealedUnits    = revealedUnits,
         }
-        return actionDropModelUnit, createActionsForPublish(actionDropModelUnit), actionDropModelUnit
+        return actionDropModelUnit, createActionsForPublish(actionDropModelUnit), createActionForServer(actionDropModelUnit)
     end
 end
 
@@ -1004,7 +1009,7 @@ local function translateEndTurn(action, modelScene)
         fileName    = sceneWarFileName,
         nextWeather = modelScene:getModelWeatherManager():getNextWeather(),
     }
-    return actionEndTurn, createActionsForPublish(actionEndTurn), actionEndTurn
+    return actionEndTurn, createActionsForPublish(actionEndTurn), createActionForServer(actionEndTurn)
 end
 
 local function translateJoinModelUnit(action, modelScene)
@@ -1037,7 +1042,7 @@ local function translateJoinModelUnit(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionWait, createActionsForPublish(actionWait), actionWait
+        return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
     else
         local actionJoinModelUnit = {
             actionName    = "JoinModelUnit",
@@ -1048,7 +1053,7 @@ local function translateJoinModelUnit(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionJoinModelUnit, createActionsForPublish(actionJoinModelUnit), actionJoinModelUnit
+        return actionJoinModelUnit, createActionsForPublish(actionJoinModelUnit), createActionForServer(actionJoinModelUnit)
     end
 end
 
@@ -1086,7 +1091,7 @@ local function translateLaunchFlare(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionWait, createActionsForPublish(actionWait), actionWait
+        return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
     else
         local tiles, units = VisibilityFunctions.getRevealedTilesAndUnitsDataForFlare(sceneWarFileName, targetGridIndex, focusModelUnit:getFlareAreaRadius(), playerIndex)
         local actionLaunchFlare = {
@@ -1099,7 +1104,7 @@ local function translateLaunchFlare(action, modelScene)
             revealedTiles   = TableFunctions.union(revealedTiles, tiles),
             revealedUnits   = TableFunctions.union(revealedUnits, units),
         }
-        return actionLaunchFlare, createActionsForPublish(actionLaunchFlare), actionLaunchFlare
+        return actionLaunchFlare, createActionsForPublish(actionLaunchFlare), createActionForServer(actionLaunchFlare)
     end
 end
 
@@ -1134,7 +1139,7 @@ local function translateLaunchSilo(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionWait, createActionsForPublish(actionWait), actionWait
+        return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
     else
         local actionLaunchSilo = {
             actionName      = "LaunchSilo",
@@ -1146,7 +1151,7 @@ local function translateLaunchSilo(action, modelScene)
             revealedTiles   = revealedTiles,
             revealedUnits   = revealedUnits,
         }
-        return actionLaunchSilo, createActionsForPublish(actionLaunchSilo), actionLaunchSilo
+        return actionLaunchSilo, createActionsForPublish(actionLaunchSilo), createActionForServer(actionLaunchSilo)
     end
 end
 
@@ -1182,7 +1187,7 @@ local function translateLoadModelUnit(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionWait, createActionsForPublish(actionWait), actionWait
+        return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
     else
         local actionLoadModelUnit = {
             actionName    = "LoadModelUnit",
@@ -1193,7 +1198,7 @@ local function translateLoadModelUnit(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionLoadModelUnit, createActionsForPublish(actionLoadModelUnit), actionLoadModelUnit
+        return actionLoadModelUnit, createActionsForPublish(actionLoadModelUnit), createActionForServer(actionLoadModelUnit)
     end
 end
 
@@ -1241,7 +1246,7 @@ local function translateProduceModelUnitOnTile(action, modelScene)
         revealedTiles = revealedTiles,
         revealedUnits = revealedUnits,
     }
-    return actionProduceModelUnitOnTile, createActionsForPublish(actionProduceModelUnitOnTile), actionProduceModelUnitOnTile
+    return actionProduceModelUnitOnTile, createActionsForPublish(actionProduceModelUnitOnTile), createActionForServer(actionProduceModelUnitOnTile)
 end
 
 local function translateProduceModelUnitOnUnit(action, modelScene)
@@ -1278,7 +1283,7 @@ local function translateProduceModelUnitOnUnit(action, modelScene)
         revealedTiles = revealedTiles,
         revealedUnits = revealedUnits,
     }
-    return actionProduceModelUnitOnUnit, createActionsForPublish(actionProduceModelUnitOnUnit), actionProduceModelUnitOnUnit
+    return actionProduceModelUnitOnUnit, createActionsForPublish(actionProduceModelUnitOnUnit), createActionForServer(actionProduceModelUnitOnUnit)
 end
 
 local function translateSupplyModelUnit(action, modelScene)
@@ -1308,7 +1313,7 @@ local function translateSupplyModelUnit(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionWait, createActionsForPublish(actionWait), actionWait
+        return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
     else
         local actionSupplyModelUnit = {
             actionName    = "SupplyModelUnit",
@@ -1319,7 +1324,7 @@ local function translateSupplyModelUnit(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionSupplyModelUnit, createActionsForPublish(actionSupplyModelUnit), actionSupplyModelUnit
+        return actionSupplyModelUnit, createActionsForPublish(actionSupplyModelUnit), createActionForServer(actionSupplyModelUnit)
     end
 end
 
@@ -1350,7 +1355,7 @@ local function translateSurface(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionWait, createActionsForPublish(actionWait), actionWait
+        return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
     else
         local actionSurface = {
             actionName    = "Surface",
@@ -1361,7 +1366,7 @@ local function translateSurface(action, modelScene)
             revealedTiles = revealedTiles,
             revealedUnits = revealedUnits,
         }
-        return actionSurface, createActionsForPublish(actionSurface), actionSurface
+        return actionSurface, createActionsForPublish(actionSurface), createActionForServer(actionSurface)
     end
 end
 
@@ -1377,7 +1382,7 @@ local function translateSurrender(action, modelScene)
         actionID   = action.actionID,
         fileName   = sceneWarFileName,
     }
-    return actionSurrender, createActionsForPublish(actionSurrender), actionSurrender
+    return actionSurrender, createActionsForPublish(actionSurrender), createActionForServer(actionSurrender)
 end
 
 local function translateWait(action, modelScene)
@@ -1404,7 +1409,7 @@ local function translateWait(action, modelScene)
         revealedTiles = revealedTiles,
         revealedUnits = revealedUnits,
     }
-    return actionWait, createActionsForPublish(actionWait), actionWait
+    return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
 end
 
 --------------------------------------------------------------------------------

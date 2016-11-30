@@ -12,7 +12,8 @@ local SCENE_WAR_PATH               = "babyWars\\res\\data\\sceneWar\\"
 local SCENE_WAR_NEXT_NAME_PATH     = SCENE_WAR_PATH .. "NextName.lua"
 local SCENE_WAR_JOINABLE_LIST_PATH = SCENE_WAR_PATH .. "JoinableList.lua"
 
-local DEFAULT_TURN_DATA = {
+local DEFAULT_EXECUTED_ACTIONS = {}
+local DEFAULT_TURN_DATA        = {
     turnIndex   = 1,
     playerIndex = 1,
     phase       = "requestToBegin",
@@ -222,6 +223,7 @@ local function generateSceneWarData(fileName, param)
         isRandomWarField    = isRandom,
         isEnded             = false,
         actionID            = 0,
+        executedActions     = DEFAULT_EXECUTED_ACTIONS,
 
         warField = generateWarFieldData(warFieldFileName),
         turn     = DEFAULT_TURN_DATA,
