@@ -479,13 +479,18 @@ function SceneWarManager.updateModelSceneWarWithAction(action)
     local modelSceneWar    = SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
     assert(modelSceneWar, "SceneWarManager.updateModelSceneWarWithAction() the param sceneWarFileName is invalid:" .. (sceneWarFileName or ""))
 
-    local warData = modelSceneWar:executeAction(action):toSerializableTable()
-    serialize(toFullFileName(sceneWarFileName), warData)
+    modelSceneWar:executeAction(action)
     PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
-    if (modelSceneWar:isEnded()) then
+    if (not modelSceneWar:isEnded()) then
+        serialize(toFullFileName(sceneWarFileName), modelSceneWar:toSerializableTable())
+    else
         removeOngoingWarListItem(sceneWarFileName)
-        if (modelSceneWar:canReplay()) then
+        if (not modelSceneWar:canReplay()) then
+            serialize(toFullFileName(sceneWarFileName), modelSceneWar:toSerializableTable())
+        else
+            serialize(toFullFileName(sceneWarFileName), modelSceneWar:toSerializableReplayData())
+
             s_ReplayNameList[#s_ReplayNameList + 1] = sceneWarFileName
             serialize(REPLAY_NAME_LIST_PATH, s_ReplayNameList)
 
