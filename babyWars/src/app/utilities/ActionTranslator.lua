@@ -404,6 +404,13 @@ local function translateRegister(action)
     end
 end
 
+local function translateGetReplayList(action)
+    return {
+        actionName = "GetReplayList",
+        list       = SceneWarManager.getReplayList(action.pageIndex),
+    }
+end
+
 local function translateNewWar(action)
     -- TODO: validate more params.
     local skillConfigurationID = action.skillConfigurationID
@@ -1427,6 +1434,7 @@ function ActionTranslator.translate(action)
     if     (actionName == "NetworkHeartbeat") then return translateNetworkHeartbeat(action)
     elseif (actionName == "Login")            then return translateLogin(           action)
     elseif (actionName == "Register")         then return translateRegister(        action)
+    elseif (actionName == "GetReplayList")    then return translateGetReplayList(   action)
     end
 
     local playerAccount = action.playerAccount
