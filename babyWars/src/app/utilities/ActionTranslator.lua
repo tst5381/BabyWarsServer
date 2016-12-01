@@ -404,6 +404,23 @@ local function translateRegister(action)
     end
 end
 
+local function translateDownloadReplayData(action)
+    local sceneWarFileName = action.sceneWarFileName
+    local data             = SceneWarManager.getReplayData(sceneWarFileName)
+    if (data) then
+        return {
+            actionName       = "DownloadReplayData",
+            sceneWarFileName = sceneWarFileName,
+            data             = data,
+        }
+    else
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(10, "ReplayDataNotExists")
+        }
+    end
+end
+
 local function translateGetReplayList(action)
     return {
         actionName = "GetReplayList",
@@ -1431,10 +1448,11 @@ function ActionTranslator.translate(action)
     end
 
     local actionName = action.actionName
-    if     (actionName == "NetworkHeartbeat") then return translateNetworkHeartbeat(action)
-    elseif (actionName == "Login")            then return translateLogin(           action)
-    elseif (actionName == "Register")         then return translateRegister(        action)
-    elseif (actionName == "GetReplayList")    then return translateGetReplayList(   action)
+    if     (actionName == "DownloadReplayData") then return translateDownloadReplayData(action)
+    elseif (actionName == "GetReplayList")      then return translateGetReplayList(     action)
+    elseif (actionName == "Login")              then return translateLogin(             action)
+    elseif (actionName == "NetworkHeartbeat")   then return translateNetworkHeartbeat(  action)
+    elseif (actionName == "Register")           then return translateRegister(          action)
     end
 
     local playerAccount = action.playerAccount

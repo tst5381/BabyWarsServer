@@ -145,7 +145,7 @@ local function loadReplayData(sceneWarFileName)
     local fullFileName = toFullFileName(sceneWarFileName)
     local warData      = dofile(fullFileName)
     return {
-        serializedData = io.open(fullFileName):read("*a"):sub(8), -- Emits the beginning string "return "
+        serializedData = io.open(fullFileName):read("*a"),
         configuration  = generateReplayConfiguration(warData),
     }
 end
@@ -403,15 +403,23 @@ end
 function SceneWarManager.getReplayList(pageIndex)
     -- TODO: limit the length of the list.
     local list = {}
-    for i, sceneWarFileName in ipairs(s_ReplayNameList) do
-        if (not s_ReplayDataList[i]) then
-            s_ReplayDataList[i] = loadReplayData(sceneWarFileName)
+    for _, sceneWarFileName in ipairs(s_ReplayNameList) do
+        if (not s_ReplayDataList[sceneWarFileName]) then
+            s_ReplayDataList[sceneWarFileName] = loadReplayData(sceneWarFileName)
         end
 
-        list[sceneWarFileName] = s_ReplayDataList[i].configuration
+        list[sceneWarFileName] = s_ReplayDataList[sceneWarFileName].configuration
     end
 
     return list
+end
+
+function SceneWarManager.getReplayData(sceneWarFileName)
+    if (not s_ReplayDataList[sceneWarFileName]) then
+        return nil
+    else
+        return s_ReplayDataList[sceneWarFileName].serializedData
+    end
 end
 
 function SceneWarManager.getJoinableSceneWarConfiguration(sceneWarFileName)
@@ -481,7 +489,7 @@ function SceneWarManager.updateModelSceneWarWithAction(action)
             s_ReplayNameList[#s_ReplayNameList + 1] = sceneWarFileName
             serialize(REPLAY_NAME_LIST_PATH, s_ReplayNameList)
 
-            s_ReplayDataList[#s_ReplayNameList] = loadReplayData(sceneWarFileName)
+            s_ReplayDataList[sceneWarFileName] = loadReplayData(sceneWarFileName)
         end
     end
 
