@@ -203,6 +203,9 @@ local function generateWarFieldData(warFieldFileName)
         unitMap = {
             template = warFieldFileName,
         },
+        fogMap = {
+            template = warFieldFileName,
+        },
     }
 end
 
