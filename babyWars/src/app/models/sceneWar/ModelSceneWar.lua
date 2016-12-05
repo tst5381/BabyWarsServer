@@ -103,14 +103,15 @@ local function initActorWeatherManager(self, weatherData)
     self.m_ActorWeatherManager = actor
 end
 
-local function initActorWarField(self, warFieldData)
-    local actor = Actor.createWithModelAndViewName("sceneWar.ModelWarField", warFieldData, "sceneWar.ViewWarField")
+local function initActorWarField(self, warFieldData, isTotalReplay)
+    local modelWarField = Actor.createModel("sceneWar.ModelWarField", warFieldData, isTotalReplay)
+    local actor = Actor.createWithModelAndViewInstance(modelWarField, Actor.createView("sceneWar.ViewWarField"))
 
     self.m_ActorWarField = actor
 end
 
-local function initActorWarHud(self)
-    local actor = Actor.createWithModelAndViewName("sceneWar.ModelWarHUD", nil, "sceneWar.ViewWarHUD")
+local function initActorWarHud(self, isReplay)
+    local actor = Actor.createWithModelAndViewName("sceneWar.ModelWarHUD", isReplay, "sceneWar.ViewWarHUD")
 
     self.m_ActorWarHud = actor
 end
@@ -143,11 +144,7 @@ function ModelSceneWar:ctor(sceneData)
     if (not IS_SERVER) then
         initActorConfirmBox(      self)
         initActorMessageIndicator(self)
-        initActorWarHud(          self)
-    end
-
-    if (self.m_View) then
-        self:initView()
+        initActorWarHud(          self, sceneData.isTotalReplay)
     end
 
     return self
@@ -227,7 +224,9 @@ function ModelSceneWar:onStartRunning()
 
     self:getScriptEventDispatcher():dispatchEvent({name = "EvtSceneWarStarted"})
 
-    modelTurnManager:runTurn()
+    if (not self:isTotalReplay()) then
+        modelTurnManager:runTurn()
+    end
     if (not IS_SERVER) then
         AudioManager.playRandomWarMusic()
     end
