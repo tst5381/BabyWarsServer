@@ -174,7 +174,7 @@ local function generateRepairData(sceneWarFileName, income)
         else
             onMapData[unitID] = {
                 repairAmount = repairAmount,
-                gridIndex    = modelUnit:getGridIndex(),
+                gridIndex    = GridIndexFunctions.clone(modelUnit:getGridIndex()),
             }
         end
         fund = fund - repairCost
