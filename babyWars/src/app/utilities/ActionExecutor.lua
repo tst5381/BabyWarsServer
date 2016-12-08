@@ -413,15 +413,16 @@ local function executeActivateSkillGroup(action)
 
     local sceneWarFileName = action.fileName
     local skillGroupID     = action.skillGroupID
-    local playerIndex = getModelTurnManager(sceneWarFileName):getPlayerIndex()
-    local modelPlayer = getModelPlayerManager(sceneWarFileName):getModelPlayer(playerIndex)
+    local modelSceneWar    = getModelScene(sceneWarFileName)
+    local playerIndex      = getModelTurnManager(sceneWarFileName):getPlayerIndex()
+    local modelPlayer      = getModelPlayerManager(sceneWarFileName):getModelPlayer(playerIndex)
     modelPlayer:getModelSkillConfiguration():setActivatingSkillGroupId(skillGroupID)
     modelPlayer:setDamageCost(modelPlayer:getDamageCost() - modelPlayer:getDamageCostForSkillGroupId(skillGroupID))
         :setSkillActivatedCount(modelPlayer:getSkillActivatedCount() + 1)
     InstantSkillExecutor.activateSkillGroup(skillGroupID, sceneWarFileName)
 
     if (IS_SERVER) then
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     else
         local modelGridEffect = getModelGridEffect()
         local func            = function(modelUnit)
@@ -436,7 +437,7 @@ local function executeActivateSkillGroup(action)
         updateTileAndUnitMapOnVisibilityChanged()
         dispatchEvtModelPlayerUpdated(sceneWarFileName, modelPlayer, playerIndex)
 
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     end
 end
 
@@ -674,8 +675,9 @@ local function executeBuildModelTile(action)
         end
     end
 
+    local modelSceneWar = getModelScene(sceneWarFileName)
     if (IS_SERVER) then
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     else
         focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
             focusModelUnit:updateView()
@@ -684,7 +686,7 @@ local function executeBuildModelTile(action)
 
             updateTileAndUnitMapOnVisibilityChanged()
 
-            getModelScene(sceneWarFileName):setExecutingAction(false)
+            modelSceneWar:setExecutingAction(false)
         end)
     end
 end
@@ -789,8 +791,9 @@ local function executeDive(action)
     focusModelUnit:setStateActioned()
         :setDiving(true)
 
+    local modelSceneWar = getModelScene(sceneWarFileName)
     if (IS_SERVER) then
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     else
         focusModelUnit:moveViewAlongPath(path, false, function()
             local endingGridIndex = path[#path]
@@ -805,7 +808,7 @@ local function executeDive(action)
 
             updateTileAndUnitMapOnVisibilityChanged()
 
-            getModelScene(sceneWarFileName):setExecutingAction(false)
+            modelSceneWar:setExecutingAction(false)
         end)
     end
 end
@@ -847,8 +850,9 @@ local function executeDropModelUnit(action)
         end
     end
 
+    local modelSceneWar = getModelScene(sceneWarFileName)
     if (IS_SERVER) then
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     else
         focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
             focusModelUnit:updateView()
@@ -875,7 +879,7 @@ local function executeDropModelUnit(action)
 
             updateTileAndUnitMapOnVisibilityChanged()
 
-            getModelScene(sceneWarFileName):setExecutingAction(false)
+            modelSceneWar:setExecutingAction(false)
         end)
     end
 end
@@ -947,8 +951,9 @@ local function executeJoinModelUnit(action)
         focusModelUnit:setCapturingModelTile(targetModelUnit:isCapturingModelTile())
     end
 
+    local modelSceneWar = getModelScene(sceneWarFileName)
     if (IS_SERVER) then
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     else
         focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
             focusModelUnit:updateView()
@@ -957,7 +962,7 @@ local function executeJoinModelUnit(action)
 
             updateTileAndUnitMapOnVisibilityChanged()
 
-            getModelScene(sceneWarFileName):setExecutingAction(false)
+            modelSceneWar:setExecutingAction(false)
         end)
     end
 end
@@ -977,18 +982,19 @@ local function executeLaunchFlare(action)
     focusModelUnit:setStateActioned()
         :setCurrentFlareAmmo(focusModelUnit:getCurrentFlareAmmo() - 1)
 
-    if ((IS_SERVER) or (playerIndexActing == playerIndexLoggedIn)) then
+    if ((IS_SERVER) or (isTotalReplay()) or (playerIndexActing == playerIndexLoggedIn)) then
         getModelFogMap(sceneWarFileName):updateMapForPathsForPlayerIndexWithFlare(playerIndexActing, targetGridIndex, flareAreaRadius)
     end
 
+    local modelSceneWar = getModelScene(sceneWarFileName)
     if (IS_SERVER) then
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     else
         focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
             focusModelUnit:updateView()
                 :showNormalAnimation()
 
-            if (playerIndexActing == playerIndexLoggedIn) then
+            if ((isTotalReplay()) or (playerIndexActing == playerIndexLoggedIn)) then
                 local modelGridEffect = getModelGridEffect()
                 for _, gridIndex in pairs(getGridsWithinDistance(targetGridIndex, 0, flareAreaRadius, modelUnitMap:getMapSize())) do
                     modelGridEffect:showAnimationFlare(gridIndex)
@@ -997,7 +1003,7 @@ local function executeLaunchFlare(action)
 
             updateTileAndUnitMapOnVisibilityChanged()
 
-            getModelScene(sceneWarFileName):setExecutingAction(false)
+            modelSceneWar:setExecutingAction(false)
         end)
     end
 end
@@ -1029,8 +1035,9 @@ local function executeLaunchSilo(action)
         end
     end
 
+    local modelSceneWar = getModelScene(sceneWarFileName)
     if (IS_SERVER) then
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     else
         focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
             focusModelUnit:updateView()
@@ -1047,7 +1054,7 @@ local function executeLaunchSilo(action)
 
             updateTileAndUnitMapOnVisibilityChanged()
 
-            getModelScene(sceneWarFileName):setExecutingAction(false)
+            modelSceneWar:setExecutingAction(false)
         end)
     end
 end
@@ -1068,8 +1075,9 @@ local function executeLoadModelUnit(action)
         assert(not IS_SERVER, "ActionExecutor-executeLoadModelUnit() failed to get the target loader on the server.")
     end
 
+    local modelSceneWar = getModelScene(sceneWarFileName)
     if (IS_SERVER) then
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     else
         focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
             focusModelUnit:updateView()
@@ -1081,7 +1089,7 @@ local function executeLoadModelUnit(action)
 
             updateTileAndUnitMapOnVisibilityChanged()
 
-            getModelScene(sceneWarFileName):setExecutingAction(false)
+            modelSceneWar:setExecutingAction(false)
         end)
     end
 end
@@ -1107,12 +1115,13 @@ local function executeProduceModelUnitOnTile(action)
     modelUnitMap:setAvailableUnitId(producedUnitID + 1)
     updateFundWithCost(sceneWarFileName, playerIndex, action.cost)
 
+    local modelSceneWar = getModelScene(sceneWarFileName)
     if (IS_SERVER) then
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     else
         updateTileAndUnitMapOnVisibilityChanged()
 
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     end
 end
 
@@ -1136,8 +1145,9 @@ local function executeProduceModelUnitOnUnit(action)
     end
     updateFundWithCost(sceneWarFileName, producer:getPlayerIndex(), action.cost)
 
+    local modelSceneWar = getModelScene(sceneWarFileName)
     if (IS_SERVER) then
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     else
         producer:moveViewAlongPath(path, isModelUnitDiving(producer), function()
             producer:updateView()
@@ -1145,7 +1155,7 @@ local function executeProduceModelUnitOnUnit(action)
 
             updateTileAndUnitMapOnVisibilityChanged()
 
-            getModelScene(sceneWarFileName):setExecutingAction(false)
+            modelSceneWar:setExecutingAction(false)
         end)
     end
 end
@@ -1161,8 +1171,9 @@ local function executeSupplyModelUnit(action)
     focusModelUnit:setStateActioned()
     local targetModelUnits = getAndSupplyAdjacentModelUnits(sceneWarFileName, path[#path], focusModelUnit:getPlayerIndex())
 
+    local modelSceneWar = getModelScene(sceneWarFileName)
     if (IS_SERVER) then
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     else
         focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
             focusModelUnit:updateView()
@@ -1176,7 +1187,7 @@ local function executeSupplyModelUnit(action)
                 modelGridEffect:showAnimationSupply(targetModelUnit:getGridIndex())
             end
 
-            getModelScene(sceneWarFileName):setExecutingAction(false)
+            modelSceneWar:setExecutingAction(false)
         end)
     end
 end
@@ -1192,8 +1203,9 @@ local function executeSurface(action)
     focusModelUnit:setStateActioned()
         :setDiving(false)
 
+    local modelSceneWar = getModelScene(sceneWarFileName)
     if (IS_SERVER) then
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     else
         focusModelUnit:moveViewAlongPath(path, true, function()
             local endingGridIndex = path[#path]
@@ -1208,7 +1220,7 @@ local function executeSurface(action)
                 getModelGridEffect():showAnimationSurface(endingGridIndex)
             end
 
-            getModelScene(sceneWarFileName):setExecutingAction(false)
+            modelSceneWar:setExecutingAction(false)
         end)
     end
 end
@@ -1228,6 +1240,7 @@ local function executeSurrender(action)
         else
             modelTurnManager:endTurnPhaseMain()
         end
+        modelSceneWar:setExecutingAction(false)
     else
         updateTileAndUnitMapOnVisibilityChanged()
 
@@ -1243,8 +1256,9 @@ local function executeSurrender(action)
                 modelTurnManager:endTurnPhaseMain()
             end
         end
+
+        modelSceneWar:setExecutingAction(false)
     end
-    modelSceneWar:setExecutingAction(false)
 end
 
 local function executeTickActionId(action)
@@ -1261,8 +1275,9 @@ local function executeWait(action)
     moveModelUnitWithAction(action)
     focusModelUnit:setStateActioned()
 
+    local modelSceneWar = getModelScene(sceneWarFileName)
     if (IS_SERVER) then
-        getModelScene(sceneWarFileName):setExecutingAction(false)
+        modelSceneWar:setExecutingAction(false)
     else
         focusModelUnit:moveViewAlongPath(path, isModelUnitDiving(focusModelUnit), function()
             focusModelUnit:updateView()
@@ -1274,7 +1289,7 @@ local function executeWait(action)
                 getModelGridEffect():showAnimationBlock(path[#path])
             end
 
-            getModelScene(sceneWarFileName):setExecutingAction(false)
+            modelSceneWar:setExecutingAction(false)
         end)
     end
 end
@@ -1284,82 +1299,47 @@ end
 --------------------------------------------------------------------------------
 function ActionExecutor.execute(action)
     local actionName = action.actionName
-    if     (actionName == "DownloadReplayData") then return executeDownloadReplayData(action)
-    elseif (actionName == "GetReplayList")      then return executeGetReplayList(     action)
-    elseif (actionName == "Logout")             then return executeLogout(            action)
-    end
-
-    local sceneWarFileName = action.fileName
-    local modelSceneWar    = getModelScene(sceneWarFileName)
-    if ((not modelSceneWar)                                or
-        (not modelSceneWar.getFileName)                    or
-        (modelSceneWar:getFileName() ~= sceneWarFileName)) then
-        return
-    end
-
-    local actionID = action.actionID
-    if (not actionID) then
-        assert(not IS_SERVER, "ActionExecutor.execute() invalid action for the server: " .. toErrorMessage(action))
-        if     (actionName == "Error")               then executeError(              action)
-        elseif (actionName == "Message")             then executeMessage(            action)
+    if (not action.actionID) then
+        if     (actionName == "DownloadReplayData")  then executeDownloadReplayData( action)
+        elseif (actionName == "Error")               then executeError(              action)
+        elseif (actionName == "GetReplayList")       then executeGetReplayList(      action)
         elseif (actionName == "GetSceneWarActionId") then executeGetSceneWarActionId(action)
         elseif (actionName == "GetSceneWarData")     then executeGetSceneWarData(    action)
+        elseif (actionName == "Logout")              then executeLogout(             action)
+        elseif (actionName == "Message")             then executeMessage(            action)
         elseif (actionName == "ReloadSceneWar")      then executeReloadSceneWar(     action)
         elseif (actionName == "RunSceneMain")        then executeRunSceneMain(       action)
-        else
-            local account, password = getLoggedInAccountAndPassword()
-            runSceneMain({
-                    isPlayerLoggedIn = (account ~= nil),
-                    confirmText      = "InvalidAction: " .. toErrorMessage(action)
-                }, account, password)
         end
-        return
-    end
-
-    if (modelSceneWar:isEnded()) then
-        return
-    elseif (modelSceneWar:isExecutingAction()) then
-        modelSceneWar:cacheAction(action)
-        return
-    end
-
-    modelSceneWar:setExecutingAction(true)
-    if (actionID == modelSceneWar:getActionId() + 1) then
-        modelSceneWar:setActionId(actionID)
     else
-        assert(not IS_SERVER, "ActionExecutor.execute() the actionID is invalid on the server: " .. (actionID or ""))
-        getModelMessageIndicator():showPersistentMessage(getLocalizedText(81, "OutOfSync"))
-        requestReloadSceneWar()
-        return
-    end
+        getModelScene(action.fileName):setExecutingAction(true)
+        if     (actionName == "ActivateSkillGroup")     then executeActivateSkillGroup(    action)
+        elseif (actionName == "Attack")                 then executeAttack(                action)
+        elseif (actionName == "BeginTurn")              then executeBeginTurn(             action)
+        elseif (actionName == "BuildModelTile")         then executeBuildModelTile(        action)
+        elseif (actionName == "CaptureModelTile")       then executeCaptureModelTile(      action)
+        elseif (actionName == "Dive")                   then executeDive(                  action)
+        elseif (actionName == "DropModelUnit")          then executeDropModelUnit(         action)
+        elseif (actionName == "EndTurn")                then executeEndTurn(               action)
+        elseif (actionName == "JoinModelUnit")          then executeJoinModelUnit(         action)
+        elseif (actionName == "LaunchFlare")            then executeLaunchFlare(           action)
+        elseif (actionName == "LaunchSilo")             then executeLaunchSilo(            action)
+        elseif (actionName == "LoadModelUnit")          then executeLoadModelUnit(         action)
+        elseif (actionName == "ProduceModelUnitOnTile") then executeProduceModelUnitOnTile(action)
+        elseif (actionName == "ProduceModelUnitOnUnit") then executeProduceModelUnitOnUnit(action)
+        elseif (actionName == "SupplyModelUnit")        then executeSupplyModelUnit(       action)
+        elseif (actionName == "Surface")                then executeSurface(               action)
+        elseif (actionName == "Surrender")              then executeSurrender(             action)
+        elseif (actionName == "TickActionId")           then executeTickActionId(          action)
+        elseif (actionName == "Wait")                   then executeWait(                  action)
+        end
 
-    if     (actionName == "ActivateSkillGroup")     then executeActivateSkillGroup(    action)
-    elseif (actionName == "Attack")                 then executeAttack(                action)
-    elseif (actionName == "BeginTurn")              then executeBeginTurn(             action)
-    elseif (actionName == "BuildModelTile")         then executeBuildModelTile(        action)
-    elseif (actionName == "CaptureModelTile")       then executeCaptureModelTile(      action)
-    elseif (actionName == "Dive")                   then executeDive(                  action)
-    elseif (actionName == "DropModelUnit")          then executeDropModelUnit(         action)
-    elseif (actionName == "EndTurn")                then executeEndTurn(               action)
-    elseif (actionName == "JoinModelUnit")          then executeJoinModelUnit(         action)
-    elseif (actionName == "LaunchFlare")            then executeLaunchFlare(           action)
-    elseif (actionName == "LaunchSilo")             then executeLaunchSilo(            action)
-    elseif (actionName == "LoadModelUnit")          then executeLoadModelUnit(         action)
-    elseif (actionName == "ProduceModelUnitOnTile") then executeProduceModelUnitOnTile(action)
-    elseif (actionName == "ProduceModelUnitOnUnit") then executeProduceModelUnitOnUnit(action)
-    elseif (actionName == "SupplyModelUnit")        then executeSupplyModelUnit(       action)
-    elseif (actionName == "Surface")                then executeSurface(               action)
-    elseif (actionName == "Surrender")              then executeSurrender(             action)
-    elseif (actionName == "TickActionId")           then executeTickActionId(          action)
-    elseif (actionName == "Wait")                   then executeWait(                  action)
-    end
-
-    if (not IS_SERVER) then
-        getModelMessageIndicator():hidePersistentMessage(getLocalizedText(80, "TransferingData"))
-        getScriptEventDispatcher():dispatchEvent({
+        if (not IS_SERVER) then
+            getModelMessageIndicator():hidePersistentMessage(getLocalizedText(80, "TransferingData"))
+            getScriptEventDispatcher():dispatchEvent({
                 name    = "EvtIsWaitingForServerResponse",
                 waiting = false,
             })
+        end
     end
 end
 
