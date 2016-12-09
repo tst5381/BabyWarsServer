@@ -107,7 +107,7 @@ creators.createActionForBeginTurn = function(action, targetPlayerIndex)
 
     local ignoredUnitIDsLoaded = {}
     for unitID, data in pairs(repairData.loadedData) do
-        local gridIndex = modelUnitMap:getLoadedModelUnitWithUnitId(unitID)
+        local gridIndex = modelUnitMap:getLoadedModelUnitWithUnitId(unitID):getGridIndex()
         local modelUnit = modelUnitMap:getModelUnit(gridIndex)
         if (not isUnitVisible(sceneWarFileName, gridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
             ignoredUnitIDsLoaded[#ignoredUnitIDsLoaded + 1] = unitID
