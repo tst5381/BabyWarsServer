@@ -16,7 +16,7 @@ local SerializationFunctions = require("src.app.utilities.SerializationFunctions
 
 local DEFAULT_CONFIGURATION = {
     timeout         = 10000000, -- 10000s
-    max_payload_len = 65535,
+    max_payload_len = 1048575,
 }
 
 --------------------------------------------------------------------------------
