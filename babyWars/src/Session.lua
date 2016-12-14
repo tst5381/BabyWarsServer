@@ -1,9 +1,10 @@
 
 -- TODO: move the code that initializes the server to somewhere else (like main()).
 package.path = package.path .. ";./babyWars/?.lua"
-require("src.app.utilities.GameConstantFunctions").init(true)
-require("src.app.utilities.SceneWarManager")      .init()
-require("src.app.utilities.PlayerProfileManager") .init()
+require("src.app.utilities.GameConstantFunctions") .init(true)
+require("src.app.utilities.SceneWarManager")       .init()
+require("src.app.utilities.PlayerProfileManager")  .init()
+require("src.app.utilities.SerializationFunctions").init()
 
 local Session = require("src.global.functions.class")("Session")
 
