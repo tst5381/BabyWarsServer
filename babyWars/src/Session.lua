@@ -11,13 +11,13 @@ local Session = require("src.global.functions.class")("Session")
 local WebSocketServer        = require("resty.websocket.server")
 local Redis                  = require("resty.redis")
 local ActionTranslator       = require("src.app.utilities.ActionTranslator")
+local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
 local SceneWarManager        = require("src.app.utilities.SceneWarManager")
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
 
-local decode                    = SerializationFunctions.decode
-local encode                    = SerializationFunctions.encode
-local getActionCode             = require("src.app.utilities.ActionCodeFunctions").getActionCode
-local isAccountAndPasswordValid = require("src.app.utilities.PlayerProfileManager").isAccountAndPasswordValid
+local decode        = SerializationFunctions.decode
+local encode        = SerializationFunctions.encode
+local getActionCode = require("src.app.utilities.ActionCodeFunctions").getActionCode
 
 local DEFAULT_CONFIGURATION = {
     timeout         = 10000000, -- 10000s
@@ -130,6 +130,14 @@ local function destroyThreadForSubscribe(self)
     end
 end
 
+local function executeActionForServer(action)
+    if (action.actionCode == ACTION_CODE_REGISTER) then
+        PlayerProfileManager.createPlayerProfile(action.registerAccount, action.registerPassword)
+    else
+        SceneWarManager.updateModelSceneWarWithAction(action)
+    end
+end
+
 local function publishTranslatedActions(actions)
     -- It seems that if we use self.m_RedisForSubscribe to publish the actions, it may fail mysteriously.
     -- So it's safer to use a temporary redis for publishing.
@@ -146,7 +154,7 @@ end
 
 local function doAction(self, rawAction, actionForRequester, actionsForPublish, actionForServer)
     if (actionForServer) then
-        SceneWarManager.updateModelSceneWarWithAction(actionForServer)
+        executeActionForServer(actionForServer)
     end
     if (actionsForPublish) then
         publishTranslatedActions(actionsForPublish)
@@ -155,7 +163,7 @@ local function doAction(self, rawAction, actionForRequester, actionsForPublish, 
     local account, password    = rawAction.playerAccount, rawAction.playerPassword
     local rawActionCode        = rawAction.actionCode
     local translatedActionCode = actionForRequester.actionCode
-    if ((translatedActionCode == ACTION_CODE_LOGOUT) or (not isAccountAndPasswordValid(account, password))) then
+    if ((translatedActionCode == ACTION_CODE_LOGOUT) or (not PlayerProfileManager.isAccountAndPasswordValid(account, password))) then
         self:unsubscribeFromPlayerChannel()
     elseif ((rawActionCode ~= ACTION_CODE_REGISTER) or (rawActionCode == translatedActionCode)) then
         self:subscribeToPlayerChannel(account, password)
@@ -223,12 +231,17 @@ function Session:start()
             return self:stop()
         end
 
-        if (typ) == "close" then
+        if (typ == "close") then
             break
-        elseif (typ == "text") then
+        elseif ((typ == "text") or (typ == "binary")) then
             -- TODO: validate the data before loadstring().
             local rawAction = decode("Action", data)
             if (rawAction) then
+                -- for debug
+                if (rawAction.actionCode ~= 1) then
+                    ngx.log(ngx.ERR, SerializationFunctions.toString(rawAction))
+                end
+
                 doAction(self, rawAction, ActionTranslator.translate(rawAction))
             else
                 local bytes, err = webSocket:send_text("Server: Failed to parse the data came from the client.")

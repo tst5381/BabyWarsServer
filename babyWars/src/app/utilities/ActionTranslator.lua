@@ -357,6 +357,28 @@ local function translateNetworkHeartbeat(action)
     }
 end
 
+local function translateRegister(action)
+    local account, password = action.registerAccount, action.registerPassword
+    if (action.clientVersion ~= GAME_VERSION) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "InvalidGameVersion", GAME_VERSION)
+        }
+    elseif (PlayerProfileManager.isAccountRegistered(account)) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(25),
+        }
+    else
+        local actionRegister = {
+            actionCode       = ACTION_CODES.Register,
+            registerAccount  = account,
+            registerPassword = password,
+        }
+        return actionRegister, nil, actionRegister
+    end
+end
+
 local function translateLogin(action)
     local account, password = action.playerAccount, action.playerPassword
     if (action.version ~= GAME_VERSION) then
@@ -379,28 +401,6 @@ local function translateLogin(action)
                 actionName = "Logout",
                 message    = getLocalizedText(23, account),
             }
-        }
-    end
-end
-
-local function translateRegister(action)
-    local account, password = action.playerAccount, action.playerPassword
-    if (action.version ~= GAME_VERSION) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "InvalidGameVersion", GAME_VERSION)
-        }
-    elseif (PlayerProfileManager.isAccountRegistered(account)) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(25),
-        }
-    else
-        PlayerProfileManager.createPlayerProfile(account, password)
-        return {
-            actionName = "Register",
-            account    = account,
-            password   = password,
         }
     end
 end
@@ -1449,7 +1449,8 @@ function ActionTranslator.translate(action)
         }
     end
 
-    if (actionCode == ACTION_CODES.NetworkHeartbeat) then return translateNetworkHeartbeat(action)
+    if     (actionCode == ACTION_CODES.NetworkHeartbeat) then return translateNetworkHeartbeat(action)
+    elseif (actionCode == ACTION_CODES.Register)         then return translateRegister(        action)
     end
 
     local actionName = action.actionName
