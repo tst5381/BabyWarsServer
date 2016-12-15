@@ -11,14 +11,21 @@ local Session = require("src.global.functions.class")("Session")
 local WebSocketServer        = require("resty.websocket.server")
 local Redis                  = require("resty.redis")
 local ActionTranslator       = require("src.app.utilities.ActionTranslator")
-local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
 local SceneWarManager        = require("src.app.utilities.SceneWarManager")
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
+
+local decode                    = SerializationFunctions.decode
+local encode                    = SerializationFunctions.encode
+local getActionCode             = require("src.app.utilities.ActionCodeFunctions").getActionCode
+local isAccountAndPasswordValid = require("src.app.utilities.PlayerProfileManager").isAccountAndPasswordValid
 
 local DEFAULT_CONFIGURATION = {
     timeout         = 10000000, -- 10000s
     max_payload_len = 1048575,
 }
+
+local ACTION_CODE_LOGOUT   = getActionCode("Logout")
+local ACTION_CODE_REGISTER = getActionCode("Register")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -130,9 +137,8 @@ local function publishTranslatedActions(actions)
     red:set_timeout(10000000) -- 10000s
     red:connect("127.0.0.1", 6379)
 
-    local toString = SerializationFunctions.toString
     for account, action in pairs(actions) do
-        red:publish("Session." .. account, toString(action))
+        red:publish("Session." .. account, encode("Action", action))
     end
 
     red:close()
@@ -147,19 +153,15 @@ local function doAction(self, rawAction, actionForRequester, actionsForPublish, 
     end
 
     local account, password    = rawAction.playerAccount, rawAction.playerPassword
-    local translatedActionName = actionForRequester.actionName
-    if ((translatedActionName == "Logout")                                       or
-        (not PlayerProfileManager.isAccountAndPasswordValid(account, password))) then
+    local rawActionCode        = rawAction.actionCode
+    local translatedActionCode = actionForRequester.actionCode
+    if ((translatedActionCode == ACTION_CODE_LOGOUT) or (not isAccountAndPasswordValid(account, password))) then
         self:unsubscribeFromPlayerChannel()
-    else
-        local rawActionName = rawAction.actionName
-        if ((rawActionName ~= "Register")                                                or
-            ((rawActionName == "Register") and (translatedActionName == rawActionName))) then
-            self:subscribeToPlayerChannel(account, password)
-        end
+    elseif ((rawActionCode ~= ACTION_CODE_REGISTER) or (rawActionCode == translatedActionCode)) then
+        self:subscribeToPlayerChannel(account, password)
     end
 
-    local bytes, err = self.m_WebSocket:send_text(SerializationFunctions.toString(actionForRequester))
+    local bytes, err = self.m_WebSocket:send_text(encode("Action", actionForRequester))
     if (not bytes) then
         ngx.log(ngx.ERR, "Session-doAction() failed to send text: ", err)
         return self:stop()
@@ -225,9 +227,8 @@ function Session:start()
             break
         elseif (typ == "text") then
             -- TODO: validate the data before loadstring().
-            local chunk = loadstring("return " .. data)
-            if (chunk) then
-                local rawAction = chunk()
+            local rawAction = decode("Action", data)
+            if (rawAction) then
                 doAction(self, rawAction, ActionTranslator.translate(rawAction))
             else
                 local bytes, err = webSocket:send_text("Server: Failed to parse the data came from the client.")

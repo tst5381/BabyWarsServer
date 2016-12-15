@@ -46,6 +46,7 @@ local getModelUnitMap              = SingletonGetters.getModelUnitMap
 local getRevealedTilesAndUnitsData = VisibilityFunctions.getRevealedTilesAndUnitsData
 local isUnitVisible                = VisibilityFunctions.isUnitOnMapVisibleToPlayerIndex
 
+local ACTION_CODES                   = require("src.app.utilities.ActionCodeFunctions").getFullList()
 local GAME_VERSION                   = GameConstantFunctions.getGameVersion()
 local IGNORED_ACTION_KEYS_FOR_SERVER = {"revealedTiles", "revealedUnits"}
 
@@ -351,7 +352,7 @@ end
 --------------------------------------------------------------------------------
 local function translateNetworkHeartbeat(action)
     return {
-        actionName       = "NetworkHeartbeat",
+        actionCode       = ACTION_CODES.NetworkHeartbeat,
         heartbeatCounter = action.heartbeatCounter,
     }
 end
@@ -1440,11 +1441,15 @@ end
 -- The public functions.
 --------------------------------------------------------------------------------
 function ActionTranslator.translate(action)
-    if (type(action) ~= "table") then
+    local actionCode = action.actionCode
+    if (not actionCode) then
         return {
             actionName = "Message",
             message    = getLocalizedText(81, "CorruptedAction"),
         }
+    end
+
+    if (actionCode == ACTION_CODES.NetworkHeartbeat) then return translateNetworkHeartbeat(action)
     end
 
     local actionName = action.actionName
