@@ -24,8 +24,10 @@ local DEFAULT_CONFIGURATION = {
     max_payload_len = 1048575,
 }
 
-local ACTION_CODE_LOGOUT   = getActionCode("Logout")
-local ACTION_CODE_REGISTER = getActionCode("Register")
+local ACTION_CODE_HEARTBEAT = getActionCode("NetworkHeartbeat")
+local ACTION_CODE_LOGIN     = getActionCode("Login")
+local ACTION_CODE_LOGOUT    = getActionCode("Logout")
+local ACTION_CODE_REGISTER  = getActionCode("Register")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -130,6 +132,14 @@ local function destroyThreadForSubscribe(self)
     end
 end
 
+local function getAccountAndPasswordWithAction(action)
+    local actionCode = action.actionCode
+    if     (actionCode == ACTION_CODE_LOGIN)    then return action.loginAccount,    action.loginPassword
+    elseif (actionCode == ACTION_CODE_REGISTER) then return action.registerAccount, action.registerPassword
+    else                                             return action.playerAccount,   action.playerPassword
+    end
+end
+
 local function executeActionForServer(action)
     if (action.actionCode == ACTION_CODE_REGISTER) then
         PlayerProfileManager.createPlayerProfile(action.registerAccount, action.registerPassword)
@@ -163,13 +173,16 @@ local function doAction(self, rawAction, actionForRequester, actionsForPublish, 
         publishTranslatedActions(actionsForPublish)
     end
 
-    local account, password    = rawAction.playerAccount, rawAction.playerPassword
-    local rawActionCode        = rawAction.actionCode
-    local translatedActionCode = actionForRequester.actionCode
-    if ((translatedActionCode == ACTION_CODE_LOGOUT) or (not PlayerProfileManager.isAccountAndPasswordValid(account, password))) then
-        self:unsubscribeFromPlayerChannel()
-    elseif ((rawActionCode ~= ACTION_CODE_REGISTER) or (rawActionCode == translatedActionCode)) then
-        self:subscribeToPlayerChannel(account, password)
+    local rawActionCode = rawAction.actionCode
+    if (rawActionCode ~= ACTION_CODE_HEARTBEAT) then
+        local translatedActionCode = actionForRequester.actionCode
+        local account, password    = getAccountAndPasswordWithAction(rawAction)
+
+        if ((translatedActionCode == ACTION_CODE_LOGOUT) or (not PlayerProfileManager.isAccountAndPasswordValid(account, password))) then
+            self:unsubscribeFromPlayerChannel()
+        elseif ((rawActionCode ~= ACTION_CODE_REGISTER) or (rawActionCode == translatedActionCode)) then
+            self:subscribeToPlayerChannel(account, password)
+        end
     end
 
     local bytes, err = self.m_WebSocket:send_text(encode("Action", actionForRequester))
@@ -241,7 +254,7 @@ function Session:start()
             local rawAction = decode("Action", data)
             if (rawAction) then
                 -- for debug
-                if (rawAction.actionCode ~= 1) then
+                if (rawAction.actionCode ~= ACTION_CODE_HEARTBEAT) then
                     ngx.log(ngx.ERR, SerializationFunctions.toString(rawAction))
                 end
 

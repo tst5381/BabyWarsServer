@@ -50,6 +50,11 @@ local ACTION_CODES                   = require("src.app.utilities.ActionCodeFunc
 local GAME_VERSION                   = GameConstantFunctions.getGameVersion()
 local IGNORED_ACTION_KEYS_FOR_SERVER = {"revealedTiles", "revealedUnits"}
 
+local LOGOUT_INVALID_ACCOUNT_PASSWORD = {
+    actionCode    = ACTION_CODES.Logout,
+    messageCode   = 81,
+    messageParams = {"InvalidAccountOrPassword"},
+}
 local MESSAGE_CORRUPTED_ACTION = {
     actionCode    = ACTION_CODES.Message,
     messageCode   = 81,
@@ -384,8 +389,9 @@ local function translateLogin(action)
             loginPassword = password,
         }, {
             [account] = {
-                actionCode = ACTION_CODES.Logout,
-                message    = getLocalizedText(23, account),
+                actionCode    = ACTION_CODES.Logout,
+                messageCode   = 81,
+                messageParams = {"MultiLogin", account},
             }
         }
     end
@@ -1464,10 +1470,7 @@ function ActionTranslator.translate(action)
 
     local playerAccount = action.playerAccount
     if (not PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
-        return {
-            actionName = "Logout",
-            message    = getLocalizedText(81, "InvalidPassword"),
-        }
+        return LOGOUT_INVALID_ACCOUNT_PASSWORD
     end
 
     if     (actionName == "NewWar")                then return translateNewWar(               action)
