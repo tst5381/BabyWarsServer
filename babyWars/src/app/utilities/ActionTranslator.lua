@@ -50,6 +50,27 @@ local ACTION_CODES                   = require("src.app.utilities.ActionCodeFunc
 local GAME_VERSION                   = GameConstantFunctions.getGameVersion()
 local IGNORED_ACTION_KEYS_FOR_SERVER = {"revealedTiles", "revealedUnits"}
 
+local MESSAGE_CORRUPTED_ACTION = {
+    actionCode    = ACTION_CODES.Message,
+    messageCode   = 81,
+    messageParams = {"CorruptedAction"},
+}
+local MESSAGE_INVALID_GAME_VERSION = {
+    actionCode    = ACTION_CODES.Message,
+    messageCode   = 81,
+    messageParams = {"InvalidGameVersion", GAME_VERSION},
+}
+local MESSAGE_INVALID_LOGIN = {
+    actionCode    = ACTION_CODES.Message,
+    messageCode   = 81,
+    messageParams = {"InvalidLogin"},
+}
+local MESSAGE_REGISTERED_ACCOUNT = {
+    actionCode    = ACTION_CODES.Message,
+    messageCode   = 81,
+    messageParams = {"RegisteredAccount"},
+}
+
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
@@ -353,15 +374,9 @@ end
 local function translateLogin(action)
     local account, password = action.loginAccount, action.loginPassword
     if (action.clientVersion ~= GAME_VERSION) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "InvalidGameVersion", GAME_VERSION)
-        }
+        return MESSAGE_INVALID_GAME_VERSION
     elseif (not PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(22),
-        }
+        return MESSAGE_INVALID_LOGIN
     else
         return {
             actionCode    = ACTION_CODES.Login,
@@ -386,15 +401,9 @@ end
 local function translateRegister(action)
     local account, password = action.registerAccount, action.registerPassword
     if (action.clientVersion ~= GAME_VERSION) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "InvalidGameVersion", GAME_VERSION)
-        }
+        return MESSAGE_INVALID_GAME_VERSION
     elseif (PlayerProfileManager.isAccountRegistered(account)) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(25),
-        }
+        return MESSAGE_REGISTERED_ACCOUNT
     else
         local actionRegister = {
             actionCode       = ACTION_CODES.Register,
@@ -1442,14 +1451,8 @@ end
 --------------------------------------------------------------------------------
 function ActionTranslator.translate(action)
     local actionCode = action.actionCode
-    if (not actionCode) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "CorruptedAction"),
-        }
-    end
-
-    if     (actionCode == ACTION_CODES.Login)            then return translateLogin(           action)
+    if     (not actionCode)                              then return MESSAGE_CORRUPTED_ACTION
+    elseif (actionCode == ACTION_CODES.Login)            then return translateLogin(           action)
     elseif (actionCode == ACTION_CODES.NetworkHeartbeat) then return translateNetworkHeartbeat(action)
     elseif (actionCode == ACTION_CODES.Register)         then return translateRegister(        action)
     end
