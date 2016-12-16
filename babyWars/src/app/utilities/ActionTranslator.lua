@@ -350,6 +350,32 @@ end
 --------------------------------------------------------------------------------
 -- The translate functions.
 --------------------------------------------------------------------------------
+local function translateLogin(action)
+    local account, password = action.loginAccount, action.loginPassword
+    if (action.clientVersion ~= GAME_VERSION) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(81, "InvalidGameVersion", GAME_VERSION)
+        }
+    elseif (not PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
+        return {
+            actionName = "Message",
+            message    = getLocalizedText(22),
+        }
+    else
+        return {
+            actionCode    = ACTION_CODES.Login,
+            loginAccount  = account,
+            loginPassword = password,
+        }, {
+            [account] = {
+                actionCode = ACTION_CODES.Logout,
+                message    = getLocalizedText(23, account),
+            }
+        }
+    end
+end
+
 local function translateNetworkHeartbeat(action)
     return {
         actionCode       = ACTION_CODES.NetworkHeartbeat,
@@ -376,32 +402,6 @@ local function translateRegister(action)
             registerPassword = password,
         }
         return actionRegister, nil, actionRegister
-    end
-end
-
-local function translateLogin(action)
-    local account, password = action.playerAccount, action.playerPassword
-    if (action.version ~= GAME_VERSION) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "InvalidGameVersion", GAME_VERSION)
-        }
-    elseif (not PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(22),
-        }
-    else
-        return {
-            actionName = "Login",
-            account    = account,
-            password   = password,
-        }, {
-            [account] = {
-                actionName = "Logout",
-                message    = getLocalizedText(23, account),
-            }
-        }
     end
 end
 
@@ -1449,16 +1449,14 @@ function ActionTranslator.translate(action)
         }
     end
 
-    if     (actionCode == ACTION_CODES.NetworkHeartbeat) then return translateNetworkHeartbeat(action)
+    if     (actionCode == ACTION_CODES.Login)            then return translateLogin(           action)
+    elseif (actionCode == ACTION_CODES.NetworkHeartbeat) then return translateNetworkHeartbeat(action)
     elseif (actionCode == ACTION_CODES.Register)         then return translateRegister(        action)
     end
 
     local actionName = action.actionName
     if     (actionName == "DownloadReplayData") then return translateDownloadReplayData(action)
     elseif (actionName == "GetReplayList")      then return translateGetReplayList(     action)
-    elseif (actionName == "Login")              then return translateLogin(             action)
-    elseif (actionName == "NetworkHeartbeat")   then return translateNetworkHeartbeat(  action)
-    elseif (actionName == "Register")           then return translateRegister(          action)
     end
 
     local playerAccount = action.playerAccount

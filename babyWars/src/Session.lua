@@ -103,14 +103,14 @@ local function initThreadForSubscribe(self)
             end
 
             if ((res) and (res[1] == "message")) then
-                if (string.find(res[3], '"Logout"')) then
+                local redisAction = decode("RedisAction", res[3])
+                if (redisAction.actionCode == ACTION_CODE_LOGOUT) then
                     ngx.log(ngx.CRIT, "Session-threadForSubscribe main loop: receive a Logout action.")
                     -- return self:stop()
                     self:unsubscribeFromPlayerChannel()
                 end
 
-                local bytes, err = self.m_WebSocket:send_text(res[3])
-                -- ngx.log(ngx.CRIT, "Session-threadForSubscribe() receive published message: ", res[3])
+                local bytes, err = self.m_WebSocket:send_text(redisAction.encodedAction)
                 if (not bytes) then
                     ngx.log(ngx.ERR, "Session-threadForSubscribe main loop: failed to send the published message to the webSocket: ", err)
                     return self:stop()
@@ -146,7 +146,10 @@ local function publishTranslatedActions(actions)
     red:connect("127.0.0.1", 6379)
 
     for account, action in pairs(actions) do
-        red:publish("Session." .. account, encode("Action", action))
+        red:publish("Session." .. account, encode("RedisAction", {
+            actionCode    = action.actionCode,
+            encodedAction = encode("Action", action),
+        }))
     end
 
     red:close()
