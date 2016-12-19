@@ -619,20 +619,12 @@ local function translateJoinWar(action)
 end
 
 local function translateGetSkillConfiguration(action)
-    local configurationID    = action.configurationID
-    local configuration, err = PlayerProfileManager.getSkillConfiguration(action.playerAccount, configurationID)
-    if (not configuration) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "FailToGetSkillConfiguration", err),
-        }
-    else
-        return {
-            actionName      = "GetSkillConfiguration",
-            configurationID = configurationID,
-            configuration   = configuration,
-        }
-    end
+    local configurationID    = action.skillConfigurationID
+    return {
+        actionCode           = ACTION_CODES.GetSkillConfiguration,
+        skillConfigurationID = configurationID,
+        skillConfiguration   = PlayerProfileManager.getSkillConfiguration(action.playerAccount, configurationID),
+    }
 end
 
 local function translateReloadSceneWar(action)
@@ -1473,13 +1465,13 @@ function ActionTranslator.translate(action)
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
     end
 
-    if     (actionName == "NewWar")                then return translateNewWar(               action)
+    if     (actionCode == ACTION_CODES.GetSkillConfiguration) then return translateGetSkillConfiguration(action)
+    elseif (actionName == "NewWar")                then return translateNewWar(               action)
     elseif (actionName == "GetOngoingWarList")     then return translateGetOngoingWarList(    action)
     elseif (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
     elseif (actionName == "GetSceneWarData")       then return translateGetSceneWarData(      action)
     elseif (actionName == "GetJoinableWarList")    then return translateGetJoinableWarList(   action)
     elseif (actionName == "JoinWar")               then return translateJoinWar(              action)
-    elseif (actionName == "GetSkillConfiguration") then return translateGetSkillConfiguration(action)
     elseif (actionName == "ReloadSceneWar")        then return translateReloadSceneWar(       action)
     elseif (actionName == "SetSkillConfiguration") then return translateSetSkillConfiguration(action)
     end

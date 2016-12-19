@@ -9,10 +9,10 @@ local io     = io
 
 local PLAYER_PROFILE_PATH          = "babyWars\\res\\data\\playerProfile\\"
 local SINGLE_SKILL_CONFIGURATION   = {
-    maxPoints = 100,
-    passive   = {},
-    active1   = {},
-    active2   = {},
+    basePoints = 100,
+    passive    = {},
+    active1    = {},
+    active2    = {},
 }
 local DEFAULT_RANK_SCORE           = 1000
 local DEFAULT_GAME_RECORDS         = {
@@ -25,7 +25,7 @@ local DEFAULT_WAR_LIST             = {
     ongoing = {},
 }
 local DEFAULT_SKILL_CONFIGURATIONS = {}
-for i = 1, 10 do
+for i = 1, require("src.app.utilities.SkillDataAccessors").getSkillConfigurationsCount() do
     DEFAULT_SKILL_CONFIGURATIONS[i] = SINGLE_SKILL_CONFIGURATION
 end
 
@@ -123,12 +123,7 @@ function PlayerProfileManager.isAccountAndPasswordValid(account, password)
 end
 
 function PlayerProfileManager.getSkillConfiguration(account, configurationID)
-    local profile = PlayerProfileManager.getPlayerProfile(account)
-    if (not profile) then
-        return nil, "PlayerProfileManager.getSkillConfiguration() the profile doesn't exist."
-    else
-        return profile.skillConfigurations[configurationID]
-    end
+    return PlayerProfileManager.getPlayerProfile(account).skillConfigurations[configurationID]
 end
 
 function PlayerProfileManager.setSkillConfiguration(account, configurationID, modelSkillConfiguration)
