@@ -10,6 +10,7 @@ local Session = require("src.global.functions.class")("Session")
 
 local WebSocketServer        = require("resty.websocket.server")
 local Redis                  = require("resty.redis")
+local ActionExecutor         = require("src.app.utilities.ActionExecutor")
 local ActionTranslator       = require("src.app.utilities.ActionTranslator")
 local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
 local SceneWarManager        = require("src.app.utilities.SceneWarManager")
@@ -24,10 +25,11 @@ local DEFAULT_CONFIGURATION = {
     max_payload_len = 1048575,
 }
 
-local ACTION_CODE_HEARTBEAT = getActionCode("NetworkHeartbeat")
-local ACTION_CODE_LOGIN     = getActionCode("Login")
-local ACTION_CODE_LOGOUT    = getActionCode("Logout")
-local ACTION_CODE_REGISTER  = getActionCode("Register")
+local ACTION_CODE_HEARTBEAT               = getActionCode("NetworkHeartbeat")
+local ACTION_CODE_LOGIN                   = getActionCode("Login")
+local ACTION_CODE_LOGOUT                  = getActionCode("Logout")
+local ACTION_CODE_REGISTER                = getActionCode("Register")
+local ACTION_CODE_SET_SKILL_CONFIGURATION = getActionCode("SetSkillConfiguration")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -141,8 +143,10 @@ local function getAccountAndPasswordWithAction(action)
 end
 
 local function executeActionForServer(action)
-    if (action.actionCode == ACTION_CODE_REGISTER) then
-        PlayerProfileManager.createPlayerProfile(action.registerAccount, action.registerPassword)
+    local actionCode = action.actionCode
+    if ((actionCode == ACTION_CODE_REGISTER)                 or
+        (actionCode == ACTION_CODE_SET_SKILL_CONFIGURATION)) then
+        ActionExecutor.execute(action)
     else
         SceneWarManager.updateModelSceneWarWithAction(action)
     end

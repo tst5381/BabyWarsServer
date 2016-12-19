@@ -126,11 +126,11 @@ function PlayerProfileManager.getSkillConfiguration(account, configurationID)
     return PlayerProfileManager.getPlayerProfile(account).skillConfigurations[configurationID]
 end
 
-function PlayerProfileManager.setSkillConfiguration(account, configurationID, modelSkillConfiguration)
+function PlayerProfileManager.setSkillConfiguration(account, configurationID, skillConfiguration)
     local profile = PlayerProfileManager.getPlayerProfile(account)
     assert(profile, "PlayerProfileManager.setSkillConfiguration() the profile doesn't exist.")
 
-    profile.skillConfigurations[configurationID] = modelSkillConfiguration:toSerializableTable()
+    profile.skillConfigurations[configurationID] = skillConfiguration
     serializeProfile(account, profile)
 
     return PlayerProfileManager

@@ -30,6 +30,7 @@ local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions
 local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
 local SceneWarManager         = require("src.app.utilities.SceneWarManager")
 local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
+local SkillDataAccessors      = require("src.app.utilities.SkillDataAccessors")
 local SkillModifierFunctions  = require("src.app.utilities.SkillModifierFunctions")
 local SingletonGetters        = require("src.app.utilities.SingletonGetters")
 local TableFunctions          = require("src.app.utilities.TableFunctions")
@@ -49,6 +50,7 @@ local isUnitVisible                = VisibilityFunctions.isUnitOnMapVisibleToPla
 local ACTION_CODES                   = require("src.app.utilities.ActionCodeFunctions").getFullList()
 local GAME_VERSION                   = GameConstantFunctions.getGameVersion()
 local IGNORED_ACTION_KEYS_FOR_SERVER = {"revealedTiles", "revealedUnits"}
+local SKILL_CONFIGURATIONS_COUNT     = SkillDataAccessors.getSkillConfigurationsCount()
 
 local LOGOUT_INVALID_ACCOUNT_PASSWORD = {
     actionCode    = ACTION_CODES.Logout,
@@ -69,6 +71,11 @@ local MESSAGE_INVALID_LOGIN = {
     actionCode    = ACTION_CODES.Message,
     messageCode   = 81,
     messageParams = {"InvalidLogin"},
+}
+local MESSAGE_INVALID_SKILL_CONFIGURATION = {
+    actionCode    = ACTION_CODES.Message,
+    messageCode   = 81,
+    messageParams = {"InvalidSkillConfiguration"},
 }
 local MESSAGE_REGISTERED_ACCOUNT = {
     actionCode    = ACTION_CODES.Message,
@@ -632,23 +639,14 @@ local function translateReloadSceneWar(action)
 end
 
 local function translateSetSkillConfiguration(action)
-    local configuration   = ModelSkillConfiguration:create(action.configuration)
-    local configurationID = action.configurationID
-    if ((configurationID < 1)                                                   or
-        (configurationID > GameConstantFunctions.getSkillConfigurationsCount()) or
-        (configurationID ~= math.floor(configurationID))                        or
-        (not configuration:isValid()))                                          then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "InvalidSkillConfiguration"),
-        }
+    local skillConfiguration, skillConfigurationID = action.skillConfiguration, action.skillConfigurationID
+    if ((skillConfigurationID < 1)                                          or
+        (skillConfigurationID > SKILL_CONFIGURATIONS_COUNT)                 or
+        (not ModelSkillConfiguration:create(skillConfiguration):isValid())) then
+        return MESSAGE_INVALID_SKILL_CONFIGURATION
+    else
+        return {actionCode = ACTION_CODES.SetSkillConfiguration}, nil, action
     end
-
-    PlayerProfileManager.setSkillConfiguration(action.playerAccount, configurationID, configuration)
-    return {
-        actionName = "Message",
-        message    = getLocalizedText(81, "SucceedToSetSkillConfiguration"),
-    }
 end
 
 -- This translation ignores the existing unit of the same player at the end of the path, so that the actions of Join/Attack/Wait can reuse this function.
@@ -1466,6 +1464,7 @@ function ActionTranslator.translate(action)
     end
 
     if     (actionCode == ACTION_CODES.GetSkillConfiguration) then return translateGetSkillConfiguration(action)
+    elseif (actionCode == ACTION_CODES.SetSkillConfiguration) then return translateSetSkillConfiguration(action)
     elseif (actionName == "NewWar")                then return translateNewWar(               action)
     elseif (actionName == "GetOngoingWarList")     then return translateGetOngoingWarList(    action)
     elseif (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
@@ -1473,7 +1472,6 @@ function ActionTranslator.translate(action)
     elseif (actionName == "GetJoinableWarList")    then return translateGetJoinableWarList(   action)
     elseif (actionName == "JoinWar")               then return translateJoinWar(              action)
     elseif (actionName == "ReloadSceneWar")        then return translateReloadSceneWar(       action)
-    elseif (actionName == "SetSkillConfiguration") then return translateSetSkillConfiguration(action)
     end
 
     local sceneWarFileName   = action.sceneWarFileName
