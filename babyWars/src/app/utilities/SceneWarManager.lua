@@ -217,7 +217,7 @@ local function generateWeatherData(defaultWeather, isRandom)
     }
 end
 
-local function generateSinglePlayerData(account, skillConfigurationID)
+local function generateSinglePlayerData(account, skillConfigurationID, playerIndex)
     local skillConfiguration
     if     (not skillConfigurationID) then skillConfiguration = DISABLED_SKILL_CONFIGURATION
     elseif (skillConfigurationID > 0) then skillConfiguration = PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID)
@@ -226,6 +226,7 @@ local function generateSinglePlayerData(account, skillConfigurationID)
     assert(skillConfiguration, "SceneWarManager-generateSinglePlayerData() failed to generate the skill configuration data.")
 
     return {
+        playerIndex         = playerIndex,
         account             = account,
         nickname            = PlayerProfileManager.getPlayerProfile(account).nickname,
         fund                = 0,
@@ -238,7 +239,7 @@ end
 
 local function generatePlayersData(playerIndex, account, skillConfigurationID)
     return {
-        [playerIndex] = generateSinglePlayerData(account, skillConfigurationID),
+        [playerIndex] = generateSinglePlayerData(account, skillConfigurationID, playerIndex),
     }
 end
 
@@ -255,7 +256,8 @@ local function generateSceneWarData(sceneWarFileName, param)
         maxBaseSkillPoints  = param.maxBaseSkillPoints,
         isFogOfWarByDefault = param.isFogOfWarByDefault,
         isRandomWarField    = isRandom,
-        isEnded             = false,
+        isWarEnded          = false,
+        isTotalReplay       = false,
         actionID            = 0,
         executedActions     = DEFAULT_EXECUTED_ACTIONS,
 
@@ -460,7 +462,7 @@ function SceneWarManager.joinWar(param)
         nickname = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
     }
     local joiningSceneWar = s_JoinableWarList[sceneWarFileName].warData
-    joiningSceneWar.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID)
+    joiningSceneWar.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex)
     serialize(toFullFileName(sceneWarFileName), joiningSceneWar)
 
     if (not isWarReadyForStart(configuration)) then

@@ -256,14 +256,8 @@ function Session:start()
         if (typ == "close") then
             break
         elseif ((typ == "text") or (typ == "binary")) then
-            -- TODO: validate the data before loadstring().
             local rawAction = decode("Action", data)
             if (rawAction) then
-                -- for debug
-                if (rawAction.actionCode ~= ACTION_CODE_HEARTBEAT) then
-                    ngx.log(ngx.ERR, SerializationFunctions.toString(rawAction))
-                end
-
                 doAction(self, rawAction, ActionTranslator.translate(rawAction))
             else
                 local bytes, err = webSocket:send_text("Server: Failed to parse the data came from the client.")
