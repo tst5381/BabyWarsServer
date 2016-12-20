@@ -77,6 +77,11 @@ local MESSAGE_INVALID_SKILL_CONFIGURATION = {
     messageCode   = 81,
     messageParams = {"InvalidSkillConfiguration"},
 }
+local MESSAGE_OVERLOADED_SKILL_POINTS = {
+    actionCode    = ACTION_CODES.Message,
+    messageCode   = 81,
+    messageParams = {"OverloadedSkillPoints"},
+}
 local MESSAGE_REGISTERED_ACCOUNT = {
     actionCode    = ACTION_CODES.Message,
     messageCode   = 81,
@@ -454,55 +459,31 @@ end
 local function translateNewWar(action)
     -- TODO: validate more params.
     local skillConfigurationID = action.skillConfigurationID
-    local maxSkillPoints       = action.maxSkillPoints
-    if ((type(skillConfigurationID) == "number") and (skillConfigurationID > 0)) then
-        local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID)
-        if (not skillConfiguration) then
-            return {
-                actionName = "Message",
-                message    = getLocalizedText(81, "FailToGetSkillConfiguration"),
-            }
-        end
+    local maxBaseSkillPoints   = action.maxBaseSkillPoints
+    if (skillConfigurationID) then
+        if (not maxBaseSkillPoints) then
+            return MESSAGE_OVERLOADED_SKILL_POINTS
 
-        local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-        local isValid, err            = modelSkillConfiguration:isValid()
-        if (not isValid) then
-            return {
-                actionName = "Message",
-                message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
-            }
-        elseif ((not maxSkillPoints) or (modelSkillConfiguration:getBaseSkillPoints() > maxSkillPoints)) then
-            return {
-                actionName = "Message",
-                message    = getLocalizedText(81, "OverloadedSkillPoints"),
-            }
-        end
-    elseif (type(skillConfigurationID) == "string") then
-        if (not GameConstantFunctions.getSkillPresets()[skillConfigurationID]) then
-            return {
-                actionName = "Message",
-                message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
-            }
-        elseif ((not maxSkillPoints) or (maxSkillPoints < 100)) then
-            return {
-                actionName = "Message",
-                message    = getLocalizedText(81, "OverloadedSkillPoints"),
-            }
+        elseif (skillConfigurationID < 0) then
+            if (maxBaseSkillPoints < 100) then
+                return MESSAGE_OVERLOADED_SKILL_POINTS
+            end
+
+        else
+            local skillConfiguration      = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID)
+            local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
+            if (modelSkillConfiguration:getBaseSkillPoints() > maxBaseSkillPoints) then
+                return MESSAGE_OVERLOADED_SKILL_POINTS
+            elseif (not modelSkillConfiguration:isValid()) then
+                return MESSAGE_INVALID_SKILL_CONFIGURATION
+            end
         end
     end
 
-    local sceneWarFileName, err = SceneWarManager.createNewWar(action)
-    if (not sceneWarFileName) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(50, err)
-        }
-    else
-        return {
-            actionName = "NewWar",
-            message    = getLocalizedText(51, sceneWarFileName:sub(13))
-        }
-    end
+    return {
+        actionCode       = ACTION_CODES.NewWar,
+        sceneWarFileName = SceneWarManager.getNextSceneWarFileName()
+    }, nil, action
 end
 
 local function translateGetOngoingWarList(action)
@@ -1464,8 +1445,8 @@ function ActionTranslator.translate(action)
     end
 
     if     (actionCode == ACTION_CODES.GetSkillConfiguration) then return translateGetSkillConfiguration(action)
+    elseif (actionCode == ACTION_CODES.NewWar)                then return translateNewWar(               action)
     elseif (actionCode == ACTION_CODES.SetSkillConfiguration) then return translateSetSkillConfiguration(action)
-    elseif (actionName == "NewWar")                then return translateNewWar(               action)
     elseif (actionName == "GetOngoingWarList")     then return translateGetOngoingWarList(    action)
     elseif (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
     elseif (actionName == "GetSceneWarData")       then return translateGetSceneWarData(      action)

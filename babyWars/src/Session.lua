@@ -28,6 +28,7 @@ local DEFAULT_CONFIGURATION = {
 local ACTION_CODE_HEARTBEAT               = getActionCode("NetworkHeartbeat")
 local ACTION_CODE_LOGIN                   = getActionCode("Login")
 local ACTION_CODE_LOGOUT                  = getActionCode("Logout")
+local ACTION_CODE_NEW_WAR                 = getActionCode("NewWar")
 local ACTION_CODE_REGISTER                = getActionCode("Register")
 local ACTION_CODE_SET_SKILL_CONFIGURATION = getActionCode("SetSkillConfiguration")
 
@@ -144,7 +145,8 @@ end
 
 local function executeActionForServer(action)
     local actionCode = action.actionCode
-    if ((actionCode == ACTION_CODE_REGISTER)                 or
+    if ((actionCode == ACTION_CODE_NEW_WAR)                  or
+        (actionCode == ACTION_CODE_REGISTER)                 or
         (actionCode == ACTION_CODE_SET_SKILL_CONFIGURATION)) then
         ActionExecutor.execute(action)
     else

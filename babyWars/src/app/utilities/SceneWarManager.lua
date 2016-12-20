@@ -1,11 +1,11 @@
 
 local SceneWarManager = {}
 
-local ModelSkillConfiguration = require("src.app.models.common.ModelSkillConfiguration")
 local GameConstantFunctions   = require("src.app.utilities.GameConstantFunctions")
 local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions")
 local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
 local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
+local SkillDataAccessors      = require("src.app.utilities.SkillDataAccessors")
 local Actor                   = require("src.global.actors.Actor")
 
 local SCENE_WAR_PATH               = "babyWars\\res\\data\\sceneWar\\"
@@ -19,6 +19,7 @@ local DEFAULT_TURN_DATA        = {
     playerIndex = 1,
     phase       = "requestToBegin",
 }
+local DISABLED_SKILL_CONFIGURATION = {basePoints = 0}
 
 local s_IsInitialized = false
 
@@ -73,7 +74,7 @@ local function generateWarConfiguration(warData)
     return {
         warFieldFileName    = warData.warField.tileMap.template,
         warPassword         = warData.warPassword,
-        maxSkillPoints      = warData.maxSkillPoints,
+        maxBaseSkillPoints  = warData.maxBaseSkillPoints,
         isFogOfWarByDefault = warData.isFogOfWarByDefault,
         isRandomWarField    = warData.isRandomWarField,
         players             = players,
@@ -94,7 +95,7 @@ local function generateReplayConfiguration(warData)
 
     return {
         warFieldFileName    = warData.warField.tileMap.template,
-        maxSkillPoints      = warData.maxSkillPoints,
+        maxBaseSkillPoints  = warData.maxBaseSkillPoints,
         isFogOfWarByDefault = warData.isFogOfWarByDefault,
         players             = players,
 
@@ -218,13 +219,11 @@ end
 
 local function generateSinglePlayerData(account, skillConfigurationID)
     local skillConfiguration
-    if (type(skillConfigurationID) == "string") then
-        skillConfiguration = ModelSkillConfiguration:create(GameConstantFunctions.getSkillPresets()[skillConfigurationID]):toSerializableTable()
-    elseif (skillConfigurationID == 0) then
-        skillConfiguration = {basePoints = 0}
-    else
-        skillConfiguration = ModelSkillConfiguration:create(PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID)):toSerializableTable()
+    if     (not skillConfigurationID) then skillConfiguration = DISABLED_SKILL_CONFIGURATION
+    elseif (skillConfigurationID > 0) then skillConfiguration = PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID)
+    else                                   skillConfiguration = SkillDataAccessors.getSkillPresets()[-skillConfigurationID]
     end
+    assert(skillConfiguration, "SceneWarManager-generateSinglePlayerData() failed to generate the skill configuration data.")
 
     return {
         account             = account,
@@ -243,7 +242,7 @@ local function generatePlayersData(playerIndex, account, skillConfigurationID)
     }
 end
 
-local function generateSceneWarData(fileName, param)
+local function generateSceneWarData(sceneWarFileName, param)
     local warFieldFileName = param.warFieldFileName
     local isRandom         = isRandomWarField(warFieldFileName)
     if (isRandom) then
@@ -251,9 +250,9 @@ local function generateSceneWarData(fileName, param)
     end
 
     return {
-        fileName            = fileName,
+        sceneWarFileName    = sceneWarFileName,
         warPassword         = param.warPassword,
-        maxSkillPoints      = param.maxSkillPoints,
+        maxBaseSkillPoints  = param.maxBaseSkillPoints,
         isFogOfWarByDefault = param.isFogOfWarByDefault,
         isRandomWarField    = isRandom,
         isEnded             = false,
@@ -264,7 +263,7 @@ local function generateSceneWarData(fileName, param)
         turn     = DEFAULT_TURN_DATA,
         players  = generatePlayersData(param.playerIndex, param.playerAccount, param.skillConfigurationID),
         weather  = generateWeatherData(),
-    }, toFullFileName(fileName)
+    }, toFullFileName(sceneWarFileName)
 end
 
 --------------------------------------------------------------------------------
@@ -338,6 +337,10 @@ function SceneWarManager.createNewWar(param)
     serialize(SCENE_WAR_NEXT_NAME_PATH, s_SceneWarNextName)
 
     return sceneWarFileName
+end
+
+function SceneWarManager.getNextSceneWarFileName()
+    return s_SceneWarNextName
 end
 
 function SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
@@ -478,7 +481,7 @@ function SceneWarManager.joinWar(param)
 end
 
 function SceneWarManager.updateModelSceneWarWithAction(action)
-    local sceneWarFileName = action.fileName
+    local sceneWarFileName = action.sceneWarFileName
     local modelSceneWar    = SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
     assert(modelSceneWar, "SceneWarManager.updateModelSceneWarWithAction() the param sceneWarFileName is invalid:" .. (sceneWarFileName or ""))
 
