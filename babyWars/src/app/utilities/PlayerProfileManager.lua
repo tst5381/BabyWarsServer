@@ -8,26 +8,25 @@ local encode = SerializationFunctions.encode
 local io     = io
 
 local PLAYER_PROFILE_PATH          = "babyWars\\res\\data\\playerProfile\\"
+local DEFAULT_SINGLE_GAME_RECORD   = {rankScore = 1000, win = 0, lose = 0, draw = 0}
+local DEFAULT_GAME_RECORDS         = {}
+for i = 1, 6 do
+    DEFAULT_GAME_RECORDS[i] = DEFAULT_SINGLE_GAME_RECORD
+end
 local SINGLE_SKILL_CONFIGURATION   = {
     basePoints = 100,
     passive    = {},
     active1    = {},
     active2    = {},
 }
-local DEFAULT_RANK_SCORE           = 1000
-local DEFAULT_GAME_RECORDS         = {
-    [2] = {playersCount = 2, win = 0, lose = 0, draw = 0},
-    [3] = {playersCount = 3, win = 0, lose = 0, draw = 0},
-    [4] = {playersCount = 4, win = 0, lose = 0, draw = 0},
-}
-local DEFAULT_WAR_LIST             = {
-    created = {},
-    ongoing = {},
-}
 local DEFAULT_SKILL_CONFIGURATIONS = {}
 for i = 1, require("src.app.utilities.SkillDataAccessors").getSkillConfigurationsCount() do
     DEFAULT_SKILL_CONFIGURATIONS[i] = SINGLE_SKILL_CONFIGURATION
 end
+local DEFAULT_WAR_LIST             = {
+    created = {},
+    ongoing = {},
+}
 
 local s_IsInitialized     = false
 local s_PlayerProfileList = {}
@@ -41,7 +40,6 @@ local function generatePlayerProfile(account, password)
         password = password,
         nickname = account,
 
-        rankScore           = DEFAULT_RANK_SCORE,
         gameRecords         = DEFAULT_GAME_RECORDS,
         skillConfigurations = DEFAULT_SKILL_CONFIGURATIONS,
         warLists            = DEFAULT_WAR_LIST,
