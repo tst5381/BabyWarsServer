@@ -46,7 +46,7 @@ local function onWebSocketOpen(self, param)
 
     if (not self:isTotalReplay()) then
         local modelTurnManager = self:getModelTurnManager()
-        if ((modelTurnManager:getTurnPhase() == "requestToBegin")                                         and
+        if ((modelTurnManager:isTurnPhaseRequestToBegin())                                                and
             (modelTurnManager:getPlayerIndex() == self:getModelPlayerManager():getPlayerIndexLoggedIn())) then
             modelTurnManager:runTurn()
         else

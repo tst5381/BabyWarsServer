@@ -702,8 +702,8 @@ local function translateActivateSkillGroup(action, modelScene)
     local playerAccount    = action.playerAccount
     local modelPlayer      = modelScene:getModelPlayerManager():getModelPlayerWithAccount(playerAccount)
     local sceneWarFileName = modelScene:getFileName()
-    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main") or
-        (not modelPlayer:canActivateSkillGroup(skillGroupID)))      then
+    if ((not modelScene:getModelTurnManager():isTurnPhaseMain()) or
+        (not modelPlayer:canActivateSkillGroup(skillGroupID)))   then
         return createActionReloadOrExitWar(sceneWarFileName, playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
@@ -737,7 +737,7 @@ local function translateAttack(action, modelScene)
     local targetTile          = modelTileMap:getModelTile(targetGridIndex)
     local attackTarget        = modelUnitMap:getModelUnit(targetGridIndex) or targetTile
     local attackerPlayerIndex = attacker:getPlayerIndex()
-    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main")                                                                                                                                               or
+    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())                                                                                                                                                  or
         (not ComponentManager.getComponent(attacker, "AttackDoer"))                                                                                                                                               or
         (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize()))                                                                                                                          or
         (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, attackerPlayerIndex))                                                                                                                  or
@@ -783,7 +783,7 @@ end
 local function translateBeginTurn(action, modelScene)
     local sceneWarFileName = modelScene:getFileName()
     local modelTurnManager = modelScene:getModelTurnManager()
-    if (modelTurnManager:getTurnPhase() ~= "requestToBegin") then
+    if (not modelTurnManager:isTurnPhaseRequestToBegin()) then
         ngx.log(ngx.ERR, "ActionTranslator-translateBeginTurn() the current turn phase is expected to be 'requestToBegin'.")
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
@@ -814,7 +814,7 @@ local function translateBuildModelTile(action, modelScene)
     local endingGridIndex = rawPath[#rawPath]
     local focusModelUnit  = getModelUnitMap(sceneWarFileName):getFocusModelUnit(rawPath[1], launchUnitID)
     local modelTile       = getModelTileMap(sceneWarFileName):getModelTile(endingGridIndex)
-    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main")                                           or
+    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())                                              or
         (not focusModelUnit.canBuildOnTileType)                                                               or
         (not focusModelUnit:canBuildOnTileType(modelTile:getTileType()))                                      or
         (not focusModelUnit.getCurrentMaterial)                                                               or
@@ -865,7 +865,7 @@ local function translateCaptureModelTile(action, modelScene)
     local endingGridIndex = rawPath[#rawPath]
     local capturer        = getModelUnitMap(sceneWarFileName):getFocusModelUnit(rawPath[1], launchUnitID)
     local captureTarget   = getModelTileMap(sceneWarFileName):getModelTile(endingGridIndex)
-    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main")                                     or
+    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())                                        or
         (not capturer.canCaptureModelTile)                                                              or
         (not capturer:canCaptureModelTile(captureTarget))                                               or
         (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, capturer:getPlayerIndex()))) then
@@ -917,7 +917,7 @@ local function translateDive(action, modelScene)
     end
 
     local focusModelUnit = getModelUnitMap(sceneWarFileName):getFocusModelUnit(rawPath[1], launchUnitID)
-    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main")                                           or
+    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())                                              or
         (not focusModelUnit.canDive)                                                                          or
         (not focusModelUnit:canDive())                                                                        or
         (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, focusModelUnit:getPlayerIndex()))) then
@@ -962,7 +962,7 @@ local function translateDropModelUnit(action, modelScene)
     local endingGridIndex = rawPath[#rawPath]
     local loaderModelUnit = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
     local tileType        = getModelTileMap(sceneWarFileName):getModelTile(endingGridIndex):getTileType()
-    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main")                                            or
+    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())                                               or
         (not loaderModelUnit.canDropModelUnit)                                                                 or
         (not loaderModelUnit:canDropModelUnit(tileType))                                                       or
         (not validateDropDestinations(action, modelScene))                                                     or
@@ -1008,7 +1008,7 @@ end
 
 local function translateEndTurn(action, modelScene)
     local sceneWarFileName = modelScene:getFileName()
-    if (modelScene:getModelTurnManager():getTurnPhase() ~= "main") then
+    if (not modelScene:getModelTurnManager():isTurnPhaseMain())    then
         ngx.log(ngx.ERR, "ActionTranslator-translateEndTurn() the current turn phase is expected to be 'main'.")
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
@@ -1034,7 +1034,7 @@ local function translateJoinModelUnit(action, modelScene)
     local modelUnitMap      = modelScene:getModelWarField():getModelUnitMap()
     local existingModelUnit = modelUnitMap:getModelUnit(rawPath[#rawPath])
     local focusModelUnit    = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
-    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main") or
+    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())    or
         (#rawPath == 1)                                             or
         (not existingModelUnit)                                     or
         (not focusModelUnit.canJoinModelUnit)                       or
@@ -1080,7 +1080,7 @@ local function translateLaunchFlare(action, modelScene)
     local targetGridIndex = action.targetGridIndex
     local focusModelUnit  = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
     local playerIndex     = focusModelUnit:getPlayerIndex()
-    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main")                                              or
+    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())                                                 or
         (#rawPath > 1)                                                                                           or
         (not focusModelUnit.getCurrentFlareAmmo)                                                                 or
         (focusModelUnit:getCurrentFlareAmmo() == 0)                                                              or
@@ -1131,7 +1131,7 @@ local function translateLaunchSilo(action, modelScene)
     local targetGridIndex = action.targetGridIndex
     local focusModelUnit  = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
     local tileType        = getModelTileMap(sceneWarFileName):getModelTile(rawPath[#rawPath]):getTileType()
-    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main")                                            or
+    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())                                               or
         (not focusModelUnit.canLaunchSiloOnTileType)                                                           or
         (not focusModelUnit:canLaunchSiloOnTileType(tileType))                                                 or
         (not GridIndexFunctions.isWithinMap(targetGridIndex, modelUnitMap:getMapSize())                        or
@@ -1179,7 +1179,7 @@ local function translateLoadModelUnit(action, modelScene)
     local destination     = rawPath[#rawPath]
     local loaderModelUnit = modelUnitMap:getModelUnit(destination)
     local tileType        = getModelTileMap(sceneWarFileName):getModelTile(destination):getTileType()
-    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main")       or
+    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())          or
         (#rawPath == 1)                                                   or
         (not loaderModelUnit)                                             or
         (not loaderModelUnit.canLoadModelUnit)                            or
@@ -1223,7 +1223,7 @@ local function translateProduceModelUnitOnTile(action, modelScene)
     local tiledID               = action.tiledID
     local sceneWarFileName      = modelScene:getFileName()
 
-    if ((modelTurnManager:getTurnPhase() ~= "main")                                 or
+    if ((not modelTurnManager:isTurnPhaseMain())                                    or
         (not GridIndexFunctions.isWithinMap(gridIndex, modelTileMap:getMapSize()))) then
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
@@ -1272,7 +1272,7 @@ local function translateProduceModelUnitOnUnit(action, modelScene)
     local modelTurnManager   = modelScene:getModelTurnManager()
     local modelPlayer        = modelScene:getModelPlayerManager():getModelPlayer(modelTurnManager:getPlayerIndex())
     local cost               = (focusModelUnit.getMovableProductionCost) and (focusModelUnit:getMovableProductionCost()) or (nil)
-    if ((modelTurnManager:getTurnPhase() ~= "main")                                 or
+    if ((not modelTurnManager:isTurnPhaseMain())                                    or
         (launchUnitID)                                                              or
         (#rawPath ~= 1)                                                             or
         (not focusModelUnit.getCurrentMaterial)                                     or
@@ -1307,7 +1307,7 @@ local function translateSupplyModelUnit(action, modelScene)
 
     local modelUnitMap   = modelScene:getModelWarField():getModelUnitMap()
     local focusModelUnit = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
-    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main")                                           or
+    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())                                              or
         (not canDoActionSupplyModelUnit(focusModelUnit, rawPath[#rawPath], modelUnitMap))                     or
         (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, focusModelUnit:getPlayerIndex()))) then
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
@@ -1348,7 +1348,7 @@ local function translateSurface(action, modelScene)
     end
 
     local focusModelUnit = getModelUnitMap(sceneWarFileName):getFocusModelUnit(rawPath[1], launchUnitID)
-    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main")                                           or
+    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())                                              or
         (not focusModelUnit.canSurface)                                                                       or
         (not focusModelUnit:canSurface())                                                                     or
         (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, focusModelUnit:getPlayerIndex()))) then
@@ -1383,7 +1383,7 @@ end
 
 local function translateSurrender(action, modelScene)
     local sceneWarFileName = modelScene:getFileName()
-    if (modelScene:getModelTurnManager():getTurnPhase() ~= "main") then
+    if (not modelScene:getModelTurnManager():isTurnPhaseMain())    then
         ngx.log(ngx.ERR, "ActionTranslator-translateSurrender() the current turn phase is expected to be 'main'.")
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end
@@ -1405,7 +1405,7 @@ local function translateWait(action, modelScene)
     end
 
     local focusModelUnit = getModelUnitMap(sceneWarFileName):getFocusModelUnit(translatedPath[1], launchUnitID)
-    if ((modelScene:getModelTurnManager():getTurnPhase() ~= "main")                                           or
+    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())                                              or
         (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, focusModelUnit:getPlayerIndex()))) then
         return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
     end

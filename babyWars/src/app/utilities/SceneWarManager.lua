@@ -15,9 +15,9 @@ local SCENE_WAR_JOINABLE_LIST_PATH = SCENE_WAR_PATH .. "JoinableList.lua"
 
 local DEFAULT_EXECUTED_ACTIONS = {}
 local DEFAULT_TURN_DATA        = {
-    turnIndex   = 1,
-    playerIndex = 1,
-    phase       = "requestToBegin",
+    turnIndex     = 1,
+    playerIndex   = 1,
+    turnPhaseCode = 1,
 }
 local DISABLED_SKILL_CONFIGURATION = {basePoints = 0}
 
