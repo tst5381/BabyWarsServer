@@ -195,21 +195,6 @@ end
 --------------------------------------------------------------------------------
 -- The functions for generating the new game data.
 --------------------------------------------------------------------------------
-local function generateWarFieldData(warFieldFileName)
-    assert(type(warFieldFileName) == "string", "SceneWarManager-generateWarFieldData() invalid warFieldFileName.")
-    return {
-        tileMap = {
-            template = warFieldFileName,
-        },
-        unitMap = {
-            template = warFieldFileName,
-        },
-        fogMap = {
-            template = warFieldFileName,
-        },
-    }
-end
-
 local function generateWeatherData(defaultWeatherCode)
     -- TODO: add code to do the real job.
     return {
@@ -262,7 +247,7 @@ local function generateSceneWarData(sceneWarFileName, param)
         actionID            = 0,
         executedActions     = DEFAULT_EXECUTED_ACTIONS,
 
-        warField = generateWarFieldData(warFieldFileName),
+        warField = {warFieldFileName = warFieldFileName},
         turn     = DEFAULT_TURN_DATA,
         players  = generatePlayersData(param.playerIndex, param.playerAccount, param.skillConfigurationID),
         weather  = generateWeatherData(),
