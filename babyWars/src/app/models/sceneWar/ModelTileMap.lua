@@ -36,6 +36,7 @@ local SingletonGetters       = require("src.app.utilities.SingletonGetters")
 local VisibilityFunctions    = require("src.app.utilities.VisibilityFunctions")
 local Actor                  = require("src.global.actors.Actor")
 
+local ceil          = math.ceil
 local isTileVisible = VisibilityFunctions.isTileVisibleToPlayerIndex
 local toErrMsg      = SerializationFunctions.toErrorMessage
 
@@ -45,6 +46,11 @@ local TEMPLATE_WAR_FIELD_PATH = "res.data.templateWarField."
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
+local function getXYWithPositionIndex(positionIndex, height)
+    local x = ceil(positionIndex / height)
+    return x, positionIndex - (x - 1) * height
+end
+
 local function createEmptyMap(width)
     local map = {}
     for x = 1, width do
@@ -66,40 +72,40 @@ local function createActorTilesMapWithWarFieldFileName(warFieldFileName, isPrevi
         for y = 1, height do
             local idIndex = x + (height - y) * width
             local actorData = {
+                positionIndex = (x - 1) * height + y,
                 objectID      = objectLayerData[idIndex],
                 baseID        = baseLayerData[idIndex],
-                GridIndexable = {gridIndex = {x = x, y = y}},
-                isPreview     = isPreview,
+                GridIndexable = {x = x, y = y},
             }
+            local modelTile = Actor.createModel("sceneWar.ModelTile", actorData, isPreview)
 
-            map[x][y] = Actor.createWithModelAndViewName("sceneWar.ModelTile", actorData, "sceneWar.ViewTile", actorData)
+            map[x][y] = (IS_SERVER)                                                                      and
+                (Actor.createWithModelAndViewInstance(modelTile))                                        or
+                (Actor.createWithModelAndViewInstance(modelTile, Actor.createView("sceneWar.ViewTile")))
         end
     end
 
     return map, {width = width, height = height}
 end
 
-local function updateActorTilesMapWithTilesData(map, tiles)
+local function updateActorTilesMapWithTilesData(map, height, tiles)
     if (tiles) then
-        for _, singleTileData in pairs(tiles) do
-            local gridIndex = singleTileData.GridIndexable.gridIndex
-            map[gridIndex.x][gridIndex.y]:getModel():ctor(singleTileData)
+        for positionIndex, singleTileData in pairs(tiles) do
+            local x, y = getXYWithPositionIndex(positionIndex, height)
+            map[x][y]:getModel():ctor(singleTileData)
         end
     end
-end
-
-local function createActorTilesMap(param, warFieldFileName)
-    local map, mapSize = createActorTilesMapWithWarFieldFileName(warFieldFileName, param.isPreview)
-    updateActorTilesMapWithTilesData(map, param.tiles)
-
-    return map, mapSize
 end
 
 --------------------------------------------------------------------------------
 -- The constructor and initializers.
 --------------------------------------------------------------------------------
-function ModelTileMap:ctor(param, warFieldFileName)
-    self.m_ActorTilesMap, self.m_MapSize = createActorTilesMap(param, warFieldFileName)
+function ModelTileMap:ctor(param, warFieldFileName, isPreview)
+    local map, mapSize = createActorTilesMapWithWarFieldFileName(warFieldFileName, isPreview)
+    updateActorTilesMapWithTilesData(map, mapSize.height, (param) and (param.tiles) or (nil))
+
+    self.m_ActorTilesMap = map
+    self.m_MapSize       = mapSize
 
     return self
 end
@@ -140,9 +146,7 @@ end
 function ModelTileMap:toSerializableTable()
     local tiles = {}
     self:forEachModelTile(function(modelTile)
-        if (modelTile:shouldSerialize()) then
-            tiles[modelTile:getTileID()] = modelTile:toSerializableTable()
-        end
+        tiles[modelTile:getPositionIndex()] = modelTile:toSerializableTable()
     end)
 
     return {tiles = tiles}
@@ -151,9 +155,7 @@ end
 function ModelTileMap:toSerializableTableForPlayerIndex(playerIndex)
     local tiles = {}
     self:forEachModelTile(function(modelTile)
-        if (modelTile:shouldSerializeForPlayerIndex(playerIndex)) then
-            tiles[modelTile:getTileID()] = modelTile:toSerializableTableForPlayerIndex(playerIndex)
-        end
+        tiles[modelTile:getPositionIndex()] = modelTile:toSerializableTableForPlayerIndex(playerIndex)
     end)
 
     return {tiles = tiles}
