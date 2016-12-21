@@ -1018,7 +1018,6 @@ local function translateEndTurn(action, modelScene)
         actionName  = "EndTurn",
         actionID    = action.actionID,
         fileName    = sceneWarFileName,
-        nextWeather = modelScene:getModelWeatherManager():getNextWeather(),
     }
     return actionEndTurn, createActionsForPublish(actionEndTurn), createActionForServer(actionEndTurn)
 end

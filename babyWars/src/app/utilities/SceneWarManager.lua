@@ -210,10 +210,11 @@ local function generateWarFieldData(warFieldFileName)
     }
 end
 
-local function generateWeatherData(defaultWeather, isRandom)
+local function generateWeatherData(defaultWeatherCode)
     -- TODO: add code to do the real job.
     return {
-        current = "Clear",
+        currentWeatherCode = defaultWeatherCode,
+        defaultWeatherCode = defaultWeatherCode,
     }
 end
 
