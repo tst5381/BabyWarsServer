@@ -45,25 +45,6 @@ local TEMPLATE_WAR_FIELD_PATH = "res.data.templateWarField."
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
-local function requireMapData(param)
-    local t = type(param)
-    if (t == "string") then
-        return require(TEMPLATE_WAR_FIELD_PATH .. param)
-    elseif (t == "table") then
-        return param
-    else
-        return error("ModelTileMap-requireMapData() the param is invalid.")
-    end
-end
-
-local function getTiledTileBaseLayer(tiledData)
-    return tiledData.layers[1]
-end
-
-local function getTiledTileObjectLayer(tiledData)
-    return tiledData.layers[2]
-end
-
 local function createEmptyMap(width)
     local map = {}
     for x = 1, width do
@@ -73,16 +54,20 @@ local function createEmptyMap(width)
     return map
 end
 
-local function createTileActorsMapWithTiledLayers(objectLayer, baseLayer, isPreview)
-    local width, height = baseLayer.width, baseLayer.height
-    local map = createEmptyMap(width)
+local function createActorTilesMapWithWarFieldFileName(warFieldFileName, isPreview)
+    local templateWarField = require(TEMPLATE_WAR_FIELD_PATH .. warFieldFileName)
+    local baseLayer        = templateWarField.layers[1]
+    local objectLayerData  = templateWarField.layers[2].data
+    local width, height    = baseLayer.width, baseLayer.height
+    local baseLayerData    = baseLayer.data
+    local map              = createEmptyMap(width)
 
     for x = 1, width do
         for y = 1, height do
             local idIndex = x + (height - y) * width
             local actorData = {
-                objectID      = objectLayer.data[idIndex],
-                baseID        = baseLayer.data[idIndex],
+                objectID      = objectLayerData[idIndex],
+                baseID        = baseLayerData[idIndex],
                 GridIndexable = {gridIndex = {x = x, y = y}},
                 isPreview     = isPreview,
             }
@@ -94,37 +79,27 @@ local function createTileActorsMapWithTiledLayers(objectLayer, baseLayer, isPrev
     return map, {width = width, height = height}
 end
 
-local function updateTileActorsMapWithGridsData(map, mapSize, gridsData)
-    for _, gridData in ipairs(gridsData) do
-        local gridIndex = gridData.GridIndexable.gridIndex
-        assert(GridIndexFunctions.isWithinMap(gridIndex, mapSize), "ModelTileMap-updateTileActorsMapWithGridsData() the data of overwriting grid is invalid.")
-        map[gridIndex.x][gridIndex.y]:getModel():ctor(gridData)
+local function updateActorTilesMapWithTilesData(map, tiles)
+    if (tiles) then
+        for _, singleTileData in pairs(tiles) do
+            local gridIndex = singleTileData.GridIndexable.gridIndex
+            map[gridIndex.x][gridIndex.y]:getModel():ctor(singleTileData)
+        end
     end
 end
 
---------------------------------------------------------------------------------
--- The composition tile actors map.
---------------------------------------------------------------------------------
-local function createTileActorsMap(param)
-    local mapData         = requireMapData(param)
-    local templateMapData = requireMapData(mapData.template)
-    local map, mapSize    = createTileActorsMapWithTiledLayers(getTiledTileObjectLayer(templateMapData), getTiledTileBaseLayer(templateMapData), param.isPreview)
-    updateTileActorsMapWithGridsData(map, mapSize, mapData.grids or {})
+local function createActorTilesMap(param, warFieldFileName)
+    local map, mapSize = createActorTilesMapWithWarFieldFileName(warFieldFileName, param.isPreview)
+    updateActorTilesMapWithTilesData(map, param.tiles)
 
-    return map, mapSize, mapData.template
-end
-
-local function initWithTileActorsMap(self, map, mapSize, templateName)
-    self.m_ActorTilesMap = map
-    self.m_MapSize       = mapSize
-    self.m_TemplateName  = templateName
+    return map, mapSize
 end
 
 --------------------------------------------------------------------------------
 -- The constructor and initializers.
 --------------------------------------------------------------------------------
-function ModelTileMap:ctor(param)
-    initWithTileActorsMap(self, createTileActorsMap(param))
+function ModelTileMap:ctor(param, warFieldFileName)
+    self.m_ActorTilesMap, self.m_MapSize = createActorTilesMap(param, warFieldFileName)
 
     return self
 end
@@ -163,27 +138,25 @@ end
 -- The function for serialization.
 --------------------------------------------------------------------------------
 function ModelTileMap:toSerializableTable()
-    local grids = {}
+    local tiles = {}
     self:forEachModelTile(function(modelTile)
-        grids[#grids + 1] = modelTile:toSerializableTable()
+        if (modelTile:shouldSerialize()) then
+            tiles[modelTile:getTileID()] = modelTile:toSerializableTable()
+        end
     end)
 
-    return {
-        template = self.m_TemplateName,
-        grids    = grids,
-    }
+    return {tiles = tiles}
 end
 
 function ModelTileMap:toSerializableTableForPlayerIndex(playerIndex)
-    local grids = {}
+    local tiles = {}
     self:forEachModelTile(function(modelTile)
-        grids[#grids + 1] = modelTile:toSerializableTableForPlayerIndex(playerIndex)
+        if (modelTile:shouldSerializeForPlayerIndex(playerIndex)) then
+            tiles[modelTile:getTileID()] = modelTile:toSerializableTableForPlayerIndex(playerIndex)
+        end
     end)
 
-    return {
-        template = self.m_TemplateName,
-        grids    = grids,
-    }
+    return {tiles = tiles}
 end
 
 --------------------------------------------------------------------------------
@@ -205,18 +178,6 @@ function ModelTileMap:getMapSize()
     return self.m_MapSize
 end
 
-function ModelTileMap:getTemplateName()
-    return self.m_TemplateName
-end
-
-function ModelTileMap:getMapName()
-    return requireMapData(self.m_TemplateName).warFieldName
-end
-
-function ModelTileMap:getAuthorName()
-    return requireMapData(self.m_TemplateName).authorName
-end
-
 function ModelTileMap:getModelTile(gridIndex)
     assert(GridIndexFunctions.isWithinMap(gridIndex, self:getMapSize()),
         "ModelTileMap-getModelTile() invalid param gridIndex: " .. toErrMsg(gridIndex))
@@ -228,7 +189,7 @@ function ModelTileMap:forEachModelTile(func)
     local mapSize = self:getMapSize()
     for x = 1, mapSize.width do
         for y = 1, mapSize.height do
-            func(self.m_ActorTilesMap[x][y]:getModel())
+            func(self.m_ActorTilesMap[x][y]:getModel(), x, y)
         end
     end
 
