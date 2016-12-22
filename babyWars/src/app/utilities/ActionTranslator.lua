@@ -530,19 +530,11 @@ local function translateGetSceneWarData(action)
     end
 end
 
-local function translateGetJoinableWarList(action)
-    local list, err = SceneWarManager.getJoinableSceneWarList(action.playerAccount, action.sceneWarShortName)
-    if (not list) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(53, err)
-        }
-    else
-        return {
-            actionName = "GetJoinableWarList",
-            list       = list,
-        }
-    end
+local function translateGetJoinableWarConfigurations(action)
+    return {
+        actionCode                = ACTION_CODES.GetJoinableWarConfigurations,
+        joinableWarConfigurations = SceneWarManager.getJoinableWarConfigurations(action.playerAccount, action.sceneWarShortName),
+    }
 end
 
 local function translateJoinWar(action)
@@ -1443,13 +1435,13 @@ function ActionTranslator.translate(action)
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
     end
 
-    if     (actionCode == ACTION_CODES.GetSkillConfiguration) then return translateGetSkillConfiguration(action)
-    elseif (actionCode == ACTION_CODES.NewWar)                then return translateNewWar(               action)
-    elseif (actionCode == ACTION_CODES.SetSkillConfiguration) then return translateSetSkillConfiguration(action)
+    if     (actionCode == ACTION_CODES.GetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
+    elseif (actionCode == ACTION_CODES.GetSkillConfiguration)        then return translateGetSkillConfiguration(       action)
+    elseif (actionCode == ACTION_CODES.NewWar)                       then return translateNewWar(                      action)
+    elseif (actionCode == ACTION_CODES.SetSkillConfiguration)        then return translateSetSkillConfiguration(       action)
     elseif (actionName == "GetOngoingWarList")     then return translateGetOngoingWarList(    action)
     elseif (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
     elseif (actionName == "GetSceneWarData")       then return translateGetSceneWarData(      action)
-    elseif (actionName == "GetJoinableWarList")    then return translateGetJoinableWarList(   action)
     elseif (actionName == "JoinWar")               then return translateJoinWar(              action)
     elseif (actionName == "ReloadSceneWar")        then return translateReloadSceneWar(       action)
     end

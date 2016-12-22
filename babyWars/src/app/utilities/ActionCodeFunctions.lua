@@ -4,14 +4,15 @@ local ActionCodeFunctions = {}
 local TableFunctions = require("src.app.utilities.TableFunctions")
 
 local s_ActionCodes = {
-    NetworkHeartbeat      = 1,
-    Register              = 2,
-    Login                 = 3,
-    Logout                = 4,
-    Message               = 5,
-    GetSkillConfiguration = 6,
-    SetSkillConfiguration = 7,
-    NewWar                = 8,
+    NetworkHeartbeat             = 1,
+    Register                     = 2,
+    Login                        = 3,
+    Logout                       = 4,
+    Message                      = 5,
+    GetSkillConfiguration        = 6,
+    SetSkillConfiguration        = 7,
+    NewWar                       = 8,
+    GetJoinableWarConfigurations = 9,
 }
 local s_ActionNames
 
