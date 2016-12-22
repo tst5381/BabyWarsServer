@@ -195,14 +195,6 @@ end
 --------------------------------------------------------------------------------
 -- The functions for generating the new game data.
 --------------------------------------------------------------------------------
-local function generateWeatherData(defaultWeatherCode)
-    -- TODO: add code to do the real job.
-    return {
-        currentWeatherCode = defaultWeatherCode,
-        defaultWeatherCode = defaultWeatherCode,
-    }
-end
-
 local function generateSinglePlayerData(account, skillConfigurationID, playerIndex)
     local skillConfiguration
     if     (not skillConfigurationID) then skillConfiguration = DISABLED_SKILL_CONFIGURATION
@@ -250,7 +242,7 @@ local function generateSceneWarData(sceneWarFileName, param)
         warField = {warFieldFileName = warFieldFileName},
         turn     = DEFAULT_TURN_DATA,
         players  = generatePlayersData(param.playerIndex, param.playerAccount, param.skillConfigurationID),
-        weather  = generateWeatherData(),
+        weather  = {defaultWeatherCode = param.defaultWeatherCode},
     }, toFullFileName(sceneWarFileName)
 end
 

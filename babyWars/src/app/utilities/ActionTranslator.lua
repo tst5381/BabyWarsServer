@@ -430,6 +430,42 @@ local function translateNetworkHeartbeat(action)
     }
 end
 
+local function translateNewWar(action)
+    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+        return LOGOUT_INVALID_ACCOUNT_PASSWORD
+    end
+
+    local skillConfigurationID = action.skillConfigurationID
+    local maxBaseSkillPoints   = action.maxBaseSkillPoints
+    if (skillConfigurationID) then
+        if (not maxBaseSkillPoints) then
+            return MESSAGE_OVERLOADED_SKILL_POINTS
+
+        elseif (skillConfigurationID < 0) then
+            if (maxBaseSkillPoints < 100) then
+                return MESSAGE_OVERLOADED_SKILL_POINTS
+            end
+
+        else
+            local skillConfiguration      = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID)
+            local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
+            if (modelSkillConfiguration:getBaseSkillPoints() > maxBaseSkillPoints) then
+                return MESSAGE_OVERLOADED_SKILL_POINTS
+            elseif (not modelSkillConfiguration:isValid()) then
+                return MESSAGE_INVALID_SKILL_CONFIGURATION
+            end
+        end
+    end
+
+    action.actionCode = ACTION_CODES.ActionNewWar
+    -- TODO: validate more params.
+
+    return {
+        actionCode       = ACTION_CODES.ActionNewWar,
+        sceneWarFileName = SceneWarManager.getNextSceneWarFileName()
+    }, nil, action
+end
+
 local function translateRegister(action)
     local account, password = action.registerAccount, action.registerPassword
     if (action.clientVersion ~= GAME_VERSION) then
@@ -484,36 +520,6 @@ local function translateGetReplayList(action)
         actionName = "GetReplayList",
         list       = SceneWarManager.getReplayList(action.pageIndex),
     }
-end
-
-local function translateNewWar(action)
-    -- TODO: validate more params.
-    local skillConfigurationID = action.skillConfigurationID
-    local maxBaseSkillPoints   = action.maxBaseSkillPoints
-    if (skillConfigurationID) then
-        if (not maxBaseSkillPoints) then
-            return MESSAGE_OVERLOADED_SKILL_POINTS
-
-        elseif (skillConfigurationID < 0) then
-            if (maxBaseSkillPoints < 100) then
-                return MESSAGE_OVERLOADED_SKILL_POINTS
-            end
-
-        else
-            local skillConfiguration      = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID)
-            local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-            if (modelSkillConfiguration:getBaseSkillPoints() > maxBaseSkillPoints) then
-                return MESSAGE_OVERLOADED_SKILL_POINTS
-            elseif (not modelSkillConfiguration:isValid()) then
-                return MESSAGE_INVALID_SKILL_CONFIGURATION
-            end
-        end
-    end
-
-    return {
-        actionCode       = ACTION_CODES.ActionNewWar,
-        sceneWarFileName = SceneWarManager.getNextSceneWarFileName()
-    }, nil, action
 end
 
 local function translateGetOngoingWarList(action)
@@ -1434,6 +1440,7 @@ function ActionTranslator.translate(action, actionCode)
     elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration) then return translateGetSkillConfiguration(action)
     elseif (actionCode == ACTION_CODES.ActionLogin)                 then return translateLogin(                action)
     elseif (actionCode == ACTION_CODES.ActionNetworkHeartbeat)      then return translateNetworkHeartbeat(     action)
+    elseif (actionCode == ACTION_CODES.ActionNewWar)                then return translateNewWar(               action)
     elseif (actionCode == ACTION_CODES.ActionRegister)              then return translateRegister(             action)
     elseif (actionCode == ACTION_CODES.ActionSetSkillConfiguration) then return translateSetSkillConfiguration(action)
     end
@@ -1449,7 +1456,6 @@ function ActionTranslator.translate(action, actionCode)
     end
 
     if     (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
-    elseif (actionCode == ACTION_CODES.ActionNewWar)                       then return translateNewWar(                      action)
     elseif (actionName == "GetOngoingWarList")     then return translateGetOngoingWarList(    action)
     elseif (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
     elseif (actionName == "GetSceneWarData")       then return translateGetSceneWarData(      action)
