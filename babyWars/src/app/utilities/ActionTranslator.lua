@@ -647,7 +647,7 @@ local function translatePath(path, launchUnitID, modelSceneWar)
         return nil, "ActionTranslator-translatePath() there is no unit on the starting grid of the path."
     elseif (focusModelUnit:getPlayerIndex() ~= playerIndexInTurn) then
         return nil, "ActionTranslator-translatePath() the owner player of the moving unit is not in his turn."
-    elseif (focusModelUnit:getState() ~= "idle") then
+    elseif (not focusModelUnit:isStateIdle()) then
         return nil, "ActionTranslator-translatePath() the moving unit is not in idle state."
     end
 
