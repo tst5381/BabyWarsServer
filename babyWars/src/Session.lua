@@ -10,27 +10,27 @@ local Session = require("src.global.functions.class")("Session")
 
 local WebSocketServer        = require("resty.websocket.server")
 local Redis                  = require("resty.redis")
+local ActionCodeFunctions    = require("src.app.utilities.ActionCodeFunctions")
 local ActionExecutor         = require("src.app.utilities.ActionExecutor")
 local ActionTranslator       = require("src.app.utilities.ActionTranslator")
 local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
 local SceneWarManager        = require("src.app.utilities.SceneWarManager")
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
 
-local decode        = SerializationFunctions.decode
-local encode        = SerializationFunctions.encode
-local getActionCode = require("src.app.utilities.ActionCodeFunctions").getActionCode
+local decode = SerializationFunctions.decode
+local encode = SerializationFunctions.encode
 
 local DEFAULT_CONFIGURATION = {
     timeout         = 10000000, -- 10000s
     max_payload_len = 1048575,
 }
 
-local ACTION_CODE_HEARTBEAT               = getActionCode("NetworkHeartbeat")
-local ACTION_CODE_LOGIN                   = getActionCode("Login")
-local ACTION_CODE_LOGOUT                  = getActionCode("Logout")
-local ACTION_CODE_NEW_WAR                 = getActionCode("NewWar")
-local ACTION_CODE_REGISTER                = getActionCode("Register")
-local ACTION_CODE_SET_SKILL_CONFIGURATION = getActionCode("SetSkillConfiguration")
+local ACTION_CODE_HEARTBEAT               = ActionCodeFunctions.getActionCode("ActionNetworkHeartbeat")
+local ACTION_CODE_LOGIN                   = ActionCodeFunctions.getActionCode("ActionLogin")
+local ACTION_CODE_LOGOUT                  = ActionCodeFunctions.getActionCode("ActionLogout")
+local ACTION_CODE_NEW_WAR                 = ActionCodeFunctions.getActionCode("ActionNewWar")
+local ACTION_CODE_REGISTER                = ActionCodeFunctions.getActionCode("ActionRegister")
+local ACTION_CODE_SET_SKILL_CONFIGURATION = ActionCodeFunctions.getActionCode("ActionSetSkillConfiguration")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -108,14 +108,14 @@ local function initThreadForSubscribe(self)
             end
 
             if ((res) and (res[1] == "message")) then
-                local redisAction = decode("RedisAction", res[3])
-                if (redisAction.actionCode == ACTION_CODE_LOGOUT) then
+                local actionGeneric = decode("ActionGeneric", res[3])
+                if (actionGeneric.actionCode == ACTION_CODE_LOGOUT) then
                     ngx.log(ngx.CRIT, "Session-threadForSubscribe main loop: receive a Logout action.")
                     -- return self:stop()
                     self:unsubscribeFromPlayerChannel()
                 end
 
-                local bytes, err = self.m_WebSocket:send_text(redisAction.encodedAction)
+                local bytes, err = self.m_WebSocket:send_text(res[3])
                 if (not bytes) then
                     ngx.log(ngx.ERR, "Session-threadForSubscribe main loop: failed to send the published message to the webSocket: ", err)
                     return self:stop()
@@ -135,8 +135,7 @@ local function destroyThreadForSubscribe(self)
     end
 end
 
-local function getAccountAndPasswordWithAction(action)
-    local actionCode = action.actionCode
+local function getAccountAndPasswordWithAction(action, actionCode)
     if     (actionCode == ACTION_CODE_LOGIN)    then return action.loginAccount,    action.loginPassword
     elseif (actionCode == ACTION_CODE_REGISTER) then return action.registerAccount, action.registerPassword
     else                                             return action.playerAccount,   action.playerPassword
@@ -148,7 +147,7 @@ local function executeActionForServer(action)
     if ((actionCode == ACTION_CODE_NEW_WAR)                  or
         (actionCode == ACTION_CODE_REGISTER)                 or
         (actionCode == ACTION_CODE_SET_SKILL_CONFIGURATION)) then
-        ActionExecutor.execute(action)
+        ActionExecutor.execute(action, actionCode)
     else
         SceneWarManager.updateModelSceneWarWithAction(action)
     end
@@ -162,16 +161,17 @@ local function publishTranslatedActions(actions)
     red:connect("127.0.0.1", 6379)
 
     for account, action in pairs(actions) do
-        red:publish("Session." .. account, encode("RedisAction", {
-            actionCode    = action.actionCode,
-            encodedAction = encode("Action", action),
+        local actionCode = action.actionCode
+        red:publish("Session." .. account, encode("ActionGeneric", {
+            actionCode    = actionCode,
+            encodedAction = encode(ActionCodeFunctions.getActionName(actionCode), action),
         }))
     end
 
     red:close()
 end
 
-local function doAction(self, rawAction, actionForRequester, actionsForPublish, actionForServer)
+local function doAction(self, rawAction, rawActionCode, actionForRequester, actionsForPublish, actionForServer)
     if (actionForServer) then
         executeActionForServer(actionForServer)
     end
@@ -179,11 +179,9 @@ local function doAction(self, rawAction, actionForRequester, actionsForPublish, 
         publishTranslatedActions(actionsForPublish)
     end
 
-    local rawActionCode = rawAction.actionCode
+    local translatedActionCode = actionForRequester.actionCode
     if (rawActionCode ~= ACTION_CODE_HEARTBEAT) then
-        local translatedActionCode = actionForRequester.actionCode
-        local account, password    = getAccountAndPasswordWithAction(rawAction)
-
+        local account, password = getAccountAndPasswordWithAction(rawAction, rawActionCode)
         if ((translatedActionCode == ACTION_CODE_LOGOUT) or (not PlayerProfileManager.isAccountAndPasswordValid(account, password))) then
             self:unsubscribeFromPlayerChannel()
         elseif ((rawActionCode ~= ACTION_CODE_REGISTER) or (rawActionCode == translatedActionCode)) then
@@ -191,7 +189,10 @@ local function doAction(self, rawAction, actionForRequester, actionsForPublish, 
         end
     end
 
-    local bytes, err = self.m_WebSocket:send_text(encode("Action", actionForRequester))
+    local bytes, err = self.m_WebSocket:send_text(encode("ActionGeneric", {
+        actionCode    = translatedActionCode,
+        encodedAction = encode(ActionCodeFunctions.getActionName(translatedActionCode), actionForRequester)
+    }))
     if (not bytes) then
         ngx.log(ngx.ERR, "Session-doAction() failed to send text: ", err)
         return self:stop()
@@ -256,9 +257,11 @@ function Session:start()
         if (typ == "close") then
             break
         elseif ((typ == "text") or (typ == "binary")) then
-            local rawAction = decode("Action", data)
+            local actionGeneric = decode("ActionGeneric", data)
+            local rawActionCode = actionGeneric.actionCode
+            local rawAction     = decode(ActionCodeFunctions.getActionName(rawActionCode), actionGeneric.encodedAction)
             if (rawAction) then
-                doAction(self, rawAction, ActionTranslator.translate(rawAction))
+                doAction(self, rawAction, rawActionCode, ActionTranslator.translate(rawAction, rawActionCode))
             else
                 local bytes, err = webSocket:send_text("Server: Failed to parse the data came from the client.")
                 if (not bytes) then

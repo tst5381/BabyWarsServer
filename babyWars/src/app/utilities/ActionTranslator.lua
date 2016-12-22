@@ -22,6 +22,7 @@ local ActionTranslator = {}
 local Producible              = require("src.app.components.Producible")
 local ModelSkillConfiguration = require("src.app.models.common.ModelSkillConfiguration")
 local Actor                   = require("src.global.actors.Actor")
+local ActionCodeFunctions     = require("src.app.utilities.ActionCodeFunctions")
 local ActionPublisher         = require("src.app.utilities.ActionPublisher")
 local DamageCalculator        = require("src.app.utilities.DamageCalculator")
 local GameConstantFunctions   = require("src.app.utilities.GameConstantFunctions")
@@ -47,43 +48,43 @@ local getModelUnitMap              = SingletonGetters.getModelUnitMap
 local getRevealedTilesAndUnitsData = VisibilityFunctions.getRevealedTilesAndUnitsData
 local isUnitVisible                = VisibilityFunctions.isUnitOnMapVisibleToPlayerIndex
 
-local ACTION_CODES                   = require("src.app.utilities.ActionCodeFunctions").getFullList()
+local ACTION_CODES                   = ActionCodeFunctions.getFullList()
 local GAME_VERSION                   = GameConstantFunctions.getGameVersion()
 local IGNORED_ACTION_KEYS_FOR_SERVER = {"revealedTiles", "revealedUnits"}
 local SKILL_CONFIGURATIONS_COUNT     = SkillDataAccessors.getSkillConfigurationsCount()
 
 local LOGOUT_INVALID_ACCOUNT_PASSWORD = {
-    actionCode    = ACTION_CODES.Logout,
+    actionCode    = ACTION_CODES.ActionLogout,
     messageCode   = 81,
     messageParams = {"InvalidAccountOrPassword"},
 }
 local MESSAGE_CORRUPTED_ACTION = {
-    actionCode    = ACTION_CODES.Message,
+    actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
     messageParams = {"CorruptedAction"},
 }
 local MESSAGE_INVALID_GAME_VERSION = {
-    actionCode    = ACTION_CODES.Message,
+    actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
     messageParams = {"InvalidGameVersion", GAME_VERSION},
 }
 local MESSAGE_INVALID_LOGIN = {
-    actionCode    = ACTION_CODES.Message,
+    actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
     messageParams = {"InvalidLogin"},
 }
 local MESSAGE_INVALID_SKILL_CONFIGURATION = {
-    actionCode    = ACTION_CODES.Message,
+    actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
     messageParams = {"InvalidSkillConfiguration"},
 }
 local MESSAGE_OVERLOADED_SKILL_POINTS = {
-    actionCode    = ACTION_CODES.Message,
+    actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
     messageParams = {"OverloadedSkillPoints"},
 }
 local MESSAGE_REGISTERED_ACCOUNT = {
-    actionCode    = ACTION_CODES.Message,
+    actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
     messageParams = {"RegisteredAccount"},
 }
@@ -396,12 +397,12 @@ local function translateLogin(action)
         return MESSAGE_INVALID_LOGIN
     else
         return {
-            actionCode    = ACTION_CODES.Login,
+            actionCode    = ACTION_CODES.ActionLogin,
             loginAccount  = account,
             loginPassword = password,
         }, {
             [account] = {
-                actionCode    = ACTION_CODES.Logout,
+                actionCode    = ACTION_CODES.ActionLogout,
                 messageCode   = 81,
                 messageParams = {"MultiLogin", account},
             }
@@ -411,7 +412,7 @@ end
 
 local function translateNetworkHeartbeat(action)
     return {
-        actionCode       = ACTION_CODES.NetworkHeartbeat,
+        actionCode       = ACTION_CODES.ActionNetworkHeartbeat,
         heartbeatCounter = action.heartbeatCounter,
     }
 end
@@ -424,7 +425,7 @@ local function translateRegister(action)
         return MESSAGE_REGISTERED_ACCOUNT
     else
         local actionRegister = {
-            actionCode       = ACTION_CODES.Register,
+            actionCode       = ACTION_CODES.ActionRegister,
             registerAccount  = account,
             registerPassword = password,
         }
@@ -481,7 +482,7 @@ local function translateNewWar(action)
     end
 
     return {
-        actionCode       = ACTION_CODES.NewWar,
+        actionCode       = ACTION_CODES.ActionNewWar,
         sceneWarFileName = SceneWarManager.getNextSceneWarFileName()
     }, nil, action
 end
@@ -532,7 +533,7 @@ end
 
 local function translateGetJoinableWarConfigurations(action)
     return {
-        actionCode                = ACTION_CODES.GetJoinableWarConfigurations,
+        actionCode                = ACTION_CODES.ActionGetJoinableWarConfigurations,
         joinableWarConfigurations = SceneWarManager.getJoinableWarConfigurations(action.playerAccount, action.sceneWarShortName),
     }
 end
@@ -601,7 +602,7 @@ end
 local function translateGetSkillConfiguration(action)
     local configurationID    = action.skillConfigurationID
     return {
-        actionCode           = ACTION_CODES.GetSkillConfiguration,
+        actionCode           = ACTION_CODES.ActionGetSkillConfiguration,
         skillConfigurationID = configurationID,
         skillConfiguration   = PlayerProfileManager.getSkillConfiguration(action.playerAccount, configurationID),
     }
@@ -618,7 +619,7 @@ local function translateSetSkillConfiguration(action)
         (not ModelSkillConfiguration:create(skillConfiguration):isValid())) then
         return MESSAGE_INVALID_SKILL_CONFIGURATION
     else
-        return {actionCode = ACTION_CODES.SetSkillConfiguration}, nil, action
+        return {actionCode = ACTION_CODES.ActionSetSkillConfiguration}, nil, action
     end
 end
 
@@ -1417,12 +1418,13 @@ end
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
-function ActionTranslator.translate(action)
-    local actionCode = action.actionCode
-    if     (not actionCode)                              then return MESSAGE_CORRUPTED_ACTION
-    elseif (actionCode == ACTION_CODES.Login)            then return translateLogin(           action)
-    elseif (actionCode == ACTION_CODES.NetworkHeartbeat) then return translateNetworkHeartbeat(action)
-    elseif (actionCode == ACTION_CODES.Register)         then return translateRegister(        action)
+function ActionTranslator.translate(action, actionCode)
+    assert(ActionCodeFunctions.getActionName(actionCode), "ActionTranslator.translate() invalid actionCode: " .. (actionCode or ""))
+
+    if     (not actionCode)                                    then return MESSAGE_CORRUPTED_ACTION
+    elseif (actionCode == ACTION_CODES.ActionLogin)            then return translateLogin(           action)
+    elseif (actionCode == ACTION_CODES.ActionNetworkHeartbeat) then return translateNetworkHeartbeat(action)
+    elseif (actionCode == ACTION_CODES.ActionRegister)         then return translateRegister(        action)
     end
 
     local actionName = action.actionName
@@ -1435,10 +1437,10 @@ function ActionTranslator.translate(action)
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
     end
 
-    if     (actionCode == ACTION_CODES.GetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
-    elseif (actionCode == ACTION_CODES.GetSkillConfiguration)        then return translateGetSkillConfiguration(       action)
-    elseif (actionCode == ACTION_CODES.NewWar)                       then return translateNewWar(                      action)
-    elseif (actionCode == ACTION_CODES.SetSkillConfiguration)        then return translateSetSkillConfiguration(       action)
+    if     (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
+    elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration)        then return translateGetSkillConfiguration(       action)
+    elseif (actionCode == ACTION_CODES.ActionNewWar)                       then return translateNewWar(                      action)
+    elseif (actionCode == ACTION_CODES.ActionSetSkillConfiguration)        then return translateSetSkillConfiguration(       action)
     elseif (actionName == "GetOngoingWarList")     then return translateGetOngoingWarList(    action)
     elseif (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
     elseif (actionName == "GetSceneWarData")       then return translateGetSceneWarData(      action)
