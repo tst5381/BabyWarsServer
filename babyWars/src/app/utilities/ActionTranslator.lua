@@ -1433,11 +1433,11 @@ end
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
-function ActionTranslator.translate(action, actionCode)
+function ActionTranslator.translate(action)
+    local actionCode = action.actionCode
     assert(ActionCodeFunctions.getActionName(actionCode), "ActionTranslator.translate() invalid actionCode: " .. (actionCode or ""))
 
-    if     (not actionCode)                                         then return MESSAGE_CORRUPTED_ACTION
-    elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration) then return translateGetSkillConfiguration(action)
+    if     (actionCode == ACTION_CODES.ActionGetSkillConfiguration) then return translateGetSkillConfiguration(action)
     elseif (actionCode == ACTION_CODES.ActionLogin)                 then return translateLogin(                action)
     elseif (actionCode == ACTION_CODES.ActionNetworkHeartbeat)      then return translateNetworkHeartbeat(     action)
     elseif (actionCode == ACTION_CODES.ActionNewWar)                then return translateNewWar(               action)

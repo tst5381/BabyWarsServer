@@ -1383,7 +1383,8 @@ end
 --------------------------------------------------------------------------------
 -- The public function.
 --------------------------------------------------------------------------------
-function ActionExecutor.execute(action, actionCode, modelScene)
+function ActionExecutor.execute(action, modelScene)
+    local actionCode = action.actionCode
     assert(ActionCodeFunctions.getActionName(actionCode), "ActionExecutor.execute() invalid actionCode: " .. (actionCode or ""))
 
     if     (actionCode == ACTION_CODES.ActionGetSkillConfiguration) then executeGetSkillConfiguration(action, modelScene)

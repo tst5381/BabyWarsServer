@@ -19,6 +19,7 @@ local SerializationFunctions = require("src.app.utilities.SerializationFunctions
 
 local decode = SerializationFunctions.decode
 local encode = SerializationFunctions.encode
+local next   = next
 
 local DEFAULT_CONFIGURATION = {
     timeout         = 10000000, -- 10000s
@@ -108,14 +109,14 @@ local function initThreadForSubscribe(self)
             end
 
             if ((res) and (res[1] == "message")) then
-                local actionGeneric = decode("ActionGeneric", res[3])
-                if (actionGeneric.actionCode == ACTION_CODE_LOGOUT) then
+                local actionRedis = decode("ActionRedis", res[3])
+                if (actionRedis.actionCode == ACTION_CODE_LOGOUT) then
                     ngx.log(ngx.CRIT, "Session-threadForSubscribe main loop: receive a Logout action.")
                     -- return self:stop()
                     self:unsubscribeFromPlayerChannel()
                 end
 
-                local bytes, err = self.m_WebSocket:send_text(res[3])
+                local bytes, err = self.m_WebSocket:send_text(actionRedis.encodedActionGeneric)
                 if (not bytes) then
                     ngx.log(ngx.ERR, "Session-threadForSubscribe main loop: failed to send the published message to the webSocket: ", err)
                     return self:stop()
@@ -164,16 +165,16 @@ local function publishTranslatedActions(actions)
 
     for account, action in pairs(actions) do
         local actionCode = action.actionCode
-        red:publish("Session." .. account, encode("ActionGeneric", {
-            actionCode    = actionCode,
-            encodedAction = encode(ActionCodeFunctions.getActionName(actionCode), action),
+        red:publish("Session." .. account, encode("ActionRedis", {
+            actionCode           = actionCode,
+            encodedActionGeneric = encode("ActionGeneric", {[ActionCodeFunctions.getActionName(actionCode)] = action}),
         }))
     end
 
     red:close()
 end
 
-local function doAction(self, rawAction, rawActionCode, actionForRequester, actionsForPublish, actionForServer)
+local function doAction(self, rawAction, actionForRequester, actionsForPublish, actionForServer)
     if (actionForServer) then
         executeActionForServer(actionForServer)
     end
@@ -181,6 +182,7 @@ local function doAction(self, rawAction, rawActionCode, actionForRequester, acti
         publishTranslatedActions(actionsForPublish)
     end
 
+    local rawActionCode        = rawAction.actionCode
     local translatedActionCode = actionForRequester.actionCode
     if (rawActionCode ~= ACTION_CODE_HEARTBEAT) then
         local account, password = getAccountAndPasswordWithAction(rawAction, rawActionCode)
@@ -191,10 +193,7 @@ local function doAction(self, rawAction, rawActionCode, actionForRequester, acti
         end
     end
 
-    local bytes, err = self.m_WebSocket:send_text(encode("ActionGeneric", {
-        actionCode    = translatedActionCode,
-        encodedAction = encode(ActionCodeFunctions.getActionName(translatedActionCode), actionForRequester)
-    }))
+    local bytes, err = self.m_WebSocket:send_text(encode("ActionGeneric", {[ActionCodeFunctions.getActionName(translatedActionCode)] = actionForRequester}))
     if (not bytes) then
         ngx.log(ngx.ERR, "Session-doAction() failed to send text: ", err)
         return self:stop()
@@ -259,11 +258,9 @@ function Session:start()
         if (typ == "close") then
             break
         elseif ((typ == "text") or (typ == "binary")) then
-            local actionGeneric = decode("ActionGeneric", data)
-            local rawActionCode = actionGeneric.actionCode
-            local rawAction     = decode(ActionCodeFunctions.getActionName(rawActionCode), actionGeneric.encodedAction)
+            local _, rawAction = next(decode("ActionGeneric", data), nil)
             if (rawAction) then
-                doAction(self, rawAction, rawActionCode, ActionTranslator.translate(rawAction, rawActionCode))
+                doAction(self, rawAction, ActionTranslator.translate(rawAction))
             else
                 local bytes, err = webSocket:send_text("Server: Failed to parse the data came from the client.")
                 if (not bytes) then
