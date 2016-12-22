@@ -389,6 +389,19 @@ end
 --------------------------------------------------------------------------------
 -- The translate functions.
 --------------------------------------------------------------------------------
+local function translateGetSkillConfiguration(action)
+    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+        return LOGOUT_INVALID_ACCOUNT_PASSWORD
+    end
+
+    local skillConfigurationID = action.skillConfigurationID
+    return {
+        actionCode           = ACTION_CODES.ActionGetSkillConfiguration,
+        skillConfigurationID = skillConfigurationID,
+        skillConfiguration   = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID),
+    }
+end
+
 local function translateLogin(action)
     local account, password = action.loginAccount, action.loginPassword
     if (action.clientVersion ~= GAME_VERSION) then
@@ -430,6 +443,22 @@ local function translateRegister(action)
             registerPassword = password,
         }
         return actionRegister, nil, actionRegister
+    end
+end
+
+local function translateSetSkillConfiguration(action)
+    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+        return LOGOUT_INVALID_ACCOUNT_PASSWORD
+    end
+
+    local skillConfiguration, skillConfigurationID = action.skillConfiguration, action.skillConfigurationID
+    if ((skillConfigurationID < 1)                                          or
+        (skillConfigurationID > SKILL_CONFIGURATIONS_COUNT)                 or
+        (not ModelSkillConfiguration:create(skillConfiguration):isValid())) then
+        return MESSAGE_INVALID_SKILL_CONFIGURATION
+    else
+        action.actionCode = ACTION_CODES.ActionSetSkillConfiguration
+        return {actionCode = ACTION_CODES.ActionSetSkillConfiguration}, nil, action
     end
 end
 
@@ -599,28 +628,8 @@ local function translateJoinWar(action)
     end
 end
 
-local function translateGetSkillConfiguration(action)
-    local configurationID    = action.skillConfigurationID
-    return {
-        actionCode           = ACTION_CODES.ActionGetSkillConfiguration,
-        skillConfigurationID = configurationID,
-        skillConfiguration   = PlayerProfileManager.getSkillConfiguration(action.playerAccount, configurationID),
-    }
-end
-
 local function translateReloadSceneWar(action)
     return createActionReloadOrExitWar(action.fileName, action.playerAccount)
-end
-
-local function translateSetSkillConfiguration(action)
-    local skillConfiguration, skillConfigurationID = action.skillConfiguration, action.skillConfigurationID
-    if ((skillConfigurationID < 1)                                          or
-        (skillConfigurationID > SKILL_CONFIGURATIONS_COUNT)                 or
-        (not ModelSkillConfiguration:create(skillConfiguration):isValid())) then
-        return MESSAGE_INVALID_SKILL_CONFIGURATION
-    else
-        return {actionCode = ACTION_CODES.ActionSetSkillConfiguration}, nil, action
-    end
 end
 
 -- This translation ignores the existing unit of the same player at the end of the path, so that the actions of Join/Attack/Wait can reuse this function.
@@ -1421,10 +1430,12 @@ end
 function ActionTranslator.translate(action, actionCode)
     assert(ActionCodeFunctions.getActionName(actionCode), "ActionTranslator.translate() invalid actionCode: " .. (actionCode or ""))
 
-    if     (not actionCode)                                    then return MESSAGE_CORRUPTED_ACTION
-    elseif (actionCode == ACTION_CODES.ActionLogin)            then return translateLogin(           action)
-    elseif (actionCode == ACTION_CODES.ActionNetworkHeartbeat) then return translateNetworkHeartbeat(action)
-    elseif (actionCode == ACTION_CODES.ActionRegister)         then return translateRegister(        action)
+    if     (not actionCode)                                         then return MESSAGE_CORRUPTED_ACTION
+    elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration) then return translateGetSkillConfiguration(action)
+    elseif (actionCode == ACTION_CODES.ActionLogin)                 then return translateLogin(                action)
+    elseif (actionCode == ACTION_CODES.ActionNetworkHeartbeat)      then return translateNetworkHeartbeat(     action)
+    elseif (actionCode == ACTION_CODES.ActionRegister)              then return translateRegister(             action)
+    elseif (actionCode == ACTION_CODES.ActionSetSkillConfiguration) then return translateSetSkillConfiguration(action)
     end
 
     local actionName = action.actionName
@@ -1438,9 +1449,7 @@ function ActionTranslator.translate(action, actionCode)
     end
 
     if     (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
-    elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration)        then return translateGetSkillConfiguration(       action)
     elseif (actionCode == ACTION_CODES.ActionNewWar)                       then return translateNewWar(                      action)
-    elseif (actionCode == ACTION_CODES.ActionSetSkillConfiguration)        then return translateSetSkillConfiguration(       action)
     elseif (actionName == "GetOngoingWarList")     then return translateGetOngoingWarList(    action)
     elseif (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
     elseif (actionName == "GetSceneWarData")       then return translateGetSceneWarData(      action)

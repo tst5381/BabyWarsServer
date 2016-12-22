@@ -144,6 +144,8 @@ end
 
 local function executeActionForServer(action)
     local actionCode = action.actionCode
+    assert(actionCode, "Session-executeActionForServer() invalid actionCode: " .. (actionCode or ""))
+
     if ((actionCode == ACTION_CODE_NEW_WAR)                  or
         (actionCode == ACTION_CODE_REGISTER)                 or
         (actionCode == ACTION_CODE_SET_SKILL_CONFIGURATION)) then
