@@ -134,12 +134,12 @@ function PlayerProfileManager.setSkillConfiguration(account, configurationID, sk
     return PlayerProfileManager
 end
 
-function PlayerProfileManager.updateProfilesWithBeginningWar(sceneWarFileName, configuration)
-    for _, player in pairs(configuration.players) do
+function PlayerProfileManager.updateProfilesWithBeginningWar(sceneWarFileName, warConfiguration)
+    for _, player in pairs(warConfiguration.players) do
         local account = player.account
         local profile = PlayerProfileManager.getPlayerProfile(account)
 
-        profile.warLists.ongoing[sceneWarFileName] = 1
+        profile.warLists.ongoing[sceneWarFileName] = {sceneWarFileName = sceneWarFileName}
         serializeProfile(account, profile)
     end
 

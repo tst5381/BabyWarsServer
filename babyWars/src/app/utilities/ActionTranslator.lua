@@ -63,6 +63,11 @@ local MESSAGE_CORRUPTED_ACTION = {
     messageCode   = 81,
     messageParams = {"CorruptedAction"},
 }
+local MESSAGE_MULTI_JOIN_WAR = {
+    actionCode    = ACTION_CODES.ActionMessage,
+    messageCode   = 81,
+    messageParams = {"MultiJoinWar"},
+}
 local MESSAGE_INVALID_GAME_VERSION = {
     actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
@@ -77,6 +82,21 @@ local MESSAGE_INVALID_SKILL_CONFIGURATION = {
     actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
     messageParams = {"InvalidSkillConfiguration"},
+}
+local MESSAGE_INVALID_WAR_PASSWORD = {
+    actionCode    = ACTION_CODES.ActionMessage,
+    messageCode   = 81,
+    messageParams = {"InvalidWarPassword"},
+}
+local MESSAGE_NOT_JOINABLE_WAR = {
+    actionCode    = ACTION_CODES.ActionMessage,
+    messageCode   = 81,
+    messageParams = {"NotJoinableWar"},
+}
+local MESSAGE_OCCUPIED_PLAYER_INDEX = {
+    actionCode    = ACTION_CODES.ActionMessage,
+    messageCode   = 81,
+    messageParams = {"OccupiedPlayerIndex"},
 }
 local MESSAGE_OVERLOADED_SKILL_POINTS = {
     actionCode    = ACTION_CODES.ActionMessage,
@@ -423,6 +443,53 @@ local function translateLogin(action)
     end
 end
 
+local function translateJoinWar(action)
+    local playerAccount = action.playerAccount
+    if (not PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
+        return LOGOUT_INVALID_ACCOUNT_PASSWORD
+    end
+
+    local sceneWarFileName = action.sceneWarFileName
+    local warConfiguration = SceneWarManager.getJoinableSceneWarConfiguration(sceneWarFileName)
+    if (not warConfiguration) then
+        return MESSAGE_NOT_JOINABLE_WAR
+    elseif (warConfiguration.warPassword ~= action.warPassword) then
+        return MESSAGE_INVALID_WAR_PASSWORD
+    elseif (SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)) then
+        return MESSAGE_MULTI_JOIN_WAR
+    elseif (warConfiguration.players[action.playerIndex]) then
+        return MESSAGE_OCCUPIED_PLAYER_INDEX
+    end
+
+    local skillConfigurationID = action.skillConfigurationID
+    if (skillConfigurationID) then
+        local maxBaseSkillPoints = warConfiguration.maxBaseSkillPoints
+        if (not maxBaseSkillPoints) then
+            return MESSAGE_OVERLOADED_SKILL_POINTS
+
+        elseif (skillConfigurationID < 0) then
+            if (maxBaseSkillPoints < 100) then
+                return MESSAGE_OVERLOADED_SKILL_POINTS
+            end
+
+        else
+            local skillConfiguration      = PlayerProfileManager.getSkillConfiguration(playerAccount, skillConfigurationID)
+            local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
+            if (modelSkillConfiguration:getBaseSkillPoints() > maxBaseSkillPoints) then
+                return MESSAGE_OVERLOADED_SKILL_POINTS
+            elseif (not modelSkillConfiguration:isValid()) then
+                return MESSAGE_INVALID_SKILL_CONFIGURATION
+            end
+        end
+    end
+
+    return {
+            actionCode       = ACTION_CODES.ActionJoinWar,
+            sceneWarFileName = sceneWarFileName,
+            isWarStarted     = SceneWarManager.isWarReadyForStartAfterJoin(warConfiguration),
+        }, nil, action
+end
+
 local function translateNetworkHeartbeat(action)
     return {
         actionCode       = ACTION_CODES.ActionNetworkHeartbeat,
@@ -436,8 +503,8 @@ local function translateNewWar(action)
     end
 
     local skillConfigurationID = action.skillConfigurationID
-    local maxBaseSkillPoints   = action.maxBaseSkillPoints
     if (skillConfigurationID) then
+        local maxBaseSkillPoints = action.maxBaseSkillPoints
         if (not maxBaseSkillPoints) then
             return MESSAGE_OVERLOADED_SKILL_POINTS
 
@@ -575,67 +642,6 @@ local function translateGetJoinableWarConfigurations(action)
         actionCode        = ACTION_CODES.ActionGetJoinableWarConfigurations,
         warConfigurations = SceneWarManager.getJoinableWarConfigurations(action.playerAccount, action.sceneWarShortName),
     }
-end
-
-local function translateJoinWar(action)
-    local warConfiguration, err = SceneWarManager.getJoinableSceneWarConfiguration(action.sceneWarFileName)
-    if (not warConfiguration) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(81, "WarNotJoinable", err)
-        }
-    end
-
-    local skillConfigurationID = action.skillConfigurationID
-    local maxSkillPoints       = warConfiguration.maxSkillPoints
-    if ((type(skillConfigurationID) == "number") and (skillConfigurationID > 0)) then
-        local skillConfiguration = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID)
-        if (not skillConfiguration) then
-            return {
-                actionName = "Message",
-                message    = getLocalizedText(81, "FailToGetSkillConfiguration"),
-            }
-        end
-
-        local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-        local isValid, err            = modelSkillConfiguration:isValid()
-        if (not isValid) then
-            return {
-                actionName = "Message",
-                message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
-            }
-        elseif ((not maxSkillPoints) or (modelSkillConfiguration:getBaseSkillPoints() > maxSkillPoints)) then
-            return {
-                actionName = "Message",
-                message    = getLocalizedText(81, "OverloadedSkillPoints"),
-            }
-        end
-    elseif (type(skillConfigurationID) == "string") then
-        if (not GameConstantFunctions.getSkillPresets()[skillConfigurationID]) then
-            return {
-                actionName = "Message",
-                message    = getLocalizedText(81, "InvalidSkillConfiguration", err)
-            }
-        elseif ((not maxSkillPoints) or (maxSkillPoints < 100)) then
-            return {
-                actionName = "Message",
-                message    = getLocalizedText(81, "OverloadedSkillPoints"),
-            }
-        end
-    end
-
-    local msg, err = SceneWarManager.joinWar(action)
-    if (not msg) then
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(54, err),
-        }
-    else
-        return {
-            actionName = "JoinWar",
-            message    = msg,
-        }
-    end
 end
 
 local function translateReloadSceneWar(action)
@@ -1444,6 +1450,7 @@ function ActionTranslator.translate(action)
     if     (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
     elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration)        then return translateGetSkillConfiguration(       action)
     elseif (actionCode == ACTION_CODES.ActionLogin)                        then return translateLogin(                       action)
+    elseif (actionCode == ACTION_CODES.ActionJoinWar)                      then return translateJoinWar(                     action)
     elseif (actionCode == ACTION_CODES.ActionNetworkHeartbeat)             then return translateNetworkHeartbeat(            action)
     elseif (actionCode == ACTION_CODES.ActionNewWar)                       then return translateNewWar(                      action)
     elseif (actionCode == ACTION_CODES.ActionRegister)                     then return translateRegister(                    action)
@@ -1463,7 +1470,6 @@ function ActionTranslator.translate(action)
     if     (actionName == "GetOngoingWarList")     then return translateGetOngoingWarList(    action)
     elseif (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
     elseif (actionName == "GetSceneWarData")       then return translateGetSceneWarData(      action)
-    elseif (actionName == "JoinWar")               then return translateJoinWar(              action)
     elseif (actionName == "ReloadSceneWar")        then return translateReloadSceneWar(       action)
     end
 

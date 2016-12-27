@@ -171,19 +171,9 @@ local function getNextName(name)
     return string.char(unpack(byteList))
 end
 
-local function hasPlayerJoinedWar(playerAccount, configuration)
-    for _, player in pairs(configuration.players) do
-        if (player.account == playerAccount) then
-            return true
-        end
-    end
-
-    return false
-end
-
-local function isWarReadyForStart(configuration)
-    local players = configuration.players
-    for i = 1, getPlayersCount(configuration.warFieldFileName) do
+local function isWarReadyForStart(warConfiguration)
+    local players = warConfiguration.players
+    for i = 1, getPlayersCount(warConfiguration.warFieldFileName) do
         if (not players[i]) then
             return false
         end
@@ -375,9 +365,9 @@ function SceneWarManager.getJoinableWarConfigurations(playerAccount, sceneWarSho
             s_JoinableWarDataList[sceneWarFileName] = loadJoinableWar(sceneWarFileName)
         end
 
-        local configuration = s_JoinableWarDataList[sceneWarFileName].configuration
-        if (not hasPlayerJoinedWar(playerAccount, configuration)) then
-            list[sceneWarFileName] = configuration
+        local warConfiguration = s_JoinableWarDataList[sceneWarFileName].configuration
+        if (not SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)) then
+            list[sceneWarFileName] = warConfiguration
         end
     end
 
@@ -423,41 +413,30 @@ function SceneWarManager.joinWar(param)
     local sceneWarFileName = param.sceneWarFileName
     local playerIndex      = param.playerIndex
     local playerAccount    = param.playerAccount
-    local configuration    = SceneWarManager.getJoinableSceneWarConfiguration(sceneWarFileName)
+    local warConfiguration = SceneWarManager.getJoinableSceneWarConfiguration(sceneWarFileName)
 
-    if (not configuration) then
-        return nil, "SceneWarManager.joinWar() the war that the param specifies doesn't exist or is not joinable."
-    elseif (hasPlayerJoinedWar(playerAccount, configuration)) then
-        return nil, "SceneWarManager.joinWar() the player has already joined the war."
-    elseif (configuration.players[playerIndex]) then
-        return nil, "SceneWarManager.joinWar() the specified player index is already used by another player."
-    elseif (configuration.warPassword ~= param.warPassword) then
-        return nil, "The password is incorrect."
-    end
-
-    configuration.players[playerIndex] = {
-        account  = playerAccount,
-        nickname = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
+    warConfiguration.players[playerIndex] = {
+        account     = playerAccount,
+        playerIndex = playerIndex,
+        nickname    = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
     }
     local joiningSceneWar = s_JoinableWarDataList[sceneWarFileName].warData
     joiningSceneWar.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex)
     serialize(toFullFileName(sceneWarFileName), joiningSceneWar)
 
-    if (not isWarReadyForStart(configuration)) then
-        return LocalizationFunctions.getLocalizedText(55)
-    else
+    if (isWarReadyForStart(warConfiguration)) then
         -- The ModelFogMap must be initialized before the players can get the war data.
         -- The ModelFogMap is initialized when the modelSceneWar:onStartRunning() is called.
         -- modelSceneWar:onStartRunning() is called when the SceneWarManager.getOngoingModelSceneWar() is called, so it's ok to do it here.
         serialize(toFullFileName(sceneWarFileName), SceneWarManager.getOngoingModelSceneWar(sceneWarFileName):toSerializableTable())
-        PlayerProfileManager.updateProfilesWithBeginningWar(sceneWarFileName, configuration)
+        PlayerProfileManager.updateProfilesWithBeginningWar(sceneWarFileName, warConfiguration)
 
-        s_JoinableWarDataList[sceneWarFileName]     = nil
+        s_JoinableWarDataList[sceneWarFileName] = nil
         s_JoinableWarNameList[sceneWarFileName] = nil
         serialize(SCENE_WAR_JOINABLE_LIST_PATH, s_JoinableWarNameList)
-
-        return LocalizationFunctions.getLocalizedText(56, sceneWarFileName:sub(13))
     end
+
+    return SceneWarManager
 end
 
 function SceneWarManager.updateModelSceneWarWithAction(action)
@@ -495,6 +474,25 @@ function SceneWarManager.isPlayerInTurn(sceneWarFileName, playerAccount)
         local playerIndex = modelSceneWar:getModelTurnManager():getPlayerIndex()
         return modelSceneWar:getModelPlayerManager():getModelPlayer(playerIndex):getAccount() == playerAccount
     end
+end
+
+function SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)
+    for _, player in pairs(warConfiguration.players) do
+        if (player.account == playerAccount) then
+            return true
+        end
+    end
+
+    return false
+end
+
+function SceneWarManager.isWarReadyForStartAfterJoin(warConfiguration)
+    local joinedPlayersCount = 0
+    for playerIndex, player in pairs(warConfiguration.players) do
+        joinedPlayersCount = joinedPlayersCount + 1
+    end
+
+    return joinedPlayersCount == getPlayersCount(warConfiguration.warFieldFileName) - 1
 end
 
 return SceneWarManager
