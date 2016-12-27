@@ -589,25 +589,6 @@ local function translateGetReplayList(action)
     }
 end
 
-local function translateGetOngoingWarList(action)
-    local list                            = {}
-    local account                         = action.playerAccount
-    local isPlayerInTurn                  = SceneWarManager.isPlayerInTurn
-    local getOngoingSceneWarConfiguration = SceneWarManager.getOngoingSceneWarConfiguration
-
-    for sceneWarFileName, _ in pairs(PlayerProfileManager.getPlayerProfile(account).warLists.ongoing) do
-        list[sceneWarFileName] = {
-            isInTurn      = isPlayerInTurn(sceneWarFileName, account),
-            configuration = getOngoingSceneWarConfiguration(sceneWarFileName),
-        }
-    end
-
-    return {
-        actionName = "GetOngoingWarList",
-        list       = list,
-    }
-end
-
 local function translateGetSceneWarActionId(action)
     local sceneWarFileName = action.fileName
     local data, err        = SceneWarManager.getOngoingSceneWarData(sceneWarFileName, action.playerAccount)
@@ -641,6 +622,26 @@ local function translateGetJoinableWarConfigurations(action)
     return {
         actionCode        = ACTION_CODES.ActionGetJoinableWarConfigurations,
         warConfigurations = SceneWarManager.getJoinableWarConfigurations(action.playerAccount, action.sceneWarShortName),
+    }
+end
+
+local function translateGetOngoingWarList(action)
+    local playerAccount = action.playerAccount
+    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+        return LOGOUT_INVALID_ACCOUNT_PASSWORD
+    end
+
+    local list = {}
+    for sceneWarFileName, _ in pairs(PlayerProfileManager.getPlayerProfile(playerAccount).warLists.ongoing) do
+        list[#list + 1] = {
+            isInTurn         = SceneWarManager.isPlayerInTurn(sceneWarFileName, playerAccount),
+            warConfiguration = SceneWarManager.getOngoingSceneWarConfiguration(sceneWarFileName),
+        }
+    end
+
+    return {
+        actionCode     = ACTION_CODES.ActionGetOngoingWarList,
+        ongoingWarList = list,
     }
 end
 
@@ -1448,6 +1449,7 @@ function ActionTranslator.translate(action)
     assert(ActionCodeFunctions.getActionName(actionCode), "ActionTranslator.translate() invalid actionCode: " .. (actionCode or ""))
 
     if     (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
+    elseif (actionCode == ACTION_CODES.ActionGetOngoingWarList)            then return translateGetOngoingWarList( action)
     elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration)        then return translateGetSkillConfiguration(       action)
     elseif (actionCode == ACTION_CODES.ActionLogin)                        then return translateLogin(                       action)
     elseif (actionCode == ACTION_CODES.ActionJoinWar)                      then return translateJoinWar(                     action)
@@ -1467,8 +1469,7 @@ function ActionTranslator.translate(action)
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
     end
 
-    if     (actionName == "GetOngoingWarList")     then return translateGetOngoingWarList(    action)
-    elseif (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
+    if     (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
     elseif (actionName == "GetSceneWarData")       then return translateGetSceneWarData(      action)
     elseif (actionName == "ReloadSceneWar")        then return translateReloadSceneWar(       action)
     end

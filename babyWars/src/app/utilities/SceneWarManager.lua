@@ -490,12 +490,8 @@ end
 
 function SceneWarManager.isPlayerInTurn(sceneWarFileName, playerAccount)
     local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
-    if (not modelSceneWar) then
-        return false
-    else
-        local playerIndex = modelSceneWar:getModelTurnManager():getPlayerIndex()
-        return modelSceneWar:getModelPlayerManager():getModelPlayer(playerIndex):getAccount() == playerAccount
-    end
+    local playerIndex = modelSceneWar:getModelTurnManager():getPlayerIndex()
+    return modelSceneWar:getModelPlayerManager():getModelPlayer(playerIndex):getAccount() == playerAccount
 end
 
 function SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)
