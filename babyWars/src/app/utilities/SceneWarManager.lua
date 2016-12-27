@@ -8,10 +8,13 @@ local SerializationFunctions  = require("src.app.utilities.SerializationFunction
 local SkillDataAccessors      = require("src.app.utilities.SkillDataAccessors")
 local Actor                   = require("src.global.actors.Actor")
 
-local SCENE_WAR_PATH               = "babyWars\\res\\data\\sceneWar\\"
-local REPLAY_NAME_LIST_PATH        = SCENE_WAR_PATH .. "ReplayNameList.lua"
-local SCENE_WAR_NEXT_NAME_PATH     = SCENE_WAR_PATH .. "NextName.lua"
-local SCENE_WAR_JOINABLE_LIST_PATH = SCENE_WAR_PATH .. "JoinableList.lua"
+local io     = io
+local string = string
+
+local SCENE_WAR_PATH           = "babyWars\\res\\data\\sceneWar\\"
+local REPLAY_NAME_LIST_PATH    = SCENE_WAR_PATH .. "ReplayNameList.lua"
+local SCENE_WAR_NEXT_NAME_PATH = SCENE_WAR_PATH .. "NextName.lua"
+local JOINABLE_WAR_LIST_PATH   = SCENE_WAR_PATH .. "JoinableList.lua"
 
 local DEFAULT_EXECUTED_ACTIONS = {}
 local DEFAULT_TURN_DATA        = {
@@ -23,10 +26,9 @@ local DISABLED_SKILL_CONFIGURATION = {basePoints = 0}
 
 local s_IsInitialized = false
 
-local s_JoinableWarNameList
+local s_JoinableWarList
 local s_ReplayNameList
 local s_SceneWarNextName
-local s_JoinableWarDataList = {}
 local s_ReplayDataList      = {}
 local s_OngoingWarList      = {}
 
@@ -46,20 +48,8 @@ local function pickRandomWarField(warFieldFileName)
     return list[math.random(#list)]
 end
 
-local function serialize(fullFileName, data)
-    local file = io.open(fullFileName, "w")
-    file:write("return ")
-    SerializationFunctions.appendToFile(data, "", file)
-    file:close()
-end
-
 local function toFullFileName(shortName)
     return SCENE_WAR_PATH .. shortName .. ".lua"
-end
-
-local function createActorSceneWar(warData)
-    local modelSceneWar = Actor.createModel("sceneWar.ModelSceneWar", warData)
-    return Actor.createWithModelAndViewInstance(modelSceneWar)
 end
 
 local function generateWarConfiguration(warData)
@@ -82,6 +72,59 @@ local function generateWarConfiguration(warData)
         isRandomWarField    = warData.isRandomWarField,
         players             = players,
     }
+end
+
+local function serialize(fullFileName, data)
+    local file = io.open(fullFileName, "w")
+    file:write("return ")
+    SerializationFunctions.appendToFile(data, "", file)
+    file:close()
+end
+
+local function serializeSceneWarNextName(name)
+    local file = io.open(SCENE_WAR_NEXT_NAME_PATH, "w")
+    file:write(name)
+    file:close()
+end
+
+local function loadSceneWarNextName()
+    local file = io.open(SCENE_WAR_NEXT_NAME_PATH, "r")
+    if (not file) then
+        return nil
+    else
+        local name = file:read("*a")
+        file:close()
+        return name
+    end
+end
+
+local function serializeJoinableWarList(list)
+    local file = io.open(JOINABLE_WAR_LIST_PATH, "w")
+    file:write(SerializationFunctions.encode("JoinableWarList", {list = list or {}}))
+    file:close()
+end
+
+local function loadJoinableWarList()
+    local file = io.open(JOINABLE_WAR_LIST_PATH, "r")
+    if (not file) then
+        return nil
+    else
+        local list = SerializationFunctions.decode("JoinableWarList", file:read("*a")).list or {}
+        file:close()
+
+        for sceneWarFileName, joinableWarItem in pairs(list) do
+            local warData                    = dofile(toFullFileName(sceneWarFileName))
+            joinableWarItem.warData          = warData
+            joinableWarItem.warConfiguration = generateWarConfiguration(warData)
+        end
+
+        return list
+    end
+end
+
+local function createActorSceneWar(warData)
+    local modelSceneWar = Actor.createModel("sceneWar.ModelSceneWar", warData)
+    return Actor.createWithModelAndViewInstance(modelSceneWar)
 end
 
 local function generateReplayConfiguration(warData)
@@ -132,14 +175,6 @@ end
 
 local function removeOngoingWarListItem(sceneWarFileName)
     s_OngoingWarList[sceneWarFileName] = nil
-end
-
-local function loadJoinableWar(sceneWarFileName)
-    local warData = dofile(toFullFileName(sceneWarFileName))
-    return {
-        warData       = warData,
-        configuration = generateWarConfiguration(warData),
-    }
 end
 
 local function loadReplayData(sceneWarFileName)
@@ -240,24 +275,18 @@ end
 -- The functions for initialization.
 --------------------------------------------------------------------------------
 local function initSceneWarNextName()
-    local file = io.open(SCENE_WAR_NEXT_NAME_PATH, "r")
-    if (file) then
-        file:close()
-        s_SceneWarNextName = dofile(SCENE_WAR_NEXT_NAME_PATH)
-    else
+    s_SceneWarNextName = loadSceneWarNextName()
+    if (not s_SceneWarNextName) then
         s_SceneWarNextName = "0000000000000000"
-        serialize(SCENE_WAR_NEXT_NAME_PATH, s_SceneWarNextName)
+        serializeSceneWarNextName(s_SceneWarNextName)
     end
 end
 
-local function initJoinableWarNameList()
-    local file = io.open(SCENE_WAR_JOINABLE_LIST_PATH)
-    if (file) then
-        file:close()
-        s_JoinableWarNameList = dofile(SCENE_WAR_JOINABLE_LIST_PATH)
-    else
-        s_JoinableWarNameList = {}
-        serialize(SCENE_WAR_JOINABLE_LIST_PATH, s_JoinableWarNameList)
+local function initJoinableWarList()
+    s_JoinableWarList = loadJoinableWarList()
+    if (not s_JoinableWarList) then
+        s_JoinableWarList = {}
+        serializeJoinableWarList(s_JoinableWarList)
     end
 end
 
@@ -283,7 +312,7 @@ function SceneWarManager.init()
 
     os.execute("mkdir " .. SCENE_WAR_PATH)
     initSceneWarNextName()
-    initJoinableWarNameList()
+    initJoinableWarList()
     initReplayNameList()
 
     return SceneWarManager
@@ -295,16 +324,17 @@ function SceneWarManager.createNewWar(param)
     if (not warData) then
         return nil, "SceneWarManager.createNewWar() failed because some param is invalid."
     end
-
-    s_JoinableWarNameList[sceneWarFileName] = 1
-    s_JoinableWarDataList[sceneWarFileName] = {
-        configuration = generateWarConfiguration(warData),
-        warData       = warData,
-    }
-    s_SceneWarNextName = getNextName(s_SceneWarNextName)
-    serialize(SCENE_WAR_JOINABLE_LIST_PATH, s_JoinableWarNameList)
     serialize(fullFileName, warData)
-    serialize(SCENE_WAR_NEXT_NAME_PATH, s_SceneWarNextName)
+
+    s_JoinableWarList[sceneWarFileName] = {
+            sceneWarFileName = sceneWarFileName,
+            warData          = warData,
+            warConfiguration = generateWarConfiguration(warData),
+        }
+    serializeJoinableWarList(s_JoinableWarList)
+
+    s_SceneWarNextName = getNextName(s_SceneWarNextName)
+    serializeSceneWarNextName(s_SceneWarNextName)
 
     return sceneWarFileName
 end
@@ -342,16 +372,16 @@ function SceneWarManager.getOngoingSceneWarConfiguration(sceneWarFileName)
 end
 
 function SceneWarManager.getJoinableWarConfigurations(playerAccount, sceneWarShortName)
-    local candidateWarNameList
+    local candidateWarList
     if (not sceneWarShortName) then
-        candidateWarNameList = s_JoinableWarNameList
+        candidateWarList = s_JoinableWarList
     else
-        candidateWarNameList = {}
+        candidateWarList = {}
         local prefix = "000000000000"
         while (true) do
             local sceneWarFileName = prefix .. sceneWarShortName
-            if (s_JoinableWarNameList[sceneWarFileName]) then
-                candidateWarNameList[sceneWarFileName] = 1
+            if (s_JoinableWarList[sceneWarFileName]) then
+                candidateWarList[sceneWarFileName] = 1
                 prefix = getNextName(prefix)
             else
                 break
@@ -360,12 +390,8 @@ function SceneWarManager.getJoinableWarConfigurations(playerAccount, sceneWarSho
     end
 
     local list = {}
-    for sceneWarFileName, _ in pairs(candidateWarNameList) do
-        if (not s_JoinableWarDataList[sceneWarFileName]) then
-            s_JoinableWarDataList[sceneWarFileName] = loadJoinableWar(sceneWarFileName)
-        end
-
-        local warConfiguration = s_JoinableWarDataList[sceneWarFileName].configuration
+    for sceneWarFileName, _ in pairs(candidateWarList) do
+        local warConfiguration = s_JoinableWarList[sceneWarFileName].warConfiguration
         if (not SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)) then
             list[sceneWarFileName] = warConfiguration
         end
@@ -399,14 +425,11 @@ function SceneWarManager.getReplayData(sceneWarFileName)
 end
 
 function SceneWarManager.getJoinableSceneWarConfiguration(sceneWarFileName)
-    if (not s_JoinableWarNameList[sceneWarFileName]) then
+    if (not s_JoinableWarList[sceneWarFileName]) then
         return nil, "SceneWarManager.getJoinableSceneWarConfiguration() the war that the param specifies doesn't exist or is not joinable."
     end
-    if (not s_JoinableWarDataList[sceneWarFileName]) then
-        s_JoinableWarDataList[sceneWarFileName] = loadJoinableWar(sceneWarFileName)
-    end
 
-    return s_JoinableWarDataList[sceneWarFileName].configuration
+    return s_JoinableWarList[sceneWarFileName].warConfiguration
 end
 
 function SceneWarManager.joinWar(param)
@@ -420,7 +443,7 @@ function SceneWarManager.joinWar(param)
         playerIndex = playerIndex,
         nickname    = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
     }
-    local joiningSceneWar = s_JoinableWarDataList[sceneWarFileName].warData
+    local joiningSceneWar = s_JoinableWarList[sceneWarFileName].warData
     joiningSceneWar.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex)
     serialize(toFullFileName(sceneWarFileName), joiningSceneWar)
 
@@ -431,9 +454,8 @@ function SceneWarManager.joinWar(param)
         serialize(toFullFileName(sceneWarFileName), SceneWarManager.getOngoingModelSceneWar(sceneWarFileName):toSerializableTable())
         PlayerProfileManager.updateProfilesWithBeginningWar(sceneWarFileName, warConfiguration)
 
-        s_JoinableWarDataList[sceneWarFileName] = nil
-        s_JoinableWarNameList[sceneWarFileName] = nil
-        serialize(SCENE_WAR_JOINABLE_LIST_PATH, s_JoinableWarNameList)
+        s_JoinableWarList[sceneWarFileName] = nil
+        serializeJoinableWarList(s_JoinableWarList)
     end
 
     return SceneWarManager
