@@ -63,6 +63,16 @@ local MESSAGE_CORRUPTED_ACTION = {
     messageCode   = 81,
     messageParams = {"CorruptedAction"},
 }
+local MESSAGE_DEFEATED_PLAYER = {
+    actionCode    = ACTION_CODES.ActionMessage,
+    messageCode   = 81,
+    messageParams = {"DefeatedPlayer"},
+}
+local MESSAGE_ENDED_WAR = {
+    actionCode    = ACTION_CODES.ActionMessage,
+    messageCode   = 81,
+    messageParams = {"EndedWar"},
+}
 local MESSAGE_MULTI_JOIN_WAR = {
     actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
@@ -559,6 +569,27 @@ local function translateRegister(action)
     end
 end
 
+local function translateRunSceneWar(action)
+    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+        return LOGOUT_INVALID_ACCOUNT_PASSWORD
+    end
+
+    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(action.sceneWarFileName)
+    if (not modelSceneWar) then
+        return MESSAGE_ENDED_WAR
+    else
+        local modelPlayer, playerIndex = modelSceneWar:getModelPlayerManager():getModelPlayerWithAccount(action.playerAccount)
+        if (not modelPlayer:isAlive()) then
+            return MESSAGE_DEFEATED_PLAYER
+        else
+            return {
+                actionCode = ACTION_CODES.ActionRunSceneWar,
+                warData    = modelSceneWar:toSerializableTableForPlayerIndex(playerIndex),
+            }
+        end
+    end
+end
+
 local function translateSetSkillConfiguration(action)
     if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
@@ -607,22 +638,6 @@ local function translateGetSceneWarActionId(action)
         fileName         = sceneWarFileName,
         sceneWarActionID = (modelSceneWar) and (modelSceneWar:getActionId()) or (nil),
     }
-end
-
-local function translateGetSceneWarData(action)
-    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(action.fileName)
-    if (modelSceneWar) then
-        local _, playerIndex = modelSceneWar:getModelPlayerManager():getModelPlayerWithAccount(action.playerAccount)
-        return {
-            actionName = "GetSceneWarData",
-            data       = modelSceneWar:toSerializableTableForPlayerIndex(playerIndex),
-        }
-    else
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(52)
-        }
-    end
 end
 
 local function translateGetJoinableWarConfigurations(action)
@@ -1460,13 +1475,14 @@ function ActionTranslator.translate(action)
     assert(ActionCodeFunctions.getActionName(actionCode), "ActionTranslator.translate() invalid actionCode: " .. (actionCode or ""))
 
     if     (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
-    elseif (actionCode == ACTION_CODES.ActionGetOngoingWarList)            then return translateGetOngoingWarList( action)
+    elseif (actionCode == ACTION_CODES.ActionGetOngoingWarList)            then return translateGetOngoingWarList(           action)
     elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration)        then return translateGetSkillConfiguration(       action)
     elseif (actionCode == ACTION_CODES.ActionLogin)                        then return translateLogin(                       action)
     elseif (actionCode == ACTION_CODES.ActionJoinWar)                      then return translateJoinWar(                     action)
     elseif (actionCode == ACTION_CODES.ActionNetworkHeartbeat)             then return translateNetworkHeartbeat(            action)
     elseif (actionCode == ACTION_CODES.ActionNewWar)                       then return translateNewWar(                      action)
     elseif (actionCode == ACTION_CODES.ActionRegister)                     then return translateRegister(                    action)
+    elseif (actionCode == ACTION_CODES.ActionRunSceneWar)                  then return translateRunSceneWar(                 action)
     elseif (actionCode == ACTION_CODES.ActionSetSkillConfiguration)        then return translateSetSkillConfiguration(       action)
     end
 
