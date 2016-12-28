@@ -385,21 +385,31 @@ local function getLostPlayerIndexForActionAttack(attacker, target, attackDamage,
 end
 
 local function createActionReloadOrExitWar(sceneWarFileName, playerAccount, message)
-    local data = SceneWarManager.getOngoingSceneWarData(sceneWarFileName, playerAccount)
-    if (data) then
-        return {
-            actionName = "ReloadSceneWar",
-            fileName   = sceneWarFileName,
-            data       = data,
-            message    = message,
-        }
-    else
+    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
+    if (not modelSceneWar) then
         return {
             actionName = "RunSceneMain",
             fileName   = sceneWarFileName,
             message    = getLocalizedText(81, "InvalidWarFileName"),
         }
     end
+
+    modelSceneWar:getModelPlayerManager():forEachModelPlayer(function(modelPlayer, playerIndex)
+        if ((modelPlayer:isAlive()) and (modelPlayer:getAccount() == playerAccount)) then
+            return {
+                actionName = "ReloadSceneWar",
+                fileName   = sceneWarFileName,
+                data       = modelSceneWar:toSerializableTableForPlayerIndex(playerIndex),
+                message    = message,
+            }
+        end
+    end)
+
+    return {
+        actionName = "RunSceneMain",
+        fileName   = sceneWarFileName,
+        message    = getLocalizedText(81, "InvalidWarFileName"),
+    }
 end
 
 local function createActionForServer(action)
@@ -591,25 +601,26 @@ end
 
 local function translateGetSceneWarActionId(action)
     local sceneWarFileName = action.fileName
-    local data, err        = SceneWarManager.getOngoingSceneWarData(sceneWarFileName, action.playerAccount)
+    local modelSceneWar    = SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
     return {
         actionName       = "GetSceneWarActionId",
         fileName         = sceneWarFileName,
-        sceneWarActionID = (data) and (data.actionID) or (nil),
+        sceneWarActionID = (modelSceneWar) and (modelSceneWar:getActionId()) or (nil),
     }
 end
 
 local function translateGetSceneWarData(action)
-    local data, err = SceneWarManager.getOngoingSceneWarData(action.fileName, action.playerAccount)
-    if (not data) then
+    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(action.fileName)
+    if (modelSceneWar) then
+        local _, playerIndex = modelSceneWar:getModelPlayerManager():getModelPlayerWithAccount(action.playerAccount)
         return {
-            actionName = "Message",
-            message    = getLocalizedText(52)
+            actionName = "GetSceneWarData",
+            data       = modelSceneWar:toSerializableTableForPlayerIndex(playerIndex),
         }
     else
         return {
-            actionName = "GetSceneWarData",
-            data       = data,
+            actionName = "Message",
+            message    = getLocalizedText(52)
         }
     end
 end

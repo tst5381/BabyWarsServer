@@ -134,7 +134,8 @@ function PlayerProfileManager.setSkillConfiguration(account, configurationID, sk
     return PlayerProfileManager
 end
 
-function PlayerProfileManager.updateProfilesWithBeginningWar(sceneWarFileName, warConfiguration)
+function PlayerProfileManager.updateProfilesWithBeginningWar(warConfiguration)
+    local sceneWarFileName = warConfiguration.sceneWarFileName
     for _, player in pairs(warConfiguration.players) do
         local account = player.account
         local profile = PlayerProfileManager.getPlayerProfile(account)
