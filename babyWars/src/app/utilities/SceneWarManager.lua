@@ -81,6 +81,21 @@ local function serialize(fullFileName, data)
     file:close()
 end
 
+local function serializeWarData(warData)
+    local file = io.open(toFullFileName(warData.sceneWarFileName), "w")
+    file:write(SerializationFunctions.encode("SceneWar", warData))
+    file:close()
+end
+
+local function loadWarData(sceneWarFileName)
+    local file = io.open(toFullFileName(sceneWarFileName), "r")
+    assert(file, "SceneWarManager-loadWarData() invalid sceneWarFileName: " .. (sceneWarFileName or ""))
+
+    local warData = SerializationFunctions.decode("SceneWar", file:read("*a"))
+    file:close()
+    return warData
+end
+
 local function serializeSceneWarNextName(name)
     local file = io.open(SCENE_WAR_NEXT_NAME_PATH, "w")
     file:write(name)
@@ -113,7 +128,7 @@ local function loadJoinableWarList()
         file:close()
 
         for sceneWarFileName, joinableWarItem in pairs(list) do
-            local warData                    = dofile(toFullFileName(sceneWarFileName))
+            local warData                    = loadWarData(sceneWarFileName)
             joinableWarItem.warData          = warData
             joinableWarItem.warConfiguration = generateWarConfiguration(warData)
         end
@@ -148,14 +163,14 @@ local function generateReplayConfiguration(warData)
 end
 
 local function loadOngoingWar(sceneWarFileName)
-    local warData = dofile(toFullFileName(sceneWarFileName))
+    local warData = loadWarData(sceneWarFileName)
     if (warData.isEnded) then
         return nil, "SceneWarManager.loadOngoingWar() the war specified by the param is ended."
     end
 
     return {
-        actorSceneWar = createActorSceneWar(warData),
-        configuration = generateWarConfiguration(warData),
+        actorSceneWar    = createActorSceneWar(warData),
+        warConfiguration = generateWarConfiguration(warData),
     }
 end
 
@@ -268,7 +283,7 @@ local function generateSceneWarData(sceneWarFileName, param)
         turn     = DEFAULT_TURN_DATA,
         players  = generatePlayersData(param.playerIndex, param.playerAccount, param.skillConfigurationID),
         weather  = {defaultWeatherCode = param.defaultWeatherCode},
-    }, toFullFileName(sceneWarFileName)
+    }
 end
 
 --------------------------------------------------------------------------------
@@ -319,18 +334,15 @@ function SceneWarManager.init()
 end
 
 function SceneWarManager.createNewWar(param)
-    local sceneWarFileName      = s_SceneWarNextName
-    local warData, fullFileName = generateSceneWarData(sceneWarFileName, param)
-    if (not warData) then
-        return nil, "SceneWarManager.createNewWar() failed because some param is invalid."
-    end
-    serialize(fullFileName, warData)
+    local sceneWarFileName = s_SceneWarNextName
+    local warData          = generateSceneWarData(sceneWarFileName, param)
+    serializeWarData(warData)
 
     s_JoinableWarList[sceneWarFileName] = {
-            sceneWarFileName = sceneWarFileName,
-            warData          = warData,
-            warConfiguration = generateWarConfiguration(warData),
-        }
+        sceneWarFileName = sceneWarFileName,
+        warData          = warData,
+        warConfiguration = generateWarConfiguration(warData),
+    }
     serializeJoinableWarList(s_JoinableWarList)
 
     s_SceneWarNextName = getNextName(s_SceneWarNextName)
@@ -368,7 +380,7 @@ function SceneWarManager.getOngoingSceneWarData(sceneWarFileName, playerAccount)
 end
 
 function SceneWarManager.getOngoingSceneWarConfiguration(sceneWarFileName)
-    return getOngoingWarListItem(sceneWarFileName).configuration
+    return getOngoingWarListItem(sceneWarFileName).warConfiguration
 end
 
 function SceneWarManager.getJoinableWarConfigurations(playerAccount, sceneWarShortName)
@@ -445,13 +457,13 @@ function SceneWarManager.joinWar(param)
     }
     local joiningSceneWar = s_JoinableWarList[sceneWarFileName].warData
     joiningSceneWar.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex)
-    serialize(toFullFileName(sceneWarFileName), joiningSceneWar)
+    serializeWarData(joiningSceneWar)
 
     if (isWarReadyForStart(warConfiguration)) then
         -- The ModelFogMap must be initialized before the players can get the war data.
         -- The ModelFogMap is initialized when the modelSceneWar:onStartRunning() is called.
         -- modelSceneWar:onStartRunning() is called when the SceneWarManager.getOngoingModelSceneWar() is called, so it's ok to do it here.
-        serialize(toFullFileName(sceneWarFileName), SceneWarManager.getOngoingModelSceneWar(sceneWarFileName):toSerializableTable())
+        serializeWarData(SceneWarManager.getOngoingModelSceneWar(sceneWarFileName):toSerializableTable())
         PlayerProfileManager.updateProfilesWithBeginningWar(sceneWarFileName, warConfiguration)
 
         s_JoinableWarList[sceneWarFileName] = nil
@@ -470,13 +482,13 @@ function SceneWarManager.updateModelSceneWarWithAction(action)
     PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
     if (not modelSceneWar:isEnded()) then
-        serialize(toFullFileName(sceneWarFileName), modelSceneWar:toSerializableTable())
+        serializeWarData(modelSceneWar:toSerializableTable())
     else
         removeOngoingWarListItem(sceneWarFileName)
         if (not modelSceneWar:canReplay()) then
-            serialize(toFullFileName(sceneWarFileName), modelSceneWar:toSerializableTable())
+            serializeWarData(modelSceneWar:toSerializableTable())
         else
-            serialize(toFullFileName(sceneWarFileName), modelSceneWar:toSerializableReplayData())
+            serializeWarData(modelSceneWar:toSerializableReplayData())
 
             s_ReplayNameList[#s_ReplayNameList + 1] = sceneWarFileName
             serialize(REPLAY_NAME_LIST_PATH, s_ReplayNameList)
