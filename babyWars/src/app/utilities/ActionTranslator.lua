@@ -51,6 +51,7 @@ local isUnitVisible                = VisibilityFunctions.isUnitOnMapVisibleToPla
 local ACTION_CODES                   = ActionCodeFunctions.getFullList()
 local GAME_VERSION                   = GameConstantFunctions.getGameVersion()
 local IGNORED_ACTION_KEYS_FOR_SERVER = {"revealedTiles", "revealedUnits"}
+local MESSAGE_PARAM_OUT_OF_SYNC      = {"OutOfSync"}
 local SKILL_CONFIGURATIONS_COUNT     = SkillDataAccessors.getSkillConfigurationsCount()
 
 local LOGOUT_INVALID_ACCOUNT_PASSWORD = {
@@ -132,8 +133,8 @@ local RUN_SCENE_MAIN_ENDED_WAR = {
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
-local function isGridInPath(gridIndex, path)
-    for _, node in ipairs(path) do
+local function isGridInPathNodes(gridIndex, pathNodes)
+    for _, node in ipairs(pathNodes) do
         if (GridIndexFunctions.isEqual(gridIndex, node)) then
             return true
         end
@@ -146,14 +147,14 @@ local function isModelUnitDiving(modelUnit)
     return (modelUnit.isDiving) and (modelUnit:isDiving())
 end
 
-local function isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, path, playerIndex)
-    local pathLength = #path
+local function isPathDestinationOccupiedByVisibleUnit(modelSceneWar, path, playerIndex)
+    local pathLength = #path.pathNodes
     if (pathLength <= 1) then
         return false
     end
 
-    local destination = path[pathLength]
-    local modelUnit   = getModelUnitMap(sceneWarFileName):getModelUnit(destination)
+    local destination = path.pathNodes[pathLength]
+    local modelUnit   = getModelUnitMap(modelSceneWar):getModelUnit(destination)
     return (modelUnit) and
         (isUnitVisible(sceneWarFileName, destination, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), playerIndex))
 end
@@ -472,7 +473,7 @@ local function getModelSceneWarWithAction(action)
     elseif (not isPlayerAliveInWar(modelSceneWar, playerAccount)) then
         return nil, RUN_SCENE_MAIN_DEFEATED_PLAYER
     elseif ((not isPlayerInTurnInWar(modelSceneWar, playerAccount)) or (modelSceneWar:getActionId() ~= action.actionID - 1)) then
-        return nil, createActionReloadSceneWar(modelSceneWar, playerAccount, 81, {"OutOfSync"})
+        return nil, createActionReloadSceneWar(modelSceneWar, playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     else
         return modelSceneWar
     end
@@ -492,27 +493,6 @@ local function translateGetSkillConfiguration(action)
         skillConfigurationID = skillConfigurationID,
         skillConfiguration   = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID),
     }
-end
-
-local function translateLogin(action)
-    local account, password = action.loginAccount, action.loginPassword
-    if (action.clientVersion ~= GAME_VERSION) then
-        return MESSAGE_INVALID_GAME_VERSION
-    elseif (not PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
-        return MESSAGE_INVALID_LOGIN
-    else
-        return {
-            actionCode    = ACTION_CODES.ActionLogin,
-            loginAccount  = account,
-            loginPassword = password,
-        }, {
-            [account] = {
-                actionCode    = ACTION_CODES.ActionLogout,
-                messageCode   = 81,
-                messageParams = {"MultiLogin", account},
-            }
-        }
-    end
 end
 
 local function translateJoinWar(action)
@@ -556,10 +536,31 @@ local function translateJoinWar(action)
     end
 
     return {
-            actionCode       = ACTION_CODES.ActionJoinWar,
-            sceneWarFileName = sceneWarFileName,
-            isWarStarted     = SceneWarManager.isWarReadyForStartAfterJoin(warConfiguration),
-        }, nil, action
+        actionCode       = ACTION_CODES.ActionJoinWar,
+        sceneWarFileName = sceneWarFileName,
+        isWarStarted     = SceneWarManager.isWarReadyForStartAfterJoin(warConfiguration),
+    }, nil, action
+end
+
+local function translateLogin(action)
+    local account, password = action.loginAccount, action.loginPassword
+    if (action.clientVersion ~= GAME_VERSION) then
+        return MESSAGE_INVALID_GAME_VERSION
+    elseif (not PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
+        return MESSAGE_INVALID_LOGIN
+    else
+        return {
+            actionCode    = ACTION_CODES.ActionLogin,
+            loginAccount  = account,
+            loginPassword = password,
+        }, {
+            [account] = {
+                actionCode    = ACTION_CODES.ActionLogout,
+                messageCode   = 81,
+                messageParams = {"MultiLogin", account},
+            }
+        }
+    end
 end
 
 local function translateNetworkHeartbeat(action)
@@ -756,7 +757,8 @@ local function translatePath(path, launchUnitID, modelSceneWar)
     local modelTurnManager   = modelSceneWar:getModelTurnManager()
     local modelUnitMap       = modelWarField:getModelUnitMap()
     local playerIndexInTurn  = modelTurnManager:getPlayerIndex()
-    local beginningGridIndex = path[1]
+    local rawPathNodes       = path.pathNodes
+    local beginningGridIndex = rawPathNodes[1]
     local mapSize            = modelUnitMap:getMapSize()
     local focusModelUnit     = modelUnitMap:getFocusModelUnit(beginningGridIndex, launchUnitID)
     local isWithinMap        = GridIndexFunctions.isWithinMap
@@ -771,19 +773,18 @@ local function translatePath(path, launchUnitID, modelSceneWar)
         return nil, "ActionTranslator-translatePath() the moving unit is not in idle state."
     end
 
-    local clone                = GridIndexFunctions.clone
-    local isAdjacent           = GridIndexFunctions.isAdjacent
     local modelTileMap         = modelWarField:getModelTileMap()
-    local translatedPath       = {clone(beginningGridIndex)}
+    local translatedPathNodes  = {GridIndexFunctions.clone(beginningGridIndex)}
+    local translatedPath       = {pathNodes = translatedPathNodes}
     local totalFuelConsumption = 0
     local maxFuelConsumption   = math.min(focusModelUnit:getCurrentFuel(), focusModelUnit:getMoveRange())
     local sceneWarFileName     = modelSceneWar:getFileName()
 
-    for i = 2, #path do
-        local gridIndex = path[i]
-        if (not isAdjacent(path[i - 1], gridIndex)) then
+    for i = 2, #rawPathNodes do
+        local gridIndex = rawPathNodes[i]
+        if (not GridIndexFunctions.isAdjacent(rawPathNodes[i - 1], gridIndex)) then
             return nil, "ActionTranslator-translatePath() the path is invalid because some grids are not adjacent to previous ones."
-        elseif (isGridInPath(gridIndex, translatedPath)) then
+        elseif (isGridInPathNodes(gridIndex, translatedPathNodes)) then
             return nil, "ActionTranslator-translatePath() some grids in the path are the same."
         elseif (not isWithinMap(gridIndex, mapSize)) then
             return nil, "ActionTranslator-translatePath() a node in the path is not within the map."
@@ -809,8 +810,8 @@ local function translatePath(path, launchUnitID, modelSceneWar)
         end
 
         if (not translatedPath.isBlocked) then
-            translatedPath.fuelConsumption      = totalFuelConsumption
-            translatedPath[#translatedPath + 1] = clone(gridIndex)
+            translatedPath.fuelConsumption                = totalFuelConsumption
+            translatedPathNodes[#translatedPathNodes + 1] = GridIndexFunctions.clone(gridIndex)
         end
     end
 
@@ -908,7 +909,7 @@ local function translateBeginTurn(action)
 
     local modelTurnManager = modelSceneWar:getModelTurnManager()
     if (not modelTurnManager:isTurnPhaseRequestToBegin()) then
-        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, {"OutOfSync"})
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
     local actionBeginTurn = {
@@ -1135,7 +1136,7 @@ local function translateEndTurn(action)
     end
 
     if (not modelSceneWar:getModelTurnManager():isTurnPhaseMain()) then
-        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, {"OutOfSync"})
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
     local actionEndTurn = {
@@ -1519,29 +1520,35 @@ local function translateSurrender(action, modelScene)
     return actionSurrender, createActionsForPublish(actionSurrender), createActionForServer(actionSurrender)
 end
 
-local function translateWait(action, modelScene)
+local function translateWait(action)
+    local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
+    if (not modelSceneWar) then
+        return actionOnError
+    end
+
     local rawPath, launchUnitID        = action.path, action.launchUnitID
-    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
-    local sceneWarFileName             = modelScene:getFileName()
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelSceneWar)
     if (not translatedPath) then
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
-    local focusModelUnit = getModelUnitMap(sceneWarFileName):getFocusModelUnit(translatedPath[1], launchUnitID)
-    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())                                              or
-        (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, focusModelUnit:getPlayerIndex()))) then
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
+    local pathNodes      = translatedPath.pathNodes
+    local focusModelUnit = getModelUnitMap(modelSceneWar):getFocusModelUnit(pathNodes[1], launchUnitID)
+    if ((not modelSceneWar:getModelTurnManager():isTurnPhaseMain())                                        or
+        (isPathDestinationOccupiedByVisibleUnit(modelSceneWar, rawPath, focusModelUnit:getPlayerIndex()))) then
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
-    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath, focusModelUnit, false)
+    local sceneWarFileName             = action.sceneWarFileName
+    local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, pathNodes, focusModelUnit, false)
     local actionWait = {
-        actionName    = "Wait",
-        actionID      = action.actionID,
-        fileName      = sceneWarFileName,
-        path          = translatedPath,
-        launchUnitID  = launchUnitID,
-        revealedTiles = revealedTiles,
-        revealedUnits = revealedUnits,
+        actionCode       = ACTION_CODES.ActionWait,
+        actionID         = action.actionID,
+        sceneWarFileName = sceneWarFileName,
+        path             = translatedPath,
+        launchUnitID     = launchUnitID,
+        revealedTiles    = revealedTiles,
+        revealedUnits    = revealedUnits,
     }
     return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
 end
@@ -1556,8 +1563,8 @@ function ActionTranslator.translate(action)
     if     (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
     elseif (actionCode == ACTION_CODES.ActionGetOngoingWarList)            then return translateGetOngoingWarList(           action)
     elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration)        then return translateGetSkillConfiguration(       action)
-    elseif (actionCode == ACTION_CODES.ActionLogin)                        then return translateLogin(                       action)
     elseif (actionCode == ACTION_CODES.ActionJoinWar)                      then return translateJoinWar(                     action)
+    elseif (actionCode == ACTION_CODES.ActionLogin)                        then return translateLogin(                       action)
     elseif (actionCode == ACTION_CODES.ActionNetworkHeartbeat)             then return translateNetworkHeartbeat(            action)
     elseif (actionCode == ACTION_CODES.ActionNewWar)                       then return translateNewWar(                      action)
     elseif (actionCode == ACTION_CODES.ActionRegister)                     then return translateRegister(                    action)
@@ -1567,6 +1574,7 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionSyncSceneWar)                 then return translateSyncSceneWar(                action)
     elseif (actionCode == ACTION_CODES.ActionBeginTurn)                    then return translateBeginTurn(                   action)
     elseif (actionCode == ACTION_CODES.ActionEndTurn)                      then return translateEndTurn(                     action)
+    elseif (actionCode == ACTION_CODES.ActionWait)                         then return translateWait(                        action)
     end
 
     local actionName = action.actionName
@@ -1602,7 +1610,6 @@ function ActionTranslator.translate(action)
     elseif (actionName == "SupplyModelUnit")        then return translateSupplyModelUnit(       action, modelSceneWar)
     elseif (actionName == "Surface")                then return translateSurface(               action, modelSceneWar)
     elseif (actionName == "Surrender")              then return translateSurrender(             action, modelSceneWar)
-    elseif (actionName == "Wait")                   then return translateWait(                  action, modelSceneWar)
     else    return createActionReloadOrExitWar(sceneWarFileName, playerAccount, getLocalizedText(81, "OutOfSync", actionName))
     end
 end

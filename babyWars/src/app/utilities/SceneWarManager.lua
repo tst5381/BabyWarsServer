@@ -83,13 +83,13 @@ local function serialize(fullFileName, data)
 end
 
 local function serializeWarData(warData)
-    local file = io.open(toFullFileName(warData.sceneWarFileName), "w")
+    local file = io.open(toFullFileName(warData.sceneWarFileName), "wb")
     file:write(SerializationFunctions.encode("SceneWar", warData))
     file:close()
 end
 
 local function loadWarData(sceneWarFileName)
-    local file = io.open(toFullFileName(sceneWarFileName), "r")
+    local file = io.open(toFullFileName(sceneWarFileName), "rb")
     assert(file, "SceneWarManager-loadWarData() invalid sceneWarFileName: " .. (sceneWarFileName or ""))
 
     local warData = SerializationFunctions.decode("SceneWar", file:read("*a"))
@@ -115,13 +115,13 @@ local function loadSceneWarNextName()
 end
 
 local function serializeJoinableWarList(list)
-    local file = io.open(JOINABLE_WAR_LIST_PATH, "w")
+    local file = io.open(JOINABLE_WAR_LIST_PATH, "wb")
     file:write(SerializationFunctions.encode("JoinableWarList", {list = list or {}}))
     file:close()
 end
 
 local function loadJoinableWarList()
-    local file = io.open(JOINABLE_WAR_LIST_PATH, "r")
+    local file = io.open(JOINABLE_WAR_LIST_PATH, "rb")
     if (not file) then
         return nil
     else
@@ -139,13 +139,13 @@ local function loadJoinableWarList()
 end
 
 local function serializeOngoingWarList(list)
-    local file = io.open(ONGOING_WAR_LIST_PATH, "w")
+    local file = io.open(ONGOING_WAR_LIST_PATH, "wb")
     file:write(SerializationFunctions.encode("OngoingWarListForServer", {list = list or {}}))
     file:close()
 end
 
 local function loadOngoingWarList()
-    local file = io.open(ONGOING_WAR_LIST_PATH, "r")
+    local file = io.open(ONGOING_WAR_LIST_PATH, "rb")
     if (not file) then
         return nil
     else
