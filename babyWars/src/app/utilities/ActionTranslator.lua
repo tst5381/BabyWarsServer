@@ -621,6 +621,22 @@ local function translateRegister(action)
     end
 end
 
+local function translateReloadSceneWar(action)
+    local playerAccount = action.playerAccount
+    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+        return nil, LOGOUT_INVALID_ACCOUNT_PASSWORD
+    end
+
+    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(action.sceneWarFileName)
+    if (not modelSceneWar) then
+        return nil, RUN_SCENE_MAIN_ENDED_WAR
+    elseif (not isPlayerAliveInWar(modelSceneWar, playerAccount)) then
+        return nil, RUN_SCENE_MAIN_DEFEATED_PLAYER
+    else
+        return createActionReloadSceneWar(modelSceneWar, playerAccount)
+    end
+end
+
 local function translateRunSceneWar(action)
     if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
@@ -721,10 +737,6 @@ local function translateGetOngoingWarList(action)
         actionCode     = ACTION_CODES.ActionGetOngoingWarList,
         ongoingWarList = list,
     }
-end
-
-local function translateReloadSceneWar(action)
-    return createActionReloadOrExitWar(action.fileName, action.playerAccount)
 end
 
 -- This translation ignores the existing unit of the same player at the end of the path, so that the actions of Join/Attack/Wait can reuse this function.
@@ -1105,18 +1117,20 @@ local function translateDropModelUnit(action, modelScene)
     end
 end
 
-local function translateEndTurn(action, modelScene)
-    local sceneWarFileName = modelScene:getFileName()
-    if (not modelScene:getModelTurnManager():isTurnPhaseMain())    then
-        ngx.log(ngx.ERR, "ActionTranslator-translateEndTurn() the current turn phase is expected to be 'main'.")
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
+local function translateEndTurn(action)
+    local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
+    if (not modelSceneWar) then
+        return actionOnError
     end
 
-    -- TODO: enable the weather.
+    if (not modelSceneWar:getModelTurnManager():isTurnPhaseMain()) then
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, {"OutOfSync"})
+    end
+
     local actionEndTurn = {
-        actionName  = "EndTurn",
-        actionID    = action.actionID,
-        fileName    = sceneWarFileName,
+        actionCode       = ACTION_CODES.ActionEndTurn,
+        actionID         = action.actionID,
+        sceneWarFileName = action.sceneWarFileName,
     }
     return actionEndTurn, createActionsForPublish(actionEndTurn), createActionForServer(actionEndTurn)
 end
@@ -1536,9 +1550,11 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionNetworkHeartbeat)             then return translateNetworkHeartbeat(            action)
     elseif (actionCode == ACTION_CODES.ActionNewWar)                       then return translateNewWar(                      action)
     elseif (actionCode == ACTION_CODES.ActionRegister)                     then return translateRegister(                    action)
+    elseif (actionCode == ACTION_CODES.ActionReloadSceneWar)               then return translateReloadSceneWar(              action)
     elseif (actionCode == ACTION_CODES.ActionRunSceneWar)                  then return translateRunSceneWar(                 action)
     elseif (actionCode == ACTION_CODES.ActionSetSkillConfiguration)        then return translateSetSkillConfiguration(       action)
     elseif (actionCode == ACTION_CODES.ActionBeginTurn)                    then return translateBeginTurn(                   action)
+    elseif (actionCode == ACTION_CODES.ActionEndTurn)                      then return translateEndTurn(                     action)
     end
 
     local actionName = action.actionName
@@ -1552,7 +1568,6 @@ function ActionTranslator.translate(action)
     end
 
     if     (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
-    elseif (actionName == "ReloadSceneWar")        then return translateReloadSceneWar(       action)
     end
 
     local sceneWarFileName   = action.sceneWarFileName
@@ -1569,7 +1584,6 @@ function ActionTranslator.translate(action)
     elseif (actionName == "CaptureModelTile")       then return translateCaptureModelTile(      action, modelSceneWar)
     elseif (actionName == "Dive")                   then return translateDive(                  action, modelSceneWar)
     elseif (actionName == "DropModelUnit")          then return translateDropModelUnit(         action, modelSceneWar)
-    elseif (actionName == "EndTurn")                then return translateEndTurn(               action, modelSceneWar)
     elseif (actionName == "JoinModelUnit")          then return translateJoinModelUnit(         action, modelSceneWar)
     elseif (actionName == "LaunchFlare")            then return translateLaunchFlare(           action, modelSceneWar)
     elseif (actionName == "LaunchSilo")             then return translateLaunchSilo(            action, modelSceneWar)
