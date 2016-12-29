@@ -263,11 +263,11 @@ local function getRepairAmountAndCost(modelUnit, fund, maxNormalizedRepairAmount
         math.floor(normalizedRepairAmount * productionCost / 10)
 end
 
-local function generateRepairDataOnBeginTurn(modelSceneWar, income)
+local function generateRepairDataOnBeginTurn(modelSceneWar)
     local modelUnitMap              = getModelUnitMap(modelSceneWar)
     local modelPlayer               = getModelPlayerManager(modelSceneWar):getModelPlayer(getModelTurnManager(modelSceneWar):getPlayerIndex())
     local skillConfiguration        = modelPlayer:getModelSkillConfiguration()
-    local fund                      = modelPlayer:getFund() + income
+    local fund                      = modelPlayer:getFund() + getIncomeOnBeginTurn(modelSceneWar)
     local maxNormalizedRepairAmount = GameConstantFunctions.getBaseNormalizedRepairAmount() + SkillModifierFunctions.getRepairAmountModifier(skillConfiguration)
     local costModifier              = SkillModifierFunctions.getRepairCostModifier(skillConfiguration)
     if (costModifier >= 0) then
@@ -282,9 +282,13 @@ local function generateRepairDataOnBeginTurn(modelSceneWar, income)
         local repairAmount, repairCost = getRepairAmountAndCost(modelUnit, fund, maxNormalizedRepairAmount, costModifier)
         local unitID                   = modelUnit:getUnitId()
         if (modelUnitMap:getLoadedModelUnitWithUnitId(unitID)) then
-            loadedData[unitID] = {repairAmount = repairAmount}
+            loadedData[unitID] = {
+                unitID       = unitID,
+                repairAmount = repairAmount,
+            }
         else
             onMapData[unitID] = {
+                unitID       = unitID,
                 repairAmount = repairAmount,
                 gridIndex    = GridIndexFunctions.clone(modelUnit:getGridIndex()),
             }
@@ -884,18 +888,16 @@ local function translateBeginTurn(action)
         return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, {"OutOfSync"})
     end
 
-    local sceneWarFileName = modelSceneWar:getFileName()
-    local income          = getIncomeOnBeginTurn(sceneWarFileName)
     local actionBeginTurn = {
         actionCode       = ACTION_CODES.ActionBeginTurn,
         actionID         = action.actionID,
-        sceneWarFileName = sceneWarFileName,
+        sceneWarFileName = action.sceneWarFileName,
     }
     if (modelTurnManager:getTurnIndex() == 1) then
-        actionBeginTurn.income = income
+        actionBeginTurn.income = getIncomeOnBeginTurn(modelSceneWar)
     else
         actionBeginTurn.lostPlayerIndex = (areAllUnitsDestroyedOnBeginTurn(modelSceneWar)) and (modelTurnManager:getPlayerIndex()) or (nil)
-        actionBeginTurn.repairData      = generateRepairDataOnBeginTurn(modelSceneWar, income)
+        actionBeginTurn.repairData      = generateRepairDataOnBeginTurn(modelSceneWar)
     end
     return actionBeginTurn, createActionsForPublish(actionBeginTurn), createActionForServer(actionBeginTurn)
 end

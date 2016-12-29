@@ -1,6 +1,7 @@
 
 local ActionPublisher = {}
 
+local ActionCodeFunctions   = require("src.app.utilities.ActionCodeFunctions")
 local GameConstantFunctions = require("src.app.utilities.GameConstantFunctions")
 local GridIndexFunctions    = require("src.app.utilities.GridIndexFunctions")
 local SingletonGetters      = require("src.app.utilities.SingletonGetters")
@@ -57,16 +58,16 @@ end
 -- The private functions that create actions for publish.
 --------------------------------------------------------------------------------
 local creators = {}
-creators.createActionForActivateSkillGroup = function(action, targetPlayerIndex)
+creators.createForActionActivateSkillGroup = function(action, targetPlayerIndex)
     return TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
 end
 
-creators.createActionForAttack = function(action, targetPlayerIndex)
+creators.createForActionAttack = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线，包括合流的两个部队的数据完整广播到目标客户端（不管对目标玩家是否可见）。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除，同时需要计算相关结果数据一并传送（如合流收入）。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
-    local sceneWarFileName   = action.fileName
+    local sceneWarFileName   = action.sceneWarFileName
     local beginningGridIndex = action.path[1]
     local targetGridIndex    = action.targetGridIndex
     local modelUnitMap       = getModelUnitMap(sceneWarFileName)
@@ -88,13 +89,13 @@ creators.createActionForAttack = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
-creators.createActionForBeginTurn = function(action, targetPlayerIndex)
+creators.createForActionBeginTurn = function(action, targetPlayerIndex)
     local repairData = action.repairData
     if (not repairData) then
         return action
     end
 
-    local sceneWarFileName    = action.fileName
+    local sceneWarFileName    = action.sceneWarFileName
     local modelUnitMap        = getModelUnitMap(sceneWarFileName)
     local ignoredUnitIDsOnMap = {}
     for unitID, data in pairs(repairData.onMapData) do
@@ -123,12 +124,12 @@ creators.createActionForBeginTurn = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
-creators.createActionForBuildModelTile = function(action, targetPlayerIndex)
+creators.createForActionBuildModelTile = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
-    local sceneWarFileName   = action.fileName
+    local sceneWarFileName   = action.sceneWarFileName
     local path               = action.path
     local beginningGridIndex = path[1]
     local endingGridIndex    = path[#path]
@@ -146,12 +147,12 @@ creators.createActionForBuildModelTile = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
-creators.createActionForCaptureModelTile = function(action, targetPlayerIndex)
+creators.createForActionCaptureModelTile = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
-    local sceneWarFileName   = action.fileName
+    local sceneWarFileName   = action.sceneWarFileName
     local path               = action.path
     local beginningGridIndex = path[1]
     local endingGridIndex    = path[#path]
@@ -169,12 +170,12 @@ creators.createActionForCaptureModelTile = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
-creators.createActionForDive = function(action, targetPlayerIndex)
+creators.createForActionDive = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
-    local sceneWarFileName   = action.fileName
+    local sceneWarFileName   = action.sceneWarFileName
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
@@ -186,12 +187,12 @@ creators.createActionForDive = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
-creators.createActionForDropModelUnit = function(action, targetPlayerIndex)
+creators.createForActionDropModelUnit = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
-    local sceneWarFileName   = action.fileName
+    local sceneWarFileName   = action.sceneWarFileName
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
@@ -203,16 +204,16 @@ creators.createActionForDropModelUnit = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
-creators.createActionForEndTurn = function(action, targetPlayerIndex)
+creators.createForActionEndTurn = function(action, targetPlayerIndex)
     return action
 end
 
-creators.createActionForJoinModelUnit = function(action, targetPlayerIndex)
+creators.createForActionJoinModelUnit = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线，包括合流的两个部队的数据完整广播到目标客户端（不管对目标玩家是否可见）。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除，同时需要计算相关结果数据一并传送（如合流收入）。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
-    local sceneWarFileName    = action.fileName
+    local sceneWarFileName    = action.sceneWarFileName
     local path                = action.path
     local beginningGridIndex  = path[1]
     local endingGridIndex     = path[#path]
@@ -235,8 +236,8 @@ creators.createActionForJoinModelUnit = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
-creators.createActionForLaunchFlare = function(action, targetPlayerIndex)
-    local sceneWarFileName   = action.fileName
+creators.createForActionLaunchFlare = function(action, targetPlayerIndex)
+    local sceneWarFileName   = action.sceneWarFileName
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
     local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
@@ -250,12 +251,12 @@ creators.createActionForLaunchFlare = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
-creators.createActionForLaunchSilo = function(action, targetPlayerIndex)
+creators.createForActionLaunchSilo = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
-    local sceneWarFileName   = action.fileName
+    local sceneWarFileName   = action.sceneWarFileName
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
@@ -267,12 +268,12 @@ creators.createActionForLaunchSilo = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
-creators.createActionForLoadModelUnit = function(action, targetPlayerIndex)
+creators.createForActionLoadModelUnit = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线完整广播到目标客户端（除非移动前后都对目标玩家不可见）。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
-    local sceneWarFileName = action.fileName
+    local sceneWarFileName = action.sceneWarFileName
     local path             = action.path
     local modelUnitMap     = getModelUnitMap(sceneWarFileName)
     local endingGridIndex  = path[#path]
@@ -292,27 +293,27 @@ creators.createActionForLoadModelUnit = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
-creators.createActionForProduceModelUnitOnTile = function(action, playerIndex)
+creators.createForActionProduceModelUnitOnTile = function(action, playerIndex)
     local tiledID  = action.tiledID
     local unitType = getUnitTypeWithTiledId(tiledID)
-    if (isUnitVisible(action.fileName, action.gridIndex, unitType, unitType == "Submarine", getPlayerIndexWithTiledId(tiledID), playerIndex)) then
+    if (isUnitVisible(action.sceneWarFileName, action.gridIndex, unitType, unitType == "Submarine", getPlayerIndexWithTiledId(tiledID), playerIndex)) then
         return TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     else
         return {
-            actionName = "ProduceModelUnitOnTile",
-            actionID   = action.actionID,
-            fileName   = action.fileName,
-            cost       = action.cost,
+            actionName       = "ProduceModelUnitOnTile",
+            actionID         = action.actionID,
+            sceneWarFileName = action.sceneWarFileName,
+            cost             = action.cost,
         }
     end
 end
 
-creators.createActionForProduceModelUnitOnUnit = function(action, targetPlayerIndex)
+creators.createForActionProduceModelUnitOnUnit = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线完整广播到目标客户端（除非移动前后都对目标玩家不可见）。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
-    local sceneWarFileName   = action.fileName
+    local sceneWarFileName   = action.sceneWarFileName
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
@@ -324,12 +325,12 @@ creators.createActionForProduceModelUnitOnUnit = function(action, targetPlayerIn
     return actionForPublish
 end
 
-creators.createActionForSupplyModelUnit = function(action, targetPlayerIndex)
+creators.createForActionSupplyModelUnit = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线完整广播到目标客户端（除非移动前后都对目标玩家不可见）。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
-    local sceneWarFileName   = action.fileName
+    local sceneWarFileName   = action.sceneWarFileName
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
@@ -341,12 +342,12 @@ creators.createActionForSupplyModelUnit = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
-creators.createActionForSurface = function(action, targetPlayerIndex)
+creators.createForActionSurface = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
-    local sceneWarFileName   = action.fileName
+    local sceneWarFileName   = action.sceneWarFileName
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
@@ -358,16 +359,16 @@ creators.createActionForSurface = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
-creators.createActionForSurrender = function(action, targetPlayerIndex)
+creators.createForActionSurrender = function(action, targetPlayerIndex)
     return action
 end
 
-creators.createActionForWait = function(action, targetPlayerIndex)
+creators.createForActionWait = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线完整广播到目标客户端（除非移动前后都对目标玩家不可见）。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
-    local sceneWarFileName   = action.fileName
+    local sceneWarFileName   = action.sceneWarFileName
     local beginningGridIndex = action.path[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
 
@@ -383,10 +384,10 @@ end
 -- The public functions.
 --------------------------------------------------------------------------------
 function ActionPublisher.createActionsForPublish(action)
-    local sceneWarFileName   = action.fileName
+    local sceneWarFileName   = action.sceneWarFileName
     local playerIndexInTurn  = getModelTurnManager(sceneWarFileName):getPlayerIndex()
     local modelPlayerManager = getModelPlayerManager(sceneWarFileName)
-    local generator          = creators["createActionFor" .. action.actionName]
+    local generator          = creators["createFor" .. ActionCodeFunctions.getActionName(action.actionCode)]
 
     local actionsForPublish  = {}
     modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)

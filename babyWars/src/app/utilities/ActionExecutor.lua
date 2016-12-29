@@ -332,6 +332,15 @@ local function callbackOnWarEndedForClient()
     runSceneMain(getLoggedInAccountAndPassword() ~= nil)
 end
 
+local function cleanupOnFinishExecutingOnClient(modelSceneWar)
+    assert(not IS_SERVER, "ActionExecutor-cleanupOnFinishExecutingOnClient() this shouldn't be invoked on the server.")
+    getModelMessageIndicator(modelSceneWar):hidePersistentMessage(getLocalizedText(80, "TransferingData"))
+    getScriptEventDispatcher(modelSceneWar):dispatchEvent({
+        name    = "EvtIsWaitingForServerResponse",
+        waiting = false,
+    })
+end
+
 --------------------------------------------------------------------------------
 -- The executors for non-war actions.
 --------------------------------------------------------------------------------
@@ -739,12 +748,16 @@ local function executeAttack(action)
     end
 end
 
-local function executeBeginTurn(action)
-    local sceneWarFileName   = action.fileName
-    local modelSceneWar      = getModelScene(sceneWarFileName)
-    local modelTurnManager   = getModelTurnManager(sceneWarFileName)
+local function executeBeginTurn(action, modelSceneWar)
+    if (not modelSceneWar.isModelSceneWar) then
+        return
+    end
+    modelSceneWar:setExecutingAction(true)
+
+    local sceneWarFileName   = action.sceneWarFileName
+    local modelTurnManager   = getModelTurnManager(modelSceneWar)
     local lostPlayerIndex    = action.lostPlayerIndex
-    local modelPlayerManager = getModelPlayerManager(sceneWarFileName)
+    local modelPlayerManager = getModelPlayerManager(modelSceneWar)
 
     if (IS_SERVER) then
         if (not lostPlayerIndex) then
@@ -771,7 +784,7 @@ local function executeBeginTurn(action)
             local isLoggedInPlayerLost = lostModelPlayer:getAccount() == getLoggedInAccountAndPassword()
             modelSceneWar:setEnded((isLoggedInPlayerLost) or (modelPlayerManager:getAlivePlayersCount() <= 2))
             modelTurnManager:beginTurnPhaseBeginning(action.income, action.repairData, function()
-                getModelMessageIndicator(sceneWarFileName):showMessage(getLocalizedText(76, lostModelPlayer:getNickname()))
+                getModelMessageIndicator(modelSceneWar):showMessage(getLocalizedText(76, lostModelPlayer:getNickname()))
                 Destroyers.destroyPlayerForce(sceneWarFileName, lostPlayerIndex)
 
                 if (isLoggedInPlayerLost) then
@@ -784,6 +797,7 @@ local function executeBeginTurn(action)
                 modelSceneWar:setExecutingAction(false)
             end)
         end
+        cleanupOnFinishExecutingOnClient(modelSceneWar)
     end
 end
 
@@ -1455,6 +1469,7 @@ function ActionExecutor.execute(action, modelScene)
     elseif (actionCode == ACTION_CODES.ActionRunSceneMain)                 then executeRunSceneMain(                action, modelScene)
     elseif (actionCode == ACTION_CODES.ActionRunSceneWar)                  then executeRunSceneWar(                 action, modelScene)
     elseif (actionCode == ACTION_CODES.ActionSetSkillConfiguration)        then executeSetSkillConfiguration(       action, modelScene)
+    elseif (actionCode == ACTION_CODES.ActionBeginTurn)                    then executeBeginTurn(                   action, modelScene)
     else                                                                        error("ActionExecutor.execute() invalid action: " .. SerializationFunctions.toString(action))
     end
 
@@ -1470,7 +1485,6 @@ function ActionExecutor.execute(action, modelScene)
         getModelScene(action.fileName):setExecutingAction(true)
         if     (actionName == "ActivateSkillGroup")     then executeActivateSkillGroup(    action)
         elseif (actionName == "Attack")                 then executeAttack(                action)
-        elseif (actionName == "BeginTurn")              then executeBeginTurn(             action)
         elseif (actionName == "BuildModelTile")         then executeBuildModelTile(        action)
         elseif (actionName == "CaptureModelTile")       then executeCaptureModelTile(      action)
         elseif (actionName == "Dive")                   then executeDive(                  action)
