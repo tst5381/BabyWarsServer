@@ -118,6 +118,16 @@ local MESSAGE_REGISTERED_ACCOUNT = {
     messageCode   = 81,
     messageParams = {"RegisteredAccount"},
 }
+local RUN_SCENE_MAIN_DEFEATED_PLAYER = {
+    actionCode    = ACTION_CODES.ActionRunSceneMain,
+    messageCode   = 81,
+    messageParams = {"DefeatedPlayer"},
+}
+local RUN_SCENE_MAIN_ENDED_WAR = {
+    actionCode    = ACTION_CODES.ActionRunSceneMain,
+    messageCode   = 81,
+    messageParams = {"EndedWar"},
+}
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -164,10 +174,10 @@ local function countModelUnitOnMapWithPlayerIndex(modelUnitMap, playerIndex)
     return count
 end
 
-local function getIncome(sceneWarFileName)
-    local playerIndex = getModelTurnManager(sceneWarFileName):getPlayerIndex()
+local function getIncomeOnBeginTurn(modelSceneWar)
+    local playerIndex = getModelTurnManager(modelSceneWar):getPlayerIndex()
     local income      = 0
-    getModelTileMap(sceneWarFileName):forEachModelTile(function(modelTile)
+    getModelTileMap(modelSceneWar):forEachModelTile(function(modelTile)
         if ((modelTile.getIncomeAmount) and (modelTile:getPlayerIndex() == playerIndex)) then
             income = income + (modelTile:getIncomeAmount() or 0)
         end
@@ -176,10 +186,42 @@ local function getIncome(sceneWarFileName)
     return income
 end
 
-local function getRepairableModelUnits(sceneWarFileName)
-    local playerIndex  = getModelTurnManager(sceneWarFileName):getPlayerIndex()
-    local modelUnitMap = getModelUnitMap(sceneWarFileName)
-    local modelTileMap = getModelTileMap(sceneWarFileName)
+local function areAllUnitsDestroyedOnBeginTurn(modelSceneWar)
+    local playerIndex   = getModelTurnManager(modelSceneWar):getPlayerIndex()
+    local modelTileMap  = getModelTileMap(modelSceneWar)
+    local modelUnitMap  = getModelUnitMap(modelSceneWar)
+    local mapSize       = modelUnitMap:getMapSize()
+    local width, height = mapSize.width, mapSize.height
+    local hasUnit       = false
+
+    for x = 1, width do
+        for y = 1, height do
+            local gridIndex = {x = x, y = y}
+            local modelUnit = modelUnitMap:getModelUnit(gridIndex)
+            if ((modelUnit) and (modelUnit:getPlayerIndex() == playerIndex)) then
+                hasUnit = true
+                if ((modelUnit.getCurrentFuel)                                            and
+                    (modelUnit:getCurrentFuel() <= modelUnit:getFuelConsumptionPerTurn()) and
+                    (modelUnit:shouldDestroyOnOutOfFuel()))                               then
+
+                    local modelTile = modelTileMap:getModelTile(gridIndex)
+                    if ((modelTile.canRepairTarget) and (modelTile:canRepairTarget(modelUnit))) then
+                        return false
+                    end
+                else
+                    return false
+                end
+            end
+        end
+    end
+
+    return hasUnit
+end
+
+local function getRepairableModelUnits(modelSceneWar)
+    local playerIndex  = getModelTurnManager(modelSceneWar):getPlayerIndex()
+    local modelUnitMap = getModelUnitMap(modelSceneWar)
+    local modelTileMap = getModelTileMap(modelSceneWar)
     local units        = {}
 
     modelUnitMap:forEachModelUnitOnMap(function(modelUnit)
@@ -221,9 +263,9 @@ local function getRepairAmountAndCost(modelUnit, fund, maxNormalizedRepairAmount
         math.floor(normalizedRepairAmount * productionCost / 10)
 end
 
-local function generateRepairData(sceneWarFileName, income)
-    local modelUnitMap              = getModelUnitMap(sceneWarFileName)
-    local modelPlayer               = getModelPlayerManager(sceneWarFileName):getModelPlayer(getModelTurnManager(sceneWarFileName):getPlayerIndex())
+local function generateRepairDataOnBeginTurn(modelSceneWar, income)
+    local modelUnitMap              = getModelUnitMap(modelSceneWar)
+    local modelPlayer               = getModelPlayerManager(modelSceneWar):getModelPlayer(getModelTurnManager(modelSceneWar):getPlayerIndex())
     local skillConfiguration        = modelPlayer:getModelSkillConfiguration()
     local fund                      = modelPlayer:getFund() + income
     local maxNormalizedRepairAmount = GameConstantFunctions.getBaseNormalizedRepairAmount() + SkillModifierFunctions.getRepairAmountModifier(skillConfiguration)
@@ -236,7 +278,7 @@ local function generateRepairData(sceneWarFileName, income)
 
     local onMapData  = {}
     local loadedData = {}
-    for _, modelUnit in ipairs(getRepairableModelUnits(sceneWarFileName)) do
+    for _, modelUnit in ipairs(getRepairableModelUnits(modelSceneWar)) do
         local repairAmount, repairCost = getRepairAmountAndCost(modelUnit, fund, maxNormalizedRepairAmount, costModifier)
         local unitID                   = modelUnit:getUnitId()
         if (modelUnitMap:getLoadedModelUnitWithUnitId(unitID)) then
@@ -255,38 +297,6 @@ local function generateRepairData(sceneWarFileName, income)
         loadedData    = loadedData,
         remainingFund = fund,
     }
-end
-
-local function areAllUnitsOutOfFuelAndDestroyed(sceneWarFileName)
-    local playerIndex   = getModelTurnManager(sceneWarFileName):getPlayerIndex()
-    local modelTileMap  = getModelTileMap(sceneWarFileName)
-    local modelUnitMap  = getModelUnitMap(sceneWarFileName)
-    local mapSize       = modelUnitMap:getMapSize()
-    local width, height = mapSize.width, mapSize.height
-    local hasUnit       = false
-
-    for x = 1, width do
-        for y = 1, height do
-            local gridIndex = {x = x, y = y}
-            local modelUnit = modelUnitMap:getModelUnit(gridIndex)
-            if ((modelUnit) and (modelUnit:getPlayerIndex() == playerIndex)) then
-                hasUnit = true
-                if ((modelUnit.getCurrentFuel)                                            and
-                    (modelUnit:getCurrentFuel() <= modelUnit:getFuelConsumptionPerTurn()) and
-                    (modelUnit:shouldDestroyOnOutOfFuel()))                               then
-
-                    local modelTile = modelTileMap:getModelTile(gridIndex)
-                    if ((modelTile.canRepairTarget) and (modelTile:canRepairTarget(modelUnit))) then
-                        return false
-                    end
-                else
-                    return false
-                end
-            end
-        end
-    end
-
-    return hasUnit
 end
 
 local function canDoActionSupplyModelUnit(focusModelUnit, destination, modelUnitMap)
@@ -424,6 +434,44 @@ end
 
 local function createActionForServer(action)
     return TableFunctions.clone(action, IGNORED_ACTION_KEYS_FOR_SERVER)
+end
+
+local function createActionReloadSceneWar(modelSceneWar, playerAccount, messageCode, messageParams)
+    local _, playerIndex = modelSceneWar:getModelPlayerManager():getModelPlayerWithAccount(playerAccount)
+    return {
+        actionCode    = ACTION_CODES.ActionReloadSceneWar,
+        warData       = modelSceneWar:toSerializableTableForPlayerIndex(playerIndex),
+        messageCode   = messageCode,
+        messageParams = messageParams,
+    }
+end
+
+local function isPlayerInTurnInWar(modelSceneWar, playerAccount)
+    local playerIndex = modelSceneWar:getModelTurnManager():getPlayerIndex()
+    return modelSceneWar:getModelPlayerManager():getModelPlayer(playerIndex):getAccount() == playerAccount
+end
+
+local function isPlayerAliveInWar(modelSceneWar, playerAccount)
+    local modelPlayer = modelSceneWar:getModelPlayerManager():getModelPlayerWithAccount(playerAccount)
+    return (modelPlayer) and (modelPlayer:isAlive())
+end
+
+local function getModelSceneWarWithAction(action)
+    local playerAccount = action.playerAccount
+    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+        return nil, LOGOUT_INVALID_ACCOUNT_PASSWORD
+    end
+
+    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(action.sceneWarFileName)
+    if (not modelSceneWar) then
+        return nil, RUN_SCENE_MAIN_ENDED_WAR
+    elseif (not isPlayerAliveInWar(modelSceneWar, playerAccount)) then
+        return nil, RUN_SCENE_MAIN_DEFEATED_PLAYER
+    elseif ((not isPlayerInTurnInWar(modelSceneWar, playerAccount)) or (modelSceneWar:getActionId() ~= action.actionID - 1)) then
+        return nil, createActionReloadSceneWar(modelSceneWar, playerAccount, 81, {"OutOfSync"})
+    else
+        return modelSceneWar
+    end
 end
 
 --------------------------------------------------------------------------------
@@ -660,7 +708,7 @@ local function translateGetOngoingWarList(action)
     local list = {}
     for sceneWarFileName, _ in pairs(PlayerProfileManager.getPlayerProfile(playerAccount).warLists.ongoing) do
         list[#list + 1] = {
-            isInTurn         = SceneWarManager.isPlayerInTurn(sceneWarFileName, playerAccount),
+            isInTurn         = isPlayerInTurnInWar(SceneWarManager.getOngoingModelSceneWar(sceneWarFileName), playerAccount),
             warConfiguration = SceneWarManager.getOngoingSceneWarConfiguration(sceneWarFileName),
         }
     end
@@ -825,25 +873,29 @@ local function translateAttack(action, modelScene)
     end
 end
 
-local function translateBeginTurn(action, modelScene)
-    local sceneWarFileName = modelScene:getFileName()
-    local modelTurnManager = modelScene:getModelTurnManager()
-    if (not modelTurnManager:isTurnPhaseRequestToBegin()) then
-        ngx.log(ngx.ERR, "ActionTranslator-translateBeginTurn() the current turn phase is expected to be 'requestToBegin'.")
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
+local function translateBeginTurn(action)
+    local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
+    if (not modelSceneWar) then
+        return actionOnError
     end
 
-    local income          = getIncome(sceneWarFileName)
+    local modelTurnManager = modelSceneWar:getModelTurnManager()
+    if (not modelTurnManager:isTurnPhaseRequestToBegin()) then
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, {"OutOfSync"})
+    end
+
+    local sceneWarFileName = modelSceneWar:getFileName()
+    local income          = getIncomeOnBeginTurn(sceneWarFileName)
     local actionBeginTurn = {
-        actionName = "BeginTurn",
-        actionID   = action.actionID,
-        fileName   = sceneWarFileName,
+        actionCode       = ACTION_CODES.ActionBeginTurn,
+        actionID         = action.actionID,
+        sceneWarFileName = sceneWarFileName,
     }
     if (modelTurnManager:getTurnIndex() == 1) then
         actionBeginTurn.income = income
     else
-        actionBeginTurn.lostPlayerIndex = (areAllUnitsOutOfFuelAndDestroyed(sceneWarFileName)) and (playerIndex) or (nil)
-        actionBeginTurn.repairData      = generateRepairData(sceneWarFileName, income)
+        actionBeginTurn.lostPlayerIndex = (areAllUnitsDestroyedOnBeginTurn(modelSceneWar)) and (modelTurnManager:getPlayerIndex()) or (nil)
+        actionBeginTurn.repairData      = generateRepairDataOnBeginTurn(modelSceneWar, income)
     end
     return actionBeginTurn, createActionsForPublish(actionBeginTurn), createActionForServer(actionBeginTurn)
 end
@@ -1484,6 +1536,7 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionRegister)                     then return translateRegister(                    action)
     elseif (actionCode == ACTION_CODES.ActionRunSceneWar)                  then return translateRunSceneWar(                 action)
     elseif (actionCode == ACTION_CODES.ActionSetSkillConfiguration)        then return translateSetSkillConfiguration(       action)
+    elseif (actionCode == ACTION_CODES.ActionBeginTurn)                    then return translateBeginTurn(                   action)
     end
 
     local actionName = action.actionName
@@ -1497,7 +1550,6 @@ function ActionTranslator.translate(action)
     end
 
     if     (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
-    elseif (actionName == "GetSceneWarData")       then return translateGetSceneWarData(      action)
     elseif (actionName == "ReloadSceneWar")        then return translateReloadSceneWar(       action)
     end
 
@@ -1511,7 +1563,6 @@ function ActionTranslator.translate(action)
 
     if     (actionName == "ActivateSkillGroup")     then return translateActivateSkillGroup(    action, modelSceneWar)
     elseif (actionName == "Attack")                 then return translateAttack(                action, modelSceneWar)
-    elseif (actionName == "BeginTurn")              then return translateBeginTurn(             action, modelSceneWar)
     elseif (actionName == "BuildModelTile")         then return translateBuildModelTile(        action, modelSceneWar)
     elseif (actionName == "CaptureModelTile")       then return translateCaptureModelTile(      action, modelSceneWar)
     elseif (actionName == "Dive")                   then return translateDive(                  action, modelSceneWar)

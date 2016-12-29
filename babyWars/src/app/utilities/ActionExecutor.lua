@@ -418,10 +418,6 @@ local function executeGetSceneWarActionId(action)
     end
 end
 
-local function executeGetSceneWarData(action)
-    -- The "GetSceneWarData" action is now ignored when a war scene is running. Use the "ReloadSceneWar" action instead.
-end
-
 local function executeJoinWar(action, modelScene)
     if (IS_SERVER) then
         SceneWarManager.joinWar(action)
@@ -537,21 +533,26 @@ local function executeSetSkillConfiguration(action, modelScene)
     end
 end
 
-local function executeReloadSceneWar(action)
+local function executeReloadSceneWar(action, modelScene)
     assert(not IS_SERVER, "ActionExecutor-executeReloadSceneWar() should not be invoked on the server.")
-    if (action.data.actionID >= getModelScene():getActionId()) then
-        if (action.message) then
-            getModelMessageIndicator():showPersistentMessage(action.message)
+
+    local warData = action.warData
+    if ((modelScene.isModelSceneWar)                           and
+        (modelScene:getFileName() == warData.sceneWarFileName) and
+        (modelScene:getActionId() <= warData.actionID))        then
+        if (action.messageCode) then
+            getModelMessageIndicator(modelScene):showPersistentMessage(getLocalizedText(action.messageCode, action.messageParams))
         end
 
-        local actorSceneWar = Actor.createWithModelAndViewName("sceneWar.ModelSceneWar", action.data, "sceneWar.ViewSceneWar")
+        local actorSceneWar = Actor.createWithModelAndViewName("sceneWar.ModelSceneWar", warData, "sceneWar.ViewSceneWar")
         ActorManager.setAndRunRootActor(actorSceneWar, "FADE", 1)
     end
 end
 
 local function executeRunSceneMain(action)
     assert(not IS_SERVER, "ActionExecutor-executeRunSceneMain() should not be invoked on the server.")
-    runSceneMain(getLoggedInAccountAndPassword() ~= nil, action.message)
+    local message = (action.messageCode) and (getLocalizedText(action.messageCode, action.messageParams)) or (nil)
+    runSceneMain(getLoggedInAccountAndPassword() ~= nil, message)
 end
 
 --------------------------------------------------------------------------------
@@ -1450,6 +1451,8 @@ function ActionExecutor.execute(action, modelScene)
     elseif (actionCode == ACTION_CODES.ActionMessage)                      then executeMessage(                     action, modelScene)
     elseif (actionCode == ACTION_CODES.ActionNewWar)                       then executeNewWar(                      action, modelScene)
     elseif (actionCode == ACTION_CODES.ActionRegister)                     then executeRegister(                    action, modelScene)
+    elseif (actionCode == ACTION_CODES.ActionReloadSceneWar)               then executeReloadSceneWar(              action, modelScene)
+    elseif (actionCode == ACTION_CODES.ActionRunSceneMain)                 then executeRunSceneMain(                action, modelScene)
     elseif (actionCode == ACTION_CODES.ActionRunSceneWar)                  then executeRunSceneWar(                 action, modelScene)
     elseif (actionCode == ACTION_CODES.ActionSetSkillConfiguration)        then executeSetSkillConfiguration(       action, modelScene)
     else                                                                        error("ActionExecutor.execute() invalid action: " .. SerializationFunctions.toString(action))
@@ -1462,9 +1465,6 @@ function ActionExecutor.execute(action, modelScene)
         elseif (actionName == "Error")               then executeError(              action)
         elseif (actionName == "GetReplayList")       then executeGetReplayList(      action)
         elseif (actionName == "GetSceneWarActionId") then executeGetSceneWarActionId(action)
-        elseif (actionName == "GetSceneWarData")     then executeGetSceneWarData(    action)
-        elseif (actionName == "ReloadSceneWar")      then executeReloadSceneWar(     action)
-        elseif (actionName == "RunSceneMain")        then executeRunSceneMain(       action)
         end
     else
         getModelScene(action.fileName):setExecutingAction(true)

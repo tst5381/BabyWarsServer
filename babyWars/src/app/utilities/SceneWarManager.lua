@@ -491,16 +491,6 @@ function SceneWarManager.updateModelSceneWarWithAction(action)
     return SceneWarManager
 end
 
-function SceneWarManager.isPlayerInTurn(sceneWarFileName, playerAccount)
-    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
-    if (not modelSceneWar) then
-        return false
-    else
-        local playerIndex = modelSceneWar:getModelTurnManager():getPlayerIndex()
-        return modelSceneWar:getModelPlayerManager():getModelPlayer(playerIndex):getAccount() == playerAccount
-    end
-end
-
 function SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)
     for _, player in pairs(warConfiguration.players) do
         if (player.account == playerAccount) then
