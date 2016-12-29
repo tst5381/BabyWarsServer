@@ -638,23 +638,22 @@ local function translateReloadSceneWar(action)
 end
 
 local function translateRunSceneWar(action)
-    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+    local playerAccount = action.playerAccount
+    if (not PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
     end
 
     local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(action.sceneWarFileName)
     if (not modelSceneWar) then
         return MESSAGE_ENDED_WAR
+    elseif (not isPlayerAliveInWar(modelSceneWar, playerAccount)) then
+        return MESSAGE_DEFEATED_PLAYER
     else
-        local modelPlayer, playerIndex = modelSceneWar:getModelPlayerManager():getModelPlayerWithAccount(action.playerAccount)
-        if (not modelPlayer:isAlive()) then
-            return MESSAGE_DEFEATED_PLAYER
-        else
-            return {
-                actionCode = ACTION_CODES.ActionRunSceneWar,
-                warData    = modelSceneWar:toSerializableTableForPlayerIndex(playerIndex),
-            }
-        end
+        local _, playerIndex = modelSceneWar:getModelPlayerManager():getModelPlayerWithAccount(playerAccount)
+        return {
+            actionCode = ACTION_CODES.ActionRunSceneWar,
+            warData    = modelSceneWar:toSerializableTableForPlayerIndex(playerIndex),
+        }
     end
 end
 
@@ -671,6 +670,28 @@ local function translateSetSkillConfiguration(action)
     else
         action.actionCode = ACTION_CODES.ActionSetSkillConfiguration
         return {actionCode = ACTION_CODES.ActionSetSkillConfiguration}, nil, action
+    end
+end
+
+local function translateSyncSceneWar(action)
+    local playerAccount = action.playerAccount
+    if (not PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
+        return LOGOUT_INVALID_ACCOUNT_PASSWORD
+    end
+
+    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(action.sceneWarFileName)
+    if (not modelSceneWar) then
+        return RUN_SCENE_MAIN_ENDED_WAR
+    elseif (not isPlayerAliveInWar(modelSceneWar, playerAccount)) then
+        return RUN_SCENE_MAIN_DEFEATED_PLAYER
+    elseif (modelSceneWar:getActionId() > action.actionID) then
+        return createActionReloadSceneWar(modelSceneWar, playerAccount, 81, {"AutoSyncWar"})
+    else
+        return {
+            actionCode       = ACTION_CODES.ActionSyncSceneWar,
+            actionID         = action.actionID,
+            sceneWarFileName = action.sceneWarFileName,
+        }
     end
 end
 
@@ -695,16 +716,6 @@ local function translateGetReplayList(action)
     return {
         actionName = "GetReplayList",
         list       = SceneWarManager.getReplayList(action.pageIndex),
-    }
-end
-
-local function translateGetSceneWarActionId(action)
-    local sceneWarFileName = action.fileName
-    local modelSceneWar    = SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
-    return {
-        actionName       = "GetSceneWarActionId",
-        fileName         = sceneWarFileName,
-        sceneWarActionID = (modelSceneWar) and (modelSceneWar:getActionId()) or (nil),
     }
 end
 
@@ -1553,6 +1564,7 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionReloadSceneWar)               then return translateReloadSceneWar(              action)
     elseif (actionCode == ACTION_CODES.ActionRunSceneWar)                  then return translateRunSceneWar(                 action)
     elseif (actionCode == ACTION_CODES.ActionSetSkillConfiguration)        then return translateSetSkillConfiguration(       action)
+    elseif (actionCode == ACTION_CODES.ActionSyncSceneWar)                 then return translateSyncSceneWar(                action)
     elseif (actionCode == ACTION_CODES.ActionBeginTurn)                    then return translateBeginTurn(                   action)
     elseif (actionCode == ACTION_CODES.ActionEndTurn)                      then return translateEndTurn(                     action)
     end
@@ -1565,9 +1577,6 @@ function ActionTranslator.translate(action)
     local playerAccount = action.playerAccount
     if (not PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
-    end
-
-    if     (actionName == "GetSceneWarActionId")   then return translateGetSceneWarActionId(  action)
     end
 
     local sceneWarFileName   = action.sceneWarFileName
