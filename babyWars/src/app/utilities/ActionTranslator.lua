@@ -99,6 +99,11 @@ local MESSAGE_INVALID_WAR_PASSWORD = {
     messageCode   = 81,
     messageParams = {"InvalidWarPassword"},
 }
+local MESSAGE_NO_REPLAY_DATA = {
+    actionCode    = ACTION_CODES.ActionMessage,
+    messageCode   = 81,
+    messageParams = {"NoReplayData"},
+}
 local MESSAGE_NOT_JOINABLE_WAR = {
     actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
@@ -482,6 +487,18 @@ end
 --------------------------------------------------------------------------------
 -- The translate functions.
 --------------------------------------------------------------------------------
+local function translateDownloadReplayData(action)
+    local encodedReplayData = SceneWarManager.getEncodedReplayData(action.sceneWarFileName)
+    if (not encodedReplayData) then
+        return MESSAGE_NO_REPLAY_DATA
+    else
+        return {
+            actionCode        = ACTION_CODES.ActionDownloadReplayData,
+            encodedReplayData = encodedReplayData,
+        }
+    end
+end
+
 local function translateGetSkillConfiguration(action)
     if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
@@ -692,23 +709,6 @@ local function translateSyncSceneWar(action)
             actionCode       = ACTION_CODES.ActionSyncSceneWar,
             actionID         = action.actionID,
             sceneWarFileName = action.sceneWarFileName,
-        }
-    end
-end
-
-local function translateDownloadReplayData(action)
-    local sceneWarFileName = action.sceneWarFileName
-    local data             = SceneWarManager.getReplayData(sceneWarFileName)
-    if (data) then
-        return {
-            actionName       = "DownloadReplayData",
-            sceneWarFileName = sceneWarFileName,
-            data             = data,
-        }
-    else
-        return {
-            actionName = "Message",
-            message    = getLocalizedText(10, "ReplayDataNotExists")
         }
     end
 end
@@ -1561,7 +1561,8 @@ function ActionTranslator.translate(action)
     local actionCode = action.actionCode
     assert(ActionCodeFunctions.getActionName(actionCode), "ActionTranslator.translate() invalid actionCode: " .. (actionCode or ""))
 
-    if     (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
+    if     (actionCode == ACTION_CODES.ActionDownloadReplayData)           then return translateDownloadReplayData(          action)
+    elseif (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
     elseif (actionCode == ACTION_CODES.ActionGetOngoingWarList)            then return translateGetOngoingWarList(           action)
     elseif (actionCode == ACTION_CODES.ActionGetReplayConfigurations)      then return translateGetReplayConfigurations(     action)
     elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration)        then return translateGetSkillConfiguration(       action)
@@ -1582,9 +1583,6 @@ function ActionTranslator.translate(action)
     end
 
     local actionName = action.actionName
-    if     (actionName == "DownloadReplayData") then return translateDownloadReplayData(action)
-    end
-
     local playerAccount = action.playerAccount
     if (not PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
         return LOGOUT_INVALID_ACCOUNT_PASSWORD

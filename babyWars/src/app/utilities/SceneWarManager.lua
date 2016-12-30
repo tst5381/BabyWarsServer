@@ -473,7 +473,7 @@ function SceneWarManager.getReplayConfigurations(pageIndex)
     return list
 end
 
-function SceneWarManager.getReplayData(sceneWarFileName)
+function SceneWarManager.getEncodedReplayData(sceneWarFileName)
     if (not s_ReplayList[sceneWarFileName]) then
         return nil
     else
