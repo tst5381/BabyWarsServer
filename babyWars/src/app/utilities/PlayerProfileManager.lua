@@ -150,11 +150,11 @@ end
 function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
     local sceneWarFileName   = modelSceneWar:getFileName()
     local modelPlayerManager = modelSceneWar:getModelPlayerManager()
-    local playersCount       = modelPlayerManager:getPlayersCount()
     local alivePlayersCount  = 0
     local alivePlayerAccount = nil
+    local gameRecordIndex    = modelPlayerManager:getPlayersCount() * 2 - 3 + (modelSceneWar:isFogOfWarByDefault() and 1 or 0)
 
-    modelSceneWar:getModelPlayerManager():forEachModelPlayer(function(modelPlayer, playerIndex)
+    modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)
         local account = modelPlayer:getAccount()
         if (modelPlayer:isAlive()) then
             alivePlayersCount  = alivePlayersCount + 1
@@ -162,7 +162,7 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
         else
             local profile = PlayerProfileManager.getPlayerProfile(account)
             if (profile.warLists.ongoing[sceneWarFileName]) then
-                profile.gameRecords[playersCount].lose = profile.gameRecords[playersCount].lose + 1
+                profile.gameRecords[gameRecordIndex].lose = profile.gameRecords[gameRecordIndex].lose + 1
                 profile.warLists.ongoing[sceneWarFileName] = nil
                 serializeProfile(account, profile)
             end
@@ -171,7 +171,7 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
     if (alivePlayersCount == 1) then
         local profile = PlayerProfileManager.getPlayerProfile(alivePlayerAccount)
-        profile.gameRecords[playersCount].win = profile.gameRecords[playersCount].win + 1
+        profile.gameRecords[gameRecordIndex].win = profile.gameRecords[gameRecordIndex].win + 1
         profile.warLists.ongoing[sceneWarFileName] = nil
         serializeProfile(alivePlayerAccount, profile)
     end

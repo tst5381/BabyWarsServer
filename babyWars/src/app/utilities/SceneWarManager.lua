@@ -479,12 +479,14 @@ function SceneWarManager.updateModelSceneWarWithAction(action)
         if (not modelSceneWar:canReplay()) then
             serializeWarData(modelSceneWar:toSerializableTable())
         else
+            --[[
             serializeWarData(modelSceneWar:toSerializableReplayData())
 
             s_ReplayNameList[#s_ReplayNameList + 1] = sceneWarFileName
             serialize(REPLAY_NAME_LIST_PATH, s_ReplayNameList)
 
             s_ReplayDataList[sceneWarFileName] = loadReplayData(sceneWarFileName)
+            ]]
         end
     end
 

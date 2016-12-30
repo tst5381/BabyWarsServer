@@ -1505,17 +1505,18 @@ local function translateSurface(action, modelScene)
     end
 end
 
-local function translateSurrender(action, modelScene)
-    local sceneWarFileName = modelScene:getFileName()
-    if (not modelScene:getModelTurnManager():isTurnPhaseMain())    then
-        ngx.log(ngx.ERR, "ActionTranslator-translateSurrender() the current turn phase is expected to be 'main'.")
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
+local function translateSurrender(action)
+    local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
+    if (not modelSceneWar) then
+        return actionOnError
+    elseif (not modelSceneWar:getModelTurnManager():isTurnPhaseMain()) then
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
     local actionSurrender = {
-        actionName = "Surrender",
-        actionID   = action.actionID,
-        fileName   = sceneWarFileName,
+        actionCode       = ACTION_CODES.ActionSurrender,
+        actionID         = action.actionID,
+        sceneWarFileName = action.sceneWarFileName,
     }
     return actionSurrender, createActionsForPublish(actionSurrender), createActionForServer(actionSurrender)
 end
@@ -1574,7 +1575,9 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionSyncSceneWar)                 then return translateSyncSceneWar(                action)
     elseif (actionCode == ACTION_CODES.ActionBeginTurn)                    then return translateBeginTurn(                   action)
     elseif (actionCode == ACTION_CODES.ActionEndTurn)                      then return translateEndTurn(                     action)
+    elseif (actionCode == ACTION_CODES.ActionSurrender)                    then return translateSurrender(                   action)
     elseif (actionCode == ACTION_CODES.ActionWait)                         then return translateWait(                        action)
+    else   error("ActionTranslator.translate() invalid actionCode: " .. (actionCode or ""))
     end
 
     local actionName = action.actionName
@@ -1609,7 +1612,6 @@ function ActionTranslator.translate(action)
     elseif (actionName == "ProduceModelUnitOnUnit") then return translateProduceModelUnitOnUnit(action, modelSceneWar)
     elseif (actionName == "SupplyModelUnit")        then return translateSupplyModelUnit(       action, modelSceneWar)
     elseif (actionName == "Surface")                then return translateSurface(               action, modelSceneWar)
-    elseif (actionName == "Surrender")              then return translateSurrender(             action, modelSceneWar)
     else    return createActionReloadOrExitWar(sceneWarFileName, playerAccount, getLocalizedText(81, "OutOfSync", actionName))
     end
 end
