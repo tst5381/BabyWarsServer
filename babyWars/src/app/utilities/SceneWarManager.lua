@@ -8,13 +8,12 @@ local SerializationFunctions  = require("src.app.utilities.SerializationFunction
 local SkillDataAccessors      = require("src.app.utilities.SkillDataAccessors")
 local Actor                   = require("src.global.actors.Actor")
 
-local io     = io
-local string = string
+local io, string, pairs = io, string, pairs
 
 local SCENE_WAR_PATH           = "babyWars\\res\\data\\sceneWar\\"
 local JOINABLE_WAR_LIST_PATH   = SCENE_WAR_PATH .. "JoinableList.lua"
 local ONGOING_WAR_LIST_PATH    = SCENE_WAR_PATH .. "OngoingWarList.lua"
-local REPLAY_NAME_LIST_PATH    = SCENE_WAR_PATH .. "ReplayNameList.lua"
+local REPLAY_LIST_PATH         = SCENE_WAR_PATH .. "ReplayNameList.lua"
 local SCENE_WAR_NEXT_NAME_PATH = SCENE_WAR_PATH .. "NextName.lua"
 
 local DEFAULT_EXECUTED_ACTIONS = {}
@@ -29,7 +28,7 @@ local s_IsInitialized = false
 
 local s_JoinableWarList
 local s_OngoingWarList
-local s_ReplayNameList
+local s_ReplayList
 local s_SceneWarNextName
 local s_ReplayDataList      = {}
 
@@ -53,6 +52,22 @@ local function toFullFileName(shortName)
     return SCENE_WAR_PATH .. shortName .. ".lua"
 end
 
+local function generateReplayConfiguration(warData)
+    local players = {}
+    for playerIndex, player in pairs(warData.players) do
+        players[playerIndex] = {
+            account     = player.account,
+            nickname    = player.nickname,
+        }
+    end
+
+    return {
+        sceneWarFileName    = warData.sceneWarFileName,
+        warFieldFileName    = warData.warField.warFieldFileName,
+        players             = players,
+    }
+end
+
 local function generateWarConfiguration(warData)
     local players = {}
     for playerIndex, player in pairs(warData.players) do
@@ -73,13 +88,6 @@ local function generateWarConfiguration(warData)
         isRandomWarField    = warData.isRandomWarField,
         players             = players,
     }
-end
-
-local function serialize(fullFileName, data)
-    local file = io.open(fullFileName, "w")
-    file:write("return ")
-    SerializationFunctions.appendToFile(data, "", file)
-    file:close()
 end
 
 local function serializeWarData(warData)
@@ -156,24 +164,29 @@ local function loadOngoingWarList()
     end
 end
 
-local function generateReplayConfiguration(warData)
-    local players = {}
-    for playerIndex, player in pairs(warData.players) do
-        players[playerIndex] = {
-            account  = player.account,
-            nickname = player.nickname,
-        }
+local function serializeReplayList(list)
+    local file = io.open(REPLAY_LIST_PATH, "wb")
+    file:write(SerializationFunctions.encode("ReplayListForServer", {list = list or {}}))
+    file:close()
+end
+
+local function loadReplayList()
+    local file = io.open(REPLAY_LIST_PATH, "rb")
+    if (not file) then
+        return nil
+    else
+        local list = SerializationFunctions.decode("ReplayListForServer", file:read("*a")).list or {}
+        file:close()
+
+        return list
     end
+end
 
-    return {
-        warFieldFileName    = warData.warField.warFieldFileName,
-        maxBaseSkillPoints  = warData.maxBaseSkillPoints,
-        isFogOfWarByDefault = warData.isFogOfWarByDefault,
-        players             = players,
-
-        -- TODO: add code to generate the real configuration of the weather/fog.
-        weather          = "Clear",
-    }
+local function loadReplayData(sceneWarFileName)
+    local file = io.open(toFullFileName(sceneWarFileName), "rb")
+    local data = file:read("*a")
+    file:close()
+    return data
 end
 
 local function getOngoingWarListItem(sceneWarFileName)
@@ -188,15 +201,6 @@ local function getOngoingWarListItem(sceneWarFileName)
     end
 
     return item
-end
-
-local function loadReplayData(sceneWarFileName)
-    local fullFileName = toFullFileName(sceneWarFileName)
-    local warData      = dofile(fullFileName)
-    return {
-        serializedData = io.open(fullFileName):read("*a"),
-        configuration  = generateReplayConfiguration(warData),
-    }
 end
 
 local function getNextName(name)
@@ -303,14 +307,11 @@ local function initOngoingWarList()
     end
 end
 
-local function initReplayNameList()
-    local file = io.open(REPLAY_NAME_LIST_PATH)
-    if (file) then
-        file:close()
-        s_ReplayNameList = dofile(REPLAY_NAME_LIST_PATH)
-    else
-        s_ReplayNameList = {}
-        serialize(REPLAY_NAME_LIST_PATH, s_ReplayNameList)
+local function initReplayList()
+    s_ReplayList = loadReplayList()
+    if (not s_ReplayList) then
+        s_ReplayList = {}
+        serializeReplayList(s_ReplayList)
     end
 end
 
@@ -334,7 +335,7 @@ function SceneWarManager.init()
     os.execute("mkdir " .. SCENE_WAR_PATH)
     initJoinableWarList()
     initOngoingWarList()
-    initReplayNameList()
+    initReplayList()
     initSceneWarNextName()
 
     return SceneWarManager
@@ -375,6 +376,14 @@ function SceneWarManager.getOngoingSceneWarConfiguration(sceneWarFileName)
     return getOngoingWarListItem(sceneWarFileName).warConfiguration
 end
 
+function SceneWarManager.getJoinableSceneWarConfiguration(sceneWarFileName)
+    if (not s_JoinableWarList[sceneWarFileName]) then
+        return nil, "SceneWarManager.getJoinableSceneWarConfiguration() the war that the param specifies doesn't exist or is not joinable."
+    end
+
+    return s_JoinableWarList[sceneWarFileName].warConfiguration
+end
+
 function SceneWarManager.getJoinableWarConfigurations(playerAccount, sceneWarShortName)
     local candidateWarList
     if (not sceneWarShortName) then
@@ -406,34 +415,23 @@ function SceneWarManager.getJoinableWarConfigurations(playerAccount, sceneWarSho
     return list
 end
 
-function SceneWarManager.getReplayList(pageIndex)
-    -- TODO: limit the length of the list.
-    local list = {}
-    for _, sceneWarFileName in ipairs(s_ReplayNameList) do
-        if (not s_ReplayDataList[sceneWarFileName]) then
-            s_ReplayDataList[sceneWarFileName] = loadReplayData(sceneWarFileName)
+function SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)
+    for _, player in pairs(warConfiguration.players) do
+        if (player.account == playerAccount) then
+            return true
         end
-
-        list[sceneWarFileName] = s_ReplayDataList[sceneWarFileName].configuration
     end
 
-    return list
+    return false
 end
 
-function SceneWarManager.getReplayData(sceneWarFileName)
-    if (not s_ReplayDataList[sceneWarFileName]) then
-        return nil
-    else
-        return s_ReplayDataList[sceneWarFileName].serializedData
-    end
-end
-
-function SceneWarManager.getJoinableSceneWarConfiguration(sceneWarFileName)
-    if (not s_JoinableWarList[sceneWarFileName]) then
-        return nil, "SceneWarManager.getJoinableSceneWarConfiguration() the war that the param specifies doesn't exist or is not joinable."
+function SceneWarManager.isWarReadyForStartAfterJoin(warConfiguration)
+    local joinedPlayersCount = 0
+    for playerIndex, player in pairs(warConfiguration.players) do
+        joinedPlayersCount = joinedPlayersCount + 1
     end
 
-    return s_JoinableWarList[sceneWarFileName].warConfiguration
+    return joinedPlayersCount == getPlayersCount(warConfiguration.warFieldFileName) - 1
 end
 
 function SceneWarManager.joinWar(param)
@@ -464,6 +462,25 @@ function SceneWarManager.joinWar(param)
     return SceneWarManager
 end
 
+function SceneWarManager.getReplayConfigurations(pageIndex)
+    -- TODO: limit the length of the list.
+    local list = {}
+    for sceneWarFileName, listItem in pairs(s_ReplayList) do
+        listItem.replayConfiguration = listItem.replayConfiguration or generateReplayConfiguration(loadWarData(sceneWarFileName))
+        list[#list + 1] = listItem.replayConfiguration
+    end
+
+    return list
+end
+
+function SceneWarManager.getReplayData(sceneWarFileName)
+    if (not s_ReplayList[sceneWarFileName]) then
+        return nil
+    else
+        return loadReplayData(sceneWarFileName)
+    end
+end
+
 function SceneWarManager.updateModelSceneWarWithAction(action)
     local sceneWarFileName = action.sceneWarFileName
     local modelSceneWar    = SceneWarManager.getOngoingModelSceneWar(sceneWarFileName)
@@ -476,40 +493,17 @@ function SceneWarManager.updateModelSceneWarWithAction(action)
         s_OngoingWarList[sceneWarFileName] = nil
         serializeOngoingWarList(s_OngoingWarList)
 
-        if (not modelSceneWar:canReplay()) then
-            serializeWarData(modelSceneWar:toSerializableTable())
-        else
-            --[[
-            serializeWarData(modelSceneWar:toSerializableReplayData())
+        local warData = modelSceneWar:toSerializableReplayData()
+        serializeWarData(warData)
 
-            s_ReplayNameList[#s_ReplayNameList + 1] = sceneWarFileName
-            serialize(REPLAY_NAME_LIST_PATH, s_ReplayNameList)
-
-            s_ReplayDataList[sceneWarFileName] = loadReplayData(sceneWarFileName)
-            ]]
-        end
+        s_ReplayList[sceneWarFileName] = {
+            sceneWarFileName    = sceneWarFileName,
+            replayConfiguration = generateReplayConfiguration(warData),
+        }
+        serializeReplayList(s_ReplayList)
     end
 
     return SceneWarManager
-end
-
-function SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)
-    for _, player in pairs(warConfiguration.players) do
-        if (player.account == playerAccount) then
-            return true
-        end
-    end
-
-    return false
-end
-
-function SceneWarManager.isWarReadyForStartAfterJoin(warConfiguration)
-    local joinedPlayersCount = 0
-    for playerIndex, player in pairs(warConfiguration.players) do
-        joinedPlayersCount = joinedPlayersCount + 1
-    end
-
-    return joinedPlayersCount == getPlayersCount(warConfiguration.warFieldFileName) - 1
 end
 
 return SceneWarManager

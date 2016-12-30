@@ -156,7 +156,7 @@ local function isPathDestinationOccupiedByVisibleUnit(modelSceneWar, path, playe
     local destination = path.pathNodes[pathLength]
     local modelUnit   = getModelUnitMap(modelSceneWar):getModelUnit(destination)
     return (modelUnit) and
-        (isUnitVisible(sceneWarFileName, destination, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), playerIndex))
+        (isUnitVisible(modelSceneWar:getFileName(), destination, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), playerIndex))
 end
 
 local function isDropBlocked(destination, modelUnitMap, loaderModelUnit)
@@ -713,10 +713,10 @@ local function translateDownloadReplayData(action)
     end
 end
 
-local function translateGetReplayList(action)
+local function translateGetReplayConfigurations(action)
     return {
-        actionName = "GetReplayList",
-        list       = SceneWarManager.getReplayList(action.pageIndex),
+        actionCode           = ACTION_CODES.ActionGetReplayConfigurations,
+        replayConfigurations = SceneWarManager.getReplayConfigurations(action.pageIndex),
     }
 end
 
@@ -1563,6 +1563,7 @@ function ActionTranslator.translate(action)
 
     if     (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
     elseif (actionCode == ACTION_CODES.ActionGetOngoingWarList)            then return translateGetOngoingWarList(           action)
+    elseif (actionCode == ACTION_CODES.ActionGetReplayConfigurations)      then return translateGetReplayConfigurations(     action)
     elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration)        then return translateGetSkillConfiguration(       action)
     elseif (actionCode == ACTION_CODES.ActionJoinWar)                      then return translateJoinWar(                     action)
     elseif (actionCode == ACTION_CODES.ActionLogin)                        then return translateLogin(                       action)
@@ -1582,7 +1583,6 @@ function ActionTranslator.translate(action)
 
     local actionName = action.actionName
     if     (actionName == "DownloadReplayData") then return translateDownloadReplayData(action)
-    elseif (actionName == "GetReplayList")      then return translateGetReplayList(     action)
     end
 
     local playerAccount = action.playerAccount
