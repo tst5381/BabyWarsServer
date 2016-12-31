@@ -68,7 +68,7 @@ creators.createForActionAttack = function(action, targetPlayerIndex)
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
     local sceneWarFileName   = action.sceneWarFileName
-    local beginningGridIndex = action.path[1]
+    local beginningGridIndex = action.path.pathNodes[1]
     local targetGridIndex    = action.targetGridIndex
     local modelUnitMap       = getModelUnitMap(sceneWarFileName)
     local focusModelUnit     = modelUnitMap:getFocusModelUnit(beginningGridIndex, action.launchUnitID)
