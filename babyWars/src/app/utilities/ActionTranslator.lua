@@ -823,24 +823,29 @@ local function translatePath(path, launchUnitID, modelSceneWar)
     return translatedPath
 end
 
-local function translateActivateSkillGroup(action, modelScene)
-    local skillGroupID     = action.skillGroupID
-    local playerAccount    = action.playerAccount
-    local modelPlayer      = modelScene:getModelPlayerManager():getModelPlayerWithAccount(playerAccount)
-    local sceneWarFileName = modelScene:getFileName()
-    if ((not modelScene:getModelTurnManager():isTurnPhaseMain()) or
-        (not modelPlayer:canActivateSkillGroup(skillGroupID)))   then
-        return createActionReloadOrExitWar(sceneWarFileName, playerAccount, getLocalizedText(81, "OutOfSync"))
+local function translateActivateSkillGroup(action)
+    local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
+    if (not modelSceneWar) then
+        return actionOnError
     end
 
+    local skillGroupID     = action.skillGroupID
+    local modelTurnManager = modelSceneWar:getModelTurnManager()
+    local modelPlayer      = modelSceneWar:getModelPlayerManager():getModelPlayer(modelTurnManager:getPlayerIndex())
+    if ((not modelTurnManager:isTurnPhaseMain())               or
+        (not modelPlayer:canActivateSkillGroup(skillGroupID))) then
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
+    end
+
+    local sceneWarFileName             = action.sceneWarFileName
     local revealedTiles, revealedUnits = VisibilityFunctions.getRevealedTilesAndUnitsDataForSkillActivation(sceneWarFileName, skillGroupID)
     local actionActivateSkillGroup = {
-        actionName    = "ActivateSkillGroup",
-        actionID      = action.actionID,
-        fileName      = sceneWarFileName,
-        skillGroupID  = skillGroupID,
-        revealedTiles = revealedTiles,
-        revealedUnits = revealedUnits,
+        actionCode       = ACTION_CODES.ActionActivateSkillGroup,
+        actionID         = action.actionID,
+        sceneWarFileName = sceneWarFileName,
+        skillGroupID     = skillGroupID,
+        revealedTiles    = revealedTiles,
+        revealedUnits    = revealedUnits,
     }
     return actionActivateSkillGroup, createActionsForPublish(actionActivateSkillGroup), createActionForServer(actionActivateSkillGroup)
 end
@@ -1573,6 +1578,7 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionRunSceneWar)                  then return translateRunSceneWar(                 action)
     elseif (actionCode == ACTION_CODES.ActionSetSkillConfiguration)        then return translateSetSkillConfiguration(       action)
     elseif (actionCode == ACTION_CODES.ActionSyncSceneWar)                 then return translateSyncSceneWar(                action)
+    elseif (actionCode == ACTION_CODES.ActionActivateSkillGroup)           then return translateActivateSkillGroup(          action)
     elseif (actionCode == ACTION_CODES.ActionAttack)                       then return translateAttack(                      action)
     elseif (actionCode == ACTION_CODES.ActionBeginTurn)                    then return translateBeginTurn(                   action)
     elseif (actionCode == ACTION_CODES.ActionEndTurn)                      then return translateEndTurn(                     action)
@@ -1581,6 +1587,7 @@ function ActionTranslator.translate(action)
     else   error("ActionTranslator.translate() invalid actionCode: " .. (actionCode or ""))
     end
 
+    --[[
     local actionName = action.actionName
     local playerAccount = action.playerAccount
     if (not PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
@@ -1595,7 +1602,6 @@ function ActionTranslator.translate(action)
         return createActionReloadOrExitWar(sceneWarFileName, playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
-    if     (actionName == "ActivateSkillGroup")     then return translateActivateSkillGroup(    action, modelSceneWar)
     elseif (actionName == "BuildModelTile")         then return translateBuildModelTile(        action, modelSceneWar)
     elseif (actionName == "CaptureModelTile")       then return translateCaptureModelTile(      action, modelSceneWar)
     elseif (actionName == "Dive")                   then return translateDive(                  action, modelSceneWar)
@@ -1610,6 +1616,7 @@ function ActionTranslator.translate(action)
     elseif (actionName == "Surface")                then return translateSurface(               action, modelSceneWar)
     else    return createActionReloadOrExitWar(sceneWarFileName, playerAccount, getLocalizedText(81, "OutOfSync", actionName))
     end
+    --]]
 end
 
 return ActionTranslator
