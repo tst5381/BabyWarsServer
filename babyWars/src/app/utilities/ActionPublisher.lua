@@ -18,6 +18,7 @@ local getUnitTypeWithTiledId    = GameConstantFunctions.getUnitTypeWithTiledId
 local isTileVisible             = VisibilityFunctions.isTileVisibleToPlayerIndex
 local isUnitVisible             = VisibilityFunctions.isUnitOnMapVisibleToPlayerIndex
 
+local ACTION_CODES                = ActionCodeFunctions.getFullList()
 local IGNORED_KEYS_FOR_PUBLISHING = {"revealedTiles", "revealedUnits"}
 
 --------------------------------------------------------------------------------
@@ -293,14 +294,14 @@ creators.createForActionLoadModelUnit = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
-creators.createForActionProduceModelUnitOnTile = function(action, playerIndex)
+creators.createForActionProduceModelUnitOnTile = function(action, targetPlayerIndex)
     local tiledID  = action.tiledID
     local unitType = getUnitTypeWithTiledId(tiledID)
-    if (isUnitVisible(action.sceneWarFileName, action.gridIndex, unitType, unitType == "Submarine", getPlayerIndexWithTiledId(tiledID), playerIndex)) then
+    if (isUnitVisible(action.sceneWarFileName, action.gridIndex, unitType, unitType == "Submarine", getPlayerIndexWithTiledId(tiledID), targetPlayerIndex)) then
         return TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     else
         return {
-            actionName       = "ProduceModelUnitOnTile",
+            actionCode       = ACTION_CODES.ActionProduceModelUnitOnTile,
             actionID         = action.actionID,
             sceneWarFileName = action.sceneWarFileName,
             cost             = action.cost,

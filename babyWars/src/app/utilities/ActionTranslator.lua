@@ -1345,49 +1345,53 @@ local function translateLoadModelUnit(action, modelScene)
     end
 end
 
-local function translateProduceModelUnitOnTile(action, modelScene)
-    local modelPlayerManager    = modelScene:getModelPlayerManager()
-    local modelTurnManager      = modelScene:getModelTurnManager()
-    local playerIndex           = modelTurnManager:getPlayerIndex()
-    local modelWarField         = modelScene:getModelWarField()
-    local modelTileMap          = modelWarField:getModelTileMap()
-    local gridIndex             = action.gridIndex
-    local tiledID               = action.tiledID
-    local sceneWarFileName      = modelScene:getFileName()
-
-    if ((not modelTurnManager:isTurnPhaseMain())                                    or
-        (not GridIndexFunctions.isWithinMap(gridIndex, modelTileMap:getMapSize()))) then
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
+local function translateProduceModelUnitOnTile(action)
+    local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
+    if (not modelSceneWar) then
+        return actionOnError
     end
 
-    local modelTile = modelTileMap:getModelTile(gridIndex)
-    local cost      = Producible.getProductionCostWithTiledId(tiledID, modelPlayerManager)
+    local modelTurnManager = modelSceneWar:getModelTurnManager()
+    local modelWarField    = modelSceneWar:getModelWarField()
+    local modelTileMap     = modelWarField:getModelTileMap()
+    local gridIndex        = action.gridIndex
+    if ((not modelTurnManager:isTurnPhaseMain())                                    or
+        (not GridIndexFunctions.isWithinMap(gridIndex, modelTileMap:getMapSize()))) then
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
+    end
+
+    local tiledID            = action.tiledID
+    local playerIndex        = modelTurnManager:getPlayerIndex()
+    local modelPlayerManager = modelSceneWar:getModelPlayerManager()
+    local modelTile          = modelTileMap:getModelTile(gridIndex)
+    local cost               = Producible.getProductionCostWithTiledId(tiledID, modelPlayerManager)
     if ((not cost)                                                        or
         (cost > modelPlayerManager:getModelPlayer(playerIndex):getFund()) or
         (modelTile:getPlayerIndex() ~= playerIndex)                       or
         (modelWarField:getModelUnitMap():getModelUnit(gridIndex))         or
         (not modelTile.canProduceUnitWithTiledId)                         or
         (not modelTile:canProduceUnitWithTiledId(tiledID)))               then
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
-    local focusModelUnit = Actor.createModel("sceneWar.ModelUnit", {
+    local sceneWarFileName = modelSceneWar:getFileName()
+    local focusModelUnit   = Actor.createModel("sceneWar.ModelUnit", {
         tiledID       = tiledID,
         unitID        = 0,
-        GridIndexable = {gridIndex = {gridIndex}},
+        GridIndexable = gridIndex,
     })
     focusModelUnit:onStartRunning(modelSceneWar, sceneWarFileName)
 
     local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, {gridIndex}, focusModelUnit)
     local actionProduceModelUnitOnTile = {
-        actionName    = "ProduceModelUnitOnTile",
-        actionID      = action.actionID,
-        fileName      = sceneWarFileName,
-        gridIndex     = gridIndex,
-        tiledID       = tiledID,
-        cost          = cost, -- the cost can be calculated by the clients, but that calculations can be eliminated by sending the cost to clients.
-        revealedTiles = revealedTiles,
-        revealedUnits = revealedUnits,
+        actionCode       = ACTION_CODES.ActionProduceModelUnitOnTile,
+        actionID         = action.actionID,
+        sceneWarFileName = sceneWarFileName,
+        gridIndex        = gridIndex,
+        tiledID          = tiledID,
+        cost             = cost, -- the cost can be calculated by the clients, but that calculations can be eliminated by sending the cost to clients.
+        revealedTiles    = revealedTiles,
+        revealedUnits    = revealedUnits,
     }
     return actionProduceModelUnitOnTile, createActionsForPublish(actionProduceModelUnitOnTile), createActionForServer(actionProduceModelUnitOnTile)
 end
@@ -1581,7 +1585,9 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionActivateSkillGroup)           then return translateActivateSkillGroup(          action)
     elseif (actionCode == ACTION_CODES.ActionAttack)                       then return translateAttack(                      action)
     elseif (actionCode == ACTION_CODES.ActionBeginTurn)                    then return translateBeginTurn(                   action)
+    --elseif (actionCode == ACTION_CODES.ActionBuildModelTile)               then return translateBuildModelTile(              action)
     elseif (actionCode == ACTION_CODES.ActionEndTurn)                      then return translateEndTurn(                     action)
+    elseif (actionCode == ACTION_CODES.ActionProduceModelUnitOnTile)       then return translateProduceModelUnitOnTile(      action)
     elseif (actionCode == ACTION_CODES.ActionSurrender)                    then return translateSurrender(                   action)
     elseif (actionCode == ACTION_CODES.ActionWait)                         then return translateWait(                        action)
     else   error("ActionTranslator.translate() invalid actionCode: " .. (actionCode or ""))
@@ -1602,7 +1608,6 @@ function ActionTranslator.translate(action)
         return createActionReloadOrExitWar(sceneWarFileName, playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
-    elseif (actionName == "BuildModelTile")         then return translateBuildModelTile(        action, modelSceneWar)
     elseif (actionName == "CaptureModelTile")       then return translateCaptureModelTile(      action, modelSceneWar)
     elseif (actionName == "Dive")                   then return translateDive(                  action, modelSceneWar)
     elseif (actionName == "DropModelUnit")          then return translateDropModelUnit(         action, modelSceneWar)
@@ -1610,7 +1615,6 @@ function ActionTranslator.translate(action)
     elseif (actionName == "LaunchFlare")            then return translateLaunchFlare(           action, modelSceneWar)
     elseif (actionName == "LaunchSilo")             then return translateLaunchSilo(            action, modelSceneWar)
     elseif (actionName == "LoadModelUnit")          then return translateLoadModelUnit(         action, modelSceneWar)
-    elseif (actionName == "ProduceModelUnitOnTile") then return translateProduceModelUnitOnTile(action, modelSceneWar)
     elseif (actionName == "ProduceModelUnitOnUnit") then return translateProduceModelUnitOnUnit(action, modelSceneWar)
     elseif (actionName == "SupplyModelUnit")        then return translateSupplyModelUnit(       action, modelSceneWar)
     elseif (actionName == "Surface")                then return translateSurface(               action, modelSceneWar)
