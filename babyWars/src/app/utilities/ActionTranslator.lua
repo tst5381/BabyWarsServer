@@ -1376,7 +1376,7 @@ local function translateProduceModelUnitOnTile(action, modelScene)
         unitID        = 0,
         GridIndexable = {gridIndex = {gridIndex}},
     })
-    focusModelUnit:onStartRunning(sceneWarFileName)
+    focusModelUnit:onStartRunning(modelSceneWar, sceneWarFileName)
 
     local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, {gridIndex}, focusModelUnit)
     local actionProduceModelUnitOnTile = {
