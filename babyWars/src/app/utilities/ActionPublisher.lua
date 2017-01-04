@@ -239,10 +239,10 @@ end
 
 creators.createForActionLaunchFlare = function(action, targetPlayerIndex)
     local sceneWarFileName   = action.sceneWarFileName
-    local beginningGridIndex = action.path[1]
+    local beginningGridIndex = action.path.pathNodes[1]
     local focusModelUnit     = getModelUnitMap(sceneWarFileName):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
     local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    actionForPublish.actionName      = "Wait"
+    actionForPublish.actionCode      = ACTION_CODES.ActionWait
     actionForPublish.targetGridIndex = nil
 
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
