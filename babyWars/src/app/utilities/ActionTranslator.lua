@@ -1257,48 +1257,45 @@ local function translateLaunchSilo(action)
     end
 end
 
-local function translateLoadModelUnit(action, modelScene)
+local function translateLoadModelUnit(action)
+    local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
+    if (not modelSceneWar) then
+        return actionOnError
+    end
+
     local rawPath, launchUnitID        = action.path, action.launchUnitID
-    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
-    local sceneWarFileName             = modelScene:getFileName()
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelSceneWar)
     if (not translatedPath) then
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
-    local modelUnitMap    = getModelUnitMap(sceneWarFileName)
-    local focusModelUnit  = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
-    local destination     = rawPath[#rawPath]
+    local modelUnitMap    = getModelUnitMap(modelSceneWar)
+    local rawPathNodes    = rawPath.pathNodes
+    local focusModelUnit  = modelUnitMap:getFocusModelUnit(rawPathNodes[1], launchUnitID)
+    local destination     = rawPathNodes[#rawPathNodes]
     local loaderModelUnit = modelUnitMap:getModelUnit(destination)
-    local tileType        = getModelTileMap(sceneWarFileName):getModelTile(destination):getTileType()
-    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())          or
-        (#rawPath == 1)                                                   or
-        (not loaderModelUnit)                                             or
-        (not loaderModelUnit.canLoadModelUnit)                            or
-        (not loaderModelUnit:canLoadModelUnit(focusModelUnit, tileType))) then
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
+    local tileType        = getModelTileMap(modelSceneWar):getModelTile(destination):getTileType()
+    if ((#rawPathNodes == 1)                                                                                                            or
+        (not loaderModelUnit)                                                                                                           or
+        (not loaderModelUnit.canLoadModelUnit)                                                                                          or
+        (not loaderModelUnit:canLoadModelUnit(focusModelUnit, getModelTileMap(modelSceneWar):getModelTile(destination):getTileType()))) then
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
+    local sceneWarFileName             = action.sceneWarFileName
     local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath.pathNodes, focusModelUnit, false)
     if (translatedPath.isBlocked) then
-        local actionWait = {
-            actionName    = "Wait",
-            actionID      = action.actionID,
-            fileName      = sceneWarFileName,
-            path          = translatedPath,
-            launchUnitID  = launchUnitID,
-            revealedTiles = revealedTiles,
-            revealedUnits = revealedUnits,
-        }
+        local actionWait = createActionWait(sceneWarFileName, action.actionID, translatedPath, launchUnitID, revealedTiles, revealedUnits)
         return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
     else
         local actionLoadModelUnit = {
-            actionName    = "LoadModelUnit",
-            actionID      = action.actionID,
-            fileName      = sceneWarFileName,
-            path          = translatedPath,
-            launchUnitID  = launchUnitID,
-            revealedTiles = revealedTiles,
-            revealedUnits = revealedUnits,
+            actionCode       = ACTION_CODES.ActionLoadModelUnit,
+            actionID         = action.actionID,
+            sceneWarFileName = sceneWarFileName,
+            path             = translatedPath,
+            launchUnitID     = launchUnitID,
+            revealedTiles    = revealedTiles,
+            revealedUnits    = revealedUnits,
         }
         return actionLoadModelUnit, createActionsForPublish(actionLoadModelUnit), createActionForServer(actionLoadModelUnit)
     end
@@ -1554,6 +1551,7 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionJoinModelUnit)                then return translateJoinModelUnit(               action)
     elseif (actionCode == ACTION_CODES.ActionLaunchFlare)                  then return translateLaunchFlare(                 action)
     elseif (actionCode == ACTION_CODES.ActionLaunchSilo)                   then return translateLaunchSilo(                  action)
+    elseif (actionCode == ACTION_CODES.ActionLoadModelUnit)                then return translateLoadModelUnit(               action)
     elseif (actionCode == ACTION_CODES.ActionProduceModelUnitOnTile)       then return translateProduceModelUnitOnTile(      action)
     elseif (actionCode == ACTION_CODES.ActionSurface)                      then return translateSurface(                     action)
     elseif (actionCode == ACTION_CODES.ActionSurrender)                    then return translateSurrender(                   action)
@@ -1576,7 +1574,6 @@ function ActionTranslator.translate(action)
         return createActionReloadOrExitWar(sceneWarFileName, playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
-    elseif (actionName == "LoadModelUnit")          then return translateLoadModelUnit(         action, modelSceneWar)
     elseif (actionName == "ProduceModelUnitOnUnit") then return translateProduceModelUnitOnUnit(action, modelSceneWar)
     elseif (actionName == "SupplyModelUnit")        then return translateSupplyModelUnit(       action, modelSceneWar)
     else    return createActionReloadOrExitWar(sceneWarFileName, playerAccount, getLocalizedText(81, "OutOfSync", actionName))

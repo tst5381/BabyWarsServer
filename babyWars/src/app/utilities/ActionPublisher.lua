@@ -275,17 +275,17 @@ creators.createForActionLoadModelUnit = function(action, targetPlayerIndex)
     -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
 
     local sceneWarFileName = action.sceneWarFileName
-    local path             = action.path
+    local pathNodes        = action.path.pathNodes
     local modelUnitMap     = getModelUnitMap(sceneWarFileName)
-    local endingGridIndex  = path[#path]
+    local endingGridIndex  = pathNodes[#pathNodes]
     local loaderModelUnit  = modelUnitMap:getModelUnit(endingGridIndex)
     local playerIndex      = loaderModelUnit:getPlayerIndex()
     local actionForPublish = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     if (not isUnitVisible(sceneWarFileName, endingGridIndex, loaderModelUnit:getUnitType(), isModelUnitDiving(loaderModelUnit), playerIndex, targetPlayerIndex)) then
-        actionForPublish.actionName = "Wait"
+        actionForPublish.actionCode = ACTION_CODES.ActionWait
     end
 
-    local beginningGridIndex = path[1]
+    local beginningGridIndex = pathNodes[1]
     local focusModelUnit     = modelUnitMap:getFocusModelUnit(beginningGridIndex, action.launchUnitID)
     if (not isUnitVisible(sceneWarFileName, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), playerIndex, targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(sceneWarFileName, focusModelUnit)
