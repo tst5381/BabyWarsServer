@@ -167,11 +167,6 @@ local function isPathDestinationOccupiedByVisibleUnit(modelSceneWar, rawPath)
         (isUnitVisible(modelSceneWar:getFileName(), destination, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), playerIndex))
 end
 
-local function isDropBlocked(destination, modelUnitMap, loaderModelUnit)
-    local existingModelUnit = modelUnitMap:getModelUnit(destination.gridIndex)
-    return (existingModelUnit) and (existingModelUnit ~= loaderModelUnit)
-end
-
 local function countModelUnitOnMapWithPlayerIndex(modelUnitMap, playerIndex)
     local count = 0
     modelUnitMap:forEachModelUnitOnMap(function(modelUnit)
@@ -328,56 +323,46 @@ local function canDoActionSupplyModelUnit(focusModelUnit, destination, modelUnit
 end
 
 local function validateDropDestinations(action, modelSceneWar)
-    local isEqual                  = GridIndexFunctions.isEqual
-    local isAdjacent               = GridIndexFunctions.isAdjacent
-    local isWithinMap              = GridIndexFunctions.isWithinMap
-    local sceneWarFileName         = modelSceneWar:getFileName()
-    local modelWarField            = modelSceneWar:getModelWarField()
-    local modelUnitMap             = modelWarField:getModelUnitMap()
-    local modelTileMap             = modelWarField:getModelTileMap()
-    local destinations             = action.dropDestinations
-    local mapSize                  = modelTileMap:getMapSize()
-    local loaderBeginningGridIndex = action.path[1]
-    local loaderEndingGridIndex    = action.path[#action.path]
-    local loaderModelUnit          = modelUnitMap:getFocusModelUnit(loaderBeginningGridIndex, action.launchUnitID)
-    local loaderEndingModelTile    = modelTileMap:getModelTile(loaderEndingGridIndex)
-    local loadedUnitIdList         = loaderModelUnit:getLoadUnitIdList()
-    local playerIndex              = loaderModelUnit:getPlayerIndex()
-
+    local destinations = action.dropDestinations
     if (#destinations < 1) then
         return false
     end
 
+    local sceneWarFileName         = action.sceneWarFileName
+    local modelUnitMap             = getModelUnitMap(modelSceneWar)
+    local modelTileMap             = getModelTileMap(modelSceneWar)
+    local mapSize                  = modelTileMap:getMapSize()
+    local pathNodes                = action.path.pathNodes
+    local loaderBeginningGridIndex = pathNodes[1]
+    local loaderEndingGridIndex    = pathNodes[#pathNodes]
+    local loaderModelUnit          = modelUnitMap:getFocusModelUnit(loaderBeginningGridIndex, action.launchUnitID)
+    local loaderEndingModelTile    = modelTileMap:getModelTile(loaderEndingGridIndex)
+    local playerIndex              = loaderModelUnit:getPlayerIndex()
+
     for i = 1, #destinations do
-        local droppingUnitID = destinations[i].unitID
-        if (not loaderModelUnit:hasLoadUnitId(droppingUnitID)) then
+        local droppingUnitID    = destinations[i].unitID
+        local droppingGridIndex = destinations[i].gridIndex
+        local droppingModelUnit = modelUnitMap:getLoadedModelUnitWithUnitId(droppingUnitID)
+        if ((not droppingModelUnit)                                                                         or
+            (not loaderModelUnit:hasLoadUnitId(droppingUnitID))                                             or
+            (not GridIndexFunctions.isWithinMap(droppingGridIndex, mapSize))                                or
+            (not GridIndexFunctions.isAdjacent(droppingGridIndex, loaderEndingGridIndex))                   or
+            (not loaderEndingModelTile:getMoveCostWithModelUnit(droppingModelUnit))                         or
+            (not modelTileMap:getModelTile(droppingGridIndex):getMoveCostWithModelUnit(droppingModelUnit))) then
             return false
         end
 
-        local droppingGridIndex = destinations[i].gridIndex
-        local droppingModelUnit = modelUnitMap:getLoadedModelUnitWithUnitId(droppingUnitID)
-        if ((not droppingModelUnit)                                     or
-            (not isWithinMap(droppingGridIndex, mapSize))               or
-            (not isAdjacent(droppingGridIndex, loaderEndingGridIndex))) then
+        local existingModelUnit = modelUnitMap:getModelUnit(droppingGridIndex)
+        if ((existingModelUnit)                                                                                                                                                           and
+            (existingModelUnit ~= loaderModelUnit)                                                                                                                                        and
+            (isUnitVisible(sceneWarFileName, droppingGridIndex, existingModelUnit:getUnitType(), isModelUnitDiving(existingModelUnit), existingModelUnit:getPlayerIndex(), playerIndex))) then
             return false
-        else
-            if ((not loaderEndingModelTile:getMoveCostWithModelUnit(droppingModelUnit))                         or
-                (not modelTileMap:getModelTile(droppingGridIndex):getMoveCostWithModelUnit(droppingModelUnit))) then
-                return false
-            end
-
-            local existingModelUnit = modelUnitMap:getModelUnit(droppingGridIndex)
-            if ((existingModelUnit)                                                                                                                          and
-                (existingModelUnit ~= loaderModelUnit)                                                                                                       and
-                (isUnitVisible(sceneWarFileName, droppingGridIndex, existingModelUnit:getUnitType(), isModelUnitDiving(existingModelUnit), existingModelUnit:getPlayerIndex(), playerIndex))) then
-                return false
-            end
         end
 
         for j = i + 1, #destinations do
             local additionalDestination = destinations[j]
-            if ((isEqual(droppingGridIndex, additionalDestination.gridIndex)) or
-                (droppingUnitID == additionalDestination.unitID))             then
+            if ((GridIndexFunctions.isEqual(droppingGridIndex, additionalDestination.gridIndex)) or
+                (droppingUnitID == additionalDestination.unitID))                                then
                 return false
             end
         end
@@ -386,18 +371,23 @@ local function validateDropDestinations(action, modelSceneWar)
     return true
 end
 
+local function isDropDestinationBlocked(destination, modelUnitMap, loaderModelUnit)
+    local existingModelUnit = modelUnitMap:getModelUnit(destination.gridIndex)
+    return (existingModelUnit) and (existingModelUnit ~= loaderModelUnit)
+end
+
 local function translateDropDestinations(rawDestinations, modelUnitMap, loaderModelUnit)
     local translatedDestinations = {}
+    local isDropBlocked
     for i = 1, #rawDestinations do
-        if (isDropBlocked(rawDestinations[i], modelUnitMap, loaderModelUnit)) then
-            translatedDestinations.isBlocked = true
-            break
+        if (isDropDestinationBlocked(rawDestinations[i], modelUnitMap, loaderModelUnit)) then
+            isDropBlocked = true
         else
             translatedDestinations[#translatedDestinations + 1] = rawDestinations[i]
         end
     end
 
-    return translatedDestinations
+    return translatedDestinations, isDropBlocked
 end
 
 local function getLostPlayerIndexForActionAttack(attacker, target, attackDamage, counterDamage)
@@ -1088,54 +1078,58 @@ local function translateDive(action)
     end
 end
 
-local function translateDropModelUnit(action, modelScene)
+local function translateDropModelUnit(action)
+    local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
+    if (not modelSceneWar) then
+        return actionOnError
+    end
+
     local rawPath, launchUnitID        = action.path, action.launchUnitID
-    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
-    local sceneWarFileName             = modelScene:getFileName()
-    if (not translatedPath) then
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelSceneWar)
+    if ((not translatedPath) or (isPathDestinationOccupiedByVisibleUnit(modelSceneWar, rawPath))) then
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
-    local modelUnitMap    = getModelUnitMap(sceneWarFileName)
-    local endingGridIndex = rawPath[#rawPath]
-    local loaderModelUnit = modelUnitMap:getFocusModelUnit(rawPath[1], launchUnitID)
-    local tileType        = getModelTileMap(sceneWarFileName):getModelTile(endingGridIndex):getTileType()
-    if ((not modelScene:getModelTurnManager():isTurnPhaseMain())                                               or
-        (not loaderModelUnit.canDropModelUnit)                                                                 or
-        (not loaderModelUnit:canDropModelUnit(tileType))                                                       or
-        (not validateDropDestinations(action, modelScene))                                                     or
-        (isPathDestinationOccupiedByVisibleUnit(sceneWarFileName, rawPath, loaderModelUnit:getPlayerIndex()))) then
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
+    local modelUnitMap    = getModelUnitMap(modelSceneWar)
+    local rawPathNodes    = rawPath.pathNodes
+    local endingGridIndex = rawPathNodes[#rawPathNodes]
+    local loaderModelUnit = modelUnitMap:getFocusModelUnit(rawPathNodes[1], launchUnitID)
+    local tileType        = getModelTileMap(modelSceneWar):getModelTile(endingGridIndex):getTileType()
+    if ((not loaderModelUnit.canDropModelUnit)                 or
+        (not loaderModelUnit:canDropModelUnit(tileType))       or
+        (not validateDropDestinations(action, modelSceneWar))) then
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
+    local sceneWarFileName             = action.sceneWarFileName
     local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath.pathNodes, loaderModelUnit, false)
     if (translatedPath.isBlocked) then
         local actionWait = {
-            actionName    = "Wait",
-            actionID      = action.actionID,
-            fileName      = sceneWarFileName,
-            path          = translatedPath,
-            launchUnitID  = launchUnitID,
-            revealedTiles = revealedTiles,
-            revealedUnits = revealedUnits,
+            actionCode       = ACTION_CODES.ActionWait,
+            actionID         = action.actionID,
+            sceneWarFileName = sceneWarFileName,
+            path             = translatedPath,
+            launchUnitID     = launchUnitID,
+            revealedTiles    = revealedTiles,
+            revealedUnits    = revealedUnits,
         }
         return actionWait, createActionsForPublish(actionWait), createActionForServer(actionWait)
     else
-        local dropDestinations = translateDropDestinations(action.dropDestinations, modelUnitMap, loaderModelUnit)
+        local dropDestinations, isDropBlocked = translateDropDestinations(action.dropDestinations, modelUnitMap, loaderModelUnit)
         for _, dropDestination in ipairs(dropDestinations) do
-            local dropPath      = {endingGridIndex, dropDestination.gridIndex}
             local dropModelUnit = modelUnitMap:getLoadedModelUnitWithUnitId(dropDestination.unitID)
-            local tiles, units  = getRevealedTilesAndUnitsData(sceneWarFileName, dropPath, dropModelUnit, false)
+            local tiles, units  = getRevealedTilesAndUnitsData(sceneWarFileName, {endingGridIndex, dropDestination.gridIndex}, dropModelUnit, false)
             revealedTiles = TableFunctions.union(revealedTiles, tiles)
             revealedUnits = TableFunctions.union(revealedUnits, units)
         end
 
         local actionDropModelUnit = {
-            actionName       = "DropModelUnit",
+            actionCode       = ACTION_CODES.ActionDropModelUnit,
             actionID         = action.actionID,
-            fileName         = sceneWarFileName,
+            sceneWarFileName = sceneWarFileName,
             path             = translatedPath,
             dropDestinations = dropDestinations,
+            isDropBlocked    = isDropBlocked,
             launchUnitID     = launchUnitID,
             revealedTiles    = revealedTiles,
             revealedUnits    = revealedUnits,
@@ -1597,6 +1591,7 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionBuildModelTile)               then return translateBuildModelTile(              action)
     elseif (actionCode == ACTION_CODES.ActionCaptureModelTile)             then return translateCaptureModelTile(            action)
     elseif (actionCode == ACTION_CODES.ActionDive)                         then return translateDive(                        action)
+    elseif (actionCode == ACTION_CODES.ActionDropModelUnit)                then return translateDropModelUnit(               action)
     elseif (actionCode == ACTION_CODES.ActionEndTurn)                      then return translateEndTurn(                     action)
     elseif (actionCode == ACTION_CODES.ActionProduceModelUnitOnTile)       then return translateProduceModelUnitOnTile(      action)
     elseif (actionCode == ACTION_CODES.ActionSurface)                      then return translateSurface(                     action)
@@ -1620,7 +1615,6 @@ function ActionTranslator.translate(action)
         return createActionReloadOrExitWar(sceneWarFileName, playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
-    elseif (actionName == "DropModelUnit")          then return translateDropModelUnit(         action, modelSceneWar)
     elseif (actionName == "JoinModelUnit")          then return translateJoinModelUnit(         action, modelSceneWar)
     elseif (actionName == "LaunchFlare")            then return translateLaunchFlare(           action, modelSceneWar)
     elseif (actionName == "LaunchSilo")             then return translateLaunchSilo(            action, modelSceneWar)
