@@ -1352,39 +1352,42 @@ local function translateProduceModelUnitOnTile(action)
     return actionProduceModelUnitOnTile, createActionsForPublish(actionProduceModelUnitOnTile), createActionForServer(actionProduceModelUnitOnTile)
 end
 
-local function translateProduceModelUnitOnUnit(action, modelScene)
+local function translateProduceModelUnitOnUnit(action)
+    local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
+    if (not modelSceneWar) then
+        return actionOnError
+    end
+
     local rawPath, launchUnitID        = action.path, action.launchUnitID
-    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelScene)
-    local sceneWarFileName             = modelScene:getFileName()
-    if (not translatedPath) then
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync", translateMsg))
+    local translatedPath, translateMsg = translatePath(rawPath, launchUnitID, modelSceneWar)
+    if ((not translatedPath) or (isPathDestinationOccupiedByVisibleUnit(modelSceneWar, rawPath))) then
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
-    local focusModelUnit     = modelScene:getModelWarField():getModelUnitMap():getFocusModelUnit(rawPath[1], launchUnitID)
-    local modelTurnManager   = modelScene:getModelTurnManager()
-    local modelPlayer        = modelScene:getModelPlayerManager():getModelPlayer(modelTurnManager:getPlayerIndex())
-    local cost               = (focusModelUnit.getMovableProductionCost) and (focusModelUnit:getMovableProductionCost()) or (nil)
-    if ((not modelTurnManager:isTurnPhaseMain())                                    or
-        (launchUnitID)                                                              or
-        (#rawPath ~= 1)                                                             or
-        (not focusModelUnit.getCurrentMaterial)                                     or
-        (focusModelUnit:getCurrentMaterial() < 1)                                   or
-        (not cost)                                                                  or
-        (cost > modelPlayer:getFund())                                              or
-        (not focusModelUnit.getCurrentLoadCount)                                    or
-        (focusModelUnit:getCurrentLoadCount() >= focusModelUnit:getMaxLoadCount())) then
-        return createActionReloadOrExitWar(sceneWarFileName, action.playerAccount, getLocalizedText(81, "OutOfSync"))
+    local rawPathNodes   = rawPath.pathNodes
+    local focusModelUnit = modelSceneWar:getModelWarField():getModelUnitMap():getFocusModelUnit(rawPathNodes[1], launchUnitID)
+    local cost           = (focusModelUnit.getMovableProductionCost) and (focusModelUnit:getMovableProductionCost()) or (nil)
+    if ((launchUnitID)                                                                                                                or
+        (#rawPathNodes ~= 1)                                                                                                          or
+        (not focusModelUnit.getCurrentMaterial)                                                                                       or
+        (focusModelUnit:getCurrentMaterial() < 1)                                                                                     or
+        (not cost)                                                                                                                    or
+        (cost > modelSceneWar:getModelPlayerManager():getModelPlayer(modelSceneWar:getModelTurnManager():getPlayerIndex()):getFund()) or
+        (not focusModelUnit.getCurrentLoadCount)                                                                                      or
+        (focusModelUnit:getCurrentLoadCount() >= focusModelUnit:getMaxLoadCount()))                                                   then
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
+    local sceneWarFileName             = action.sceneWarFileName
     local revealedTiles, revealedUnits = getRevealedTilesAndUnitsData(sceneWarFileName, translatedPath.pathNodes, focusModelUnit, false)
     local actionProduceModelUnitOnUnit = {
-        actionName    = "ProduceModelUnitOnUnit",
-        actionID      = action.actionID,
-        fileName      = sceneWarFileName,
-        path          = translatedPath,
-        cost          = cost,
-        revealedTiles = revealedTiles,
-        revealedUnits = revealedUnits,
+        actionCode       = ACTION_CODES.ActionProduceModelUnitOnUnit,
+        actionID         = action.actionID,
+        sceneWarFileName = sceneWarFileName,
+        path             = translatedPath,
+        cost             = cost,
+        revealedTiles    = revealedTiles,
+        revealedUnits    = revealedUnits,
     }
     return actionProduceModelUnitOnUnit, createActionsForPublish(actionProduceModelUnitOnUnit), createActionForServer(actionProduceModelUnitOnUnit)
 end
@@ -1431,7 +1434,7 @@ local function translateSupplyModelUnit(action, modelScene)
     end
 end
 
-local function translateSurface(action, modelScene)
+local function translateSurface(action)
     local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
     if (not modelSceneWar) then
         return actionOnError
@@ -1553,6 +1556,7 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionLaunchSilo)                   then return translateLaunchSilo(                  action)
     elseif (actionCode == ACTION_CODES.ActionLoadModelUnit)                then return translateLoadModelUnit(               action)
     elseif (actionCode == ACTION_CODES.ActionProduceModelUnitOnTile)       then return translateProduceModelUnitOnTile(      action)
+    elseif (actionCode == ACTION_CODES.ActionProduceModelUnitOnUnit)       then return translateProduceModelUnitOnUnit(      action)
     elseif (actionCode == ACTION_CODES.ActionSurface)                      then return translateSurface(                     action)
     elseif (actionCode == ACTION_CODES.ActionSurrender)                    then return translateSurrender(                   action)
     elseif (actionCode == ACTION_CODES.ActionWait)                         then return translateWait(                        action)
@@ -1574,7 +1578,6 @@ function ActionTranslator.translate(action)
         return createActionReloadOrExitWar(sceneWarFileName, playerAccount, getLocalizedText(81, "OutOfSync"))
     end
 
-    elseif (actionName == "ProduceModelUnitOnUnit") then return translateProduceModelUnitOnUnit(action, modelSceneWar)
     elseif (actionName == "SupplyModelUnit")        then return translateSupplyModelUnit(       action, modelSceneWar)
     else    return createActionReloadOrExitWar(sceneWarFileName, playerAccount, getLocalizedText(81, "OutOfSync", actionName))
     end
