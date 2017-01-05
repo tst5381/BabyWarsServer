@@ -46,6 +46,7 @@ local getModelTurnManager          = SingletonGetters.getModelTurnManager
 local getModelUnitMap              = SingletonGetters.getModelUnitMap
 local getRevealedTilesAndUnitsData = VisibilityFunctions.getRevealedTilesAndUnitsData
 local isUnitVisible                = VisibilityFunctions.isUnitOnMapVisibleToPlayerIndex
+local ipairs, pairs, next          = ipairs, pairs, next
 
 local ACTION_CODES                   = ActionCodeFunctions.getFullList()
 local GAME_VERSION                   = GameConstantFunctions.getGameVersion()
@@ -279,17 +280,18 @@ local function generateRepairDataOnBeginTurn(modelSceneWar)
         costModifier = 100 / (100 - costModifier)
     end
 
-    local onMapData  = {}
-    local loadedData = {}
+    local onMapData, loadedData
     for _, modelUnit in ipairs(getRepairableModelUnits(modelSceneWar)) do
         local repairAmount, repairCost = getRepairAmountAndCost(modelUnit, fund, maxNormalizedRepairAmount, costModifier)
         local unitID                   = modelUnit:getUnitId()
         if (modelUnitMap:getLoadedModelUnitWithUnitId(unitID)) then
+            loadedData         = loadedData or {}
             loadedData[unitID] = {
                 unitID       = unitID,
                 repairAmount = repairAmount,
             }
         else
+            onMapData         = onMapData or {}
             onMapData[unitID] = {
                 unitID       = unitID,
                 repairAmount = repairAmount,
@@ -304,6 +306,68 @@ local function generateRepairDataOnBeginTurn(modelSceneWar)
         loadedData    = loadedData,
         remainingFund = fund,
     }
+end
+
+local function generateSupplyDataOnBeginTurn(modelSceneWar, repairData)
+    local modelUnitMap          = getModelUnitMap(modelSceneWar)
+    local playerIndex           = getModelTurnManager(modelSceneWar):getPlayerIndex()
+    local repairDataOnMap       = repairData.onMapData
+    local repairDataLoaded      = repairData.loadedData
+    local onMapData, loadedData
+
+    local updateOnMapData = function(supplier)
+        if ((supplier:getPlayerIndex() == playerIndex) and (supplier.canSupplyModelUnit)) then
+            if (((repairDataOnMap) and (repairDataOnMap[supplier:getUnitId()]))                                                        or
+                (not ((supplier:shouldDestroyOnOutOfFuel()) and (supplier:getCurrentFuel() <= supplier:getFuelConsumptionPerTurn())))) then
+
+                for _, adjacentGridIndex in pairs(GridIndexFunctions.getAdjacentGrids(supplier:getGridIndex())) do
+                    local target = modelUnitMap:getModelUnit(adjacentGridIndex)
+                    if ((target) and (supplier:canSupplyModelUnit(target))) then
+                        local unitID = target:getUnitId()
+                        if (((not repairDataOnMap) or (not repairDataOnMap[unitID]))                                                         and
+                            ((not onMapData)       or (not onMapData[unitID]))                                                               and
+                            (not ((target:shouldDestroyOnOutOfFuel()) and (target:getCurrentFuel() <= target:getFuelConsumptionPerTurn())))) then
+
+                            onMapData         = onMapData or {}
+                            onMapData[unitID] = {
+                                unitID    = unitID,
+                                gridIndex = adjacentGridIndex,
+                            }
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    local updateLoadedData = function(supplier)
+        if ((supplier:getPlayerIndex() == playerIndex) and
+            (supplier.canSupplyLoadedModelUnit)        and
+            (supplier:canSupplyLoadedModelUnit())      and
+            (not supplier:canRepairLoadedModelUnit())) then
+            if (((repairDataOnMap) and (repairDataOnMap[supplier:getUnitId()]))                                                        or
+                (not ((supplier:shouldDestroyOnOutOfFuel()) and (supplier:getCurrentFuel() <= supplier:getFuelConsumptionPerTurn())))) then
+
+                for _, unitID in pairs(supplier:getLoadUnitIdList()) do
+                    loadedData         = loadedData or {}
+                    loadedData[unitID] = {unitID = unitID}
+                end
+            end
+        end
+    end
+
+    modelUnitMap:forEachModelUnitOnMap(updateOnMapData)
+        :forEachModelUnitOnMap(        updateLoadedData)
+        :forEachModelUnitLoaded(       updateLoadedData)
+
+    if ((not onMapData) and (not loadedData)) then
+        return nil
+    else
+        return {
+            onMapData  = onMapData,
+            loadedData = loadedData,
+        }
+    end
 end
 
 local function canDoActionSupplyModelUnit(focusModelUnit, destination, modelUnitMap)
@@ -893,6 +957,7 @@ local function translateBeginTurn(action)
     else
         actionBeginTurn.lostPlayerIndex = (areAllUnitsDestroyedOnBeginTurn(modelSceneWar)) and (modelTurnManager:getPlayerIndex()) or (nil)
         actionBeginTurn.repairData      = generateRepairDataOnBeginTurn(modelSceneWar)
+        actionBeginTurn.supplyData      = generateSupplyDataOnBeginTurn(modelSceneWar, actionBeginTurn.repairData)
     end
     return actionBeginTurn, createActionsForPublish(actionBeginTurn), createActionForServer(actionBeginTurn)
 end

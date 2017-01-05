@@ -17,6 +17,7 @@ local getPlayerIndexWithTiledId = GameConstantFunctions.getPlayerIndexWithTiledI
 local getUnitTypeWithTiledId    = GameConstantFunctions.getUnitTypeWithTiledId
 local isTileVisible             = VisibilityFunctions.isTileVisibleToPlayerIndex
 local isUnitVisible             = VisibilityFunctions.isUnitOnMapVisibleToPlayerIndex
+local next, pairs               = next, pairs
 
 local ACTION_CODES                = ActionCodeFunctions.getFullList()
 local IGNORED_KEYS_FOR_PUBLISHING = {"revealedTiles", "revealedUnits"}
@@ -55,6 +56,68 @@ local function generateUnitsDataForPublish(sceneWarFileName, modelUnit)
     return data
 end
 
+local function generateOnMapData(sceneWarFileName, rawOnMapData, targetPlayerIndex)
+    if (not rawOnMapData) then
+        return nil
+    else
+        local modelUnitMap = getModelUnitMap(sceneWarFileName)
+        local onMapData    = TableFunctions.clone(rawOnMapData)
+        for unitID, data in pairs(onMapData) do
+            local gridIndex = data.gridIndex
+            local modelUnit = modelUnitMap:getModelUnit(gridIndex)
+            if (not isUnitVisible(sceneWarFileName, gridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+                onMapData[unitID] = nil
+            end
+        end
+
+        return (next(onMapData)) and (onMapData) or (nil)
+    end
+end
+
+local function generateLoadedData(sceneWarFileName, rawLoadedData, targetPlayerIndex)
+    if (not rawLoadedData) then
+        return nil
+    else
+        local modelUnitMap = getModelUnitMap(sceneWarFileName)
+        local loadedData   = TableFunctions.clone(rawLoadedData)
+        for unitID, data in pairs(loadedData) do
+            local gridIndex = modelUnitMap:getLoadedModelUnitWithUnitId(unitID):getGridIndex()
+            local modelUnit = modelUnitMap:getModelUnit(gridIndex)
+            if (not isUnitVisible(sceneWarFileName, gridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+                loadedData[unitID] = nil
+            end
+        end
+
+        return (next(loadedData)) and (loadedData) or (nil)
+    end
+end
+
+local function generateRepairDataForActionBeginTurn(action, targetPlayerIndex)
+    local rawRepairData = action.repairData
+    if (not rawRepairData) then
+        return nil
+    else
+        return {
+            onMapData     = generateOnMapData( action.sceneWarFileName, rawRepairData.onMapData,  targetPlayerIndex),
+            loadedData    = generateLoadedData(action.sceneWarFileName, rawRepairData.loadedData, targetPlayerIndex),
+            remainingFund = rawRepairData.remainingFund,
+        }
+    end
+end
+
+local function generateSupplyDataForActionBeginTurn(action, targetPlayerIndex)
+    local rawSupplyData = action.supplyData
+    if (not rawSupplyData) then
+        return nil
+    else
+        local supplyData = {
+            onMapData  = generateOnMapData (action.sceneWarFileName, rawSupplyData.onMapData,  targetPlayerIndex),
+            loadedData = generateLoadedData(action.sceneWarFileName, rawSupplyData.loadedData, targetPlayerIndex),
+        }
+        return (next(supplyData)) and (supplyData) or (nil)
+    end
+end
+
 --------------------------------------------------------------------------------
 -- The private functions that create actions for publish.
 --------------------------------------------------------------------------------
@@ -91,37 +154,10 @@ creators.createForActionAttack = function(action, targetPlayerIndex)
 end
 
 creators.createForActionBeginTurn = function(action, targetPlayerIndex)
-    local repairData = action.repairData
-    if (not repairData) then
-        return action
-    end
+    local actionForPublish      = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
+    actionForPublish.repairData = generateRepairDataForActionBeginTurn(action, targetPlayerIndex)
+    actionForPublish.supplyData = generateSupplyDataForActionBeginTurn(action, targetPlayerIndex)
 
-    local sceneWarFileName    = action.sceneWarFileName
-    local modelUnitMap        = getModelUnitMap(sceneWarFileName)
-    local ignoredUnitIDsOnMap = {}
-    for unitID, data in pairs(repairData.onMapData) do
-        local gridIndex = data.gridIndex
-        local modelUnit = modelUnitMap:getModelUnit(gridIndex)
-        if (not isUnitVisible(sceneWarFileName, gridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
-            ignoredUnitIDsOnMap[#ignoredUnitIDsOnMap + 1] = unitID
-        end
-    end
-
-    local ignoredUnitIDsLoaded = {}
-    for unitID, data in pairs(repairData.loadedData) do
-        local gridIndex = modelUnitMap:getLoadedModelUnitWithUnitId(unitID):getGridIndex()
-        local modelUnit = modelUnitMap:getModelUnit(gridIndex)
-        if (not isUnitVisible(sceneWarFileName, gridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
-            ignoredUnitIDsLoaded[#ignoredUnitIDsLoaded + 1] = unitID
-        end
-    end
-
-    local actionForPublish = TableFunctions.clone(action)
-    actionForPublish.repairData = {
-        onMapData     = TableFunctions.clone(repairData.onMapData,  ignoredUnitIDsOnMap),
-        loadedData    = TableFunctions.clone(repairData.loadedData, ignoredUnitIDsLoaded),
-        remainingFund = repairData.remainingFund,
-    }
     return actionForPublish
 end
 
