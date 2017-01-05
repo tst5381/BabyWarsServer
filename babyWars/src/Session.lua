@@ -1,23 +1,38 @@
 
 -- TODO: move the code that initializes the server to somewhere else (like main()).
 package.path = package.path .. ";./babyWars/?.lua"
-require("src.app.utilities.GameConstantFunctions").init(true)
-require("src.app.utilities.SceneWarManager")      .init()
-require("src.app.utilities.PlayerProfileManager") .init()
+require("src.app.utilities.GameConstantFunctions") .init(true)
+require("src.app.utilities.SerializationFunctions").init()
+require("src.app.utilities.SceneWarManager")       .init()
+require("src.app.utilities.PlayerProfileManager")  .init()
 
 local Session = require("src.global.functions.class")("Session")
 
 local WebSocketServer        = require("resty.websocket.server")
 local Redis                  = require("resty.redis")
+local ActionCodeFunctions    = require("src.app.utilities.ActionCodeFunctions")
+local ActionExecutor         = require("src.app.utilities.ActionExecutor")
 local ActionTranslator       = require("src.app.utilities.ActionTranslator")
 local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
 local SceneWarManager        = require("src.app.utilities.SceneWarManager")
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
 
+local decode = SerializationFunctions.decode
+local encode = SerializationFunctions.encode
+local next   = next
+
 local DEFAULT_CONFIGURATION = {
     timeout         = 10000000, -- 10000s
     max_payload_len = 1048575,
 }
+
+local ACTION_CODE_HEARTBEAT               = ActionCodeFunctions.getActionCode("ActionNetworkHeartbeat")
+local ACTION_CODE_JOIN_WAR                = ActionCodeFunctions.getActionCode("ActionJoinWar")
+local ACTION_CODE_LOGIN                   = ActionCodeFunctions.getActionCode("ActionLogin")
+local ACTION_CODE_LOGOUT                  = ActionCodeFunctions.getActionCode("ActionLogout")
+local ACTION_CODE_NEW_WAR                 = ActionCodeFunctions.getActionCode("ActionNewWar")
+local ACTION_CODE_REGISTER                = ActionCodeFunctions.getActionCode("ActionRegister")
+local ACTION_CODE_SET_SKILL_CONFIGURATION = ActionCodeFunctions.getActionCode("ActionSetSkillConfiguration")
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -95,14 +110,14 @@ local function initThreadForSubscribe(self)
             end
 
             if ((res) and (res[1] == "message")) then
-                if (string.find(res[3], '"Logout"')) then
+                local actionRedis = decode("ActionRedis", res[3])
+                if (actionRedis.actionCode == ACTION_CODE_LOGOUT) then
                     ngx.log(ngx.CRIT, "Session-threadForSubscribe main loop: receive a Logout action.")
                     -- return self:stop()
                     self:unsubscribeFromPlayerChannel()
                 end
 
-                local bytes, err = self.m_WebSocket:send_text(res[3])
-                -- ngx.log(ngx.CRIT, "Session-threadForSubscribe() receive published message: ", res[3])
+                local bytes, err = self.m_WebSocket:send_text(actionRedis.encodedActionGeneric)
                 if (not bytes) then
                     ngx.log(ngx.ERR, "Session-threadForSubscribe main loop: failed to send the published message to the webSocket: ", err)
                     return self:stop()
@@ -122,6 +137,27 @@ local function destroyThreadForSubscribe(self)
     end
 end
 
+local function getAccountAndPasswordWithAction(action, actionCode)
+    if     (actionCode == ACTION_CODE_LOGIN)    then return action.loginAccount,    action.loginPassword
+    elseif (actionCode == ACTION_CODE_REGISTER) then return action.registerAccount, action.registerPassword
+    else                                             return action.playerAccount,   action.playerPassword
+    end
+end
+
+local function executeActionForServer(action)
+    local actionCode = action.actionCode
+    assert(actionCode, "Session-executeActionForServer() invalid actionCode: " .. (actionCode or ""))
+
+    if ((actionCode == ACTION_CODE_JOIN_WAR)                 or
+        (actionCode == ACTION_CODE_NEW_WAR)                  or
+        (actionCode == ACTION_CODE_REGISTER)                 or
+        (actionCode == ACTION_CODE_SET_SKILL_CONFIGURATION)) then
+        ActionExecutor.execute(action, actionCode)
+    else
+        SceneWarManager.updateModelSceneWarWithAction(action)
+    end
+end
+
 local function publishTranslatedActions(actions)
     -- It seems that if we use self.m_RedisForSubscribe to publish the actions, it may fail mysteriously.
     -- So it's safer to use a temporary redis for publishing.
@@ -129,9 +165,12 @@ local function publishTranslatedActions(actions)
     red:set_timeout(10000000) -- 10000s
     red:connect("127.0.0.1", 6379)
 
-    local toString = SerializationFunctions.toString
     for account, action in pairs(actions) do
-        red:publish("Session." .. account, toString(action))
+        local actionCode = action.actionCode
+        red:publish("Session." .. account, encode("ActionRedis", {
+            actionCode           = actionCode,
+            encodedActionGeneric = encode("ActionGeneric", {[ActionCodeFunctions.getActionName(actionCode)] = action}),
+        }))
     end
 
     red:close()
@@ -139,26 +178,24 @@ end
 
 local function doAction(self, rawAction, actionForRequester, actionsForPublish, actionForServer)
     if (actionForServer) then
-        SceneWarManager.updateModelSceneWarWithAction(actionForServer)
+        executeActionForServer(actionForServer)
     end
     if (actionsForPublish) then
         publishTranslatedActions(actionsForPublish)
     end
 
-    local account, password    = rawAction.playerAccount, rawAction.playerPassword
-    local translatedActionName = actionForRequester.actionName
-    if ((translatedActionName == "Logout")                                       or
-        (not PlayerProfileManager.isAccountAndPasswordValid(account, password))) then
-        self:unsubscribeFromPlayerChannel()
-    else
-        local rawActionName = rawAction.actionName
-        if ((rawActionName ~= "Register")                                                or
-            ((rawActionName == "Register") and (translatedActionName == rawActionName))) then
+    local rawActionCode        = rawAction.actionCode
+    local translatedActionCode = actionForRequester.actionCode
+    if (rawActionCode ~= ACTION_CODE_HEARTBEAT) then
+        local account, password = getAccountAndPasswordWithAction(rawAction, rawActionCode)
+        if ((translatedActionCode == ACTION_CODE_LOGOUT) or (not PlayerProfileManager.isAccountAndPasswordValid(account, password))) then
+            self:unsubscribeFromPlayerChannel()
+        elseif ((rawActionCode ~= ACTION_CODE_REGISTER) or (rawActionCode == translatedActionCode)) then
             self:subscribeToPlayerChannel(account, password)
         end
     end
 
-    local bytes, err = self.m_WebSocket:send_text(SerializationFunctions.toString(actionForRequester))
+    local bytes, err = self.m_WebSocket:send_text(encode("ActionGeneric", {[ActionCodeFunctions.getActionName(translatedActionCode)] = actionForRequester}))
     if (not bytes) then
         ngx.log(ngx.ERR, "Session-doAction() failed to send text: ", err)
         return self:stop()
@@ -220,13 +257,11 @@ function Session:start()
             return self:stop()
         end
 
-        if (typ) == "close" then
+        if (typ == "close") then
             break
-        elseif (typ == "text") then
-            -- TODO: validate the data before loadstring().
-            local chunk = loadstring("return " .. data)
-            if (chunk) then
-                local rawAction = chunk()
+        elseif ((typ == "text") or (typ == "binary")) then
+            local _, rawAction = next(decode("ActionGeneric", data), nil)
+            if (rawAction) then
                 doAction(self, rawAction, ActionTranslator.translate(rawAction))
             else
                 local bytes, err = webSocket:send_text("Server: Failed to parse the data came from the client.")

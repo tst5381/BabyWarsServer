@@ -3,32 +3,30 @@ local PlayerProfileManager = {}
 
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
 
+local decode = SerializationFunctions.decode
+local encode = SerializationFunctions.encode
+local io     = io
+
 local PLAYER_PROFILE_PATH          = "babyWars\\res\\data\\playerProfile\\"
+local DEFAULT_SINGLE_GAME_RECORD   = {rankScore = 1000, win = 0, lose = 0, draw = 0}
+local DEFAULT_GAME_RECORDS         = {}
+for i = 1, 6 do
+    DEFAULT_GAME_RECORDS[i] = DEFAULT_SINGLE_GAME_RECORD
+end
 local SINGLE_SKILL_CONFIGURATION   = {
-    maxPoints = 100,
-    passive   = {},
-    active1   = {},
-    active2   = {},
+    basePoints = 100,
+    passive    = {},
+    active1    = {},
+    active2    = {},
 }
-local SINGLE_GAME_RECORD           = {
-    win  = 0,
-    lose = 0,
-    draw = 0,
-}
-local DEFAULT_RANK_SCORE           = 1000
-local DEFAULT_GAME_RECORDS         = {
-    [2] = SINGLE_GAME_RECORD,
-    [3] = SINGLE_GAME_RECORD,
-    [4] = SINGLE_GAME_RECORD,
-}
+local DEFAULT_SKILL_CONFIGURATIONS = {}
+for i = 1, require("src.app.utilities.SkillDataAccessors").getSkillConfigurationsCount() do
+    DEFAULT_SKILL_CONFIGURATIONS[i] = SINGLE_SKILL_CONFIGURATION
+end
 local DEFAULT_WAR_LIST             = {
     created = {},
     ongoing = {},
 }
-local DEFAULT_SKILL_CONFIGURATIONS = {}
-for i = 1, 10 do
-    DEFAULT_SKILL_CONFIGURATIONS[i] = SINGLE_SKILL_CONFIGURATION
-end
 
 local s_IsInitialized     = false
 local s_PlayerProfileList = {}
@@ -42,7 +40,6 @@ local function generatePlayerProfile(account, password)
         password = password,
         nickname = account,
 
-        rankScore           = DEFAULT_RANK_SCORE,
         gameRecords         = DEFAULT_GAME_RECORDS,
         skillConfigurations = DEFAULT_SKILL_CONFIGURATIONS,
         warLists            = DEFAULT_WAR_LIST,
@@ -53,10 +50,22 @@ local function toFullFileName(account)
     return PLAYER_PROFILE_PATH .. account .. ".lua"
 end
 
-local function serialize(fullFileName, data)
-    local file = io.open(fullFileName, "w")
-    file:write("return ")
-    SerializationFunctions.appendToFile(data, "", file)
+local function loadProfile(account)
+    local fullFileName = toFullFileName(account)
+    local file         = io.open(fullFileName, "rb")
+    if (not file) then
+        return nil
+    else
+        local data = file:read("*a")
+        file:close()
+
+        return decode("PlayerProfile", data)
+    end
+end
+
+local function serializeProfile(account, profile)
+    local file = io.open(toFullFileName(account), "wb")
+    file:write(encode("PlayerProfile", profile))
     file:close()
 end
 
@@ -75,84 +84,64 @@ function PlayerProfileManager.init()
 end
 
 function PlayerProfileManager.getPlayerProfile(account)
-    if (type(account) ~= "string") then
-        return nil
-    end
-
-    if (not s_PlayerProfileList[account]) then
-        local fullFileName = toFullFileName(account)
-        local file = io.open(fullFileName, "r")
-        if (not file) then
+    local lowerAccount = string.lower(account)
+    if (not s_PlayerProfileList[lowerAccount]) then
+        local profile = loadProfile(account)
+        if (not profile) then
             return nil
         else
-            file:close()
-            local profile = dofile(fullFileName)
-            if (profile.account ~= account) then
-                return nil
-            end
-
-            s_PlayerProfileList[account] = {
-                fullFileName = fullFileName,
+            s_PlayerProfileList[lowerAccount] = {
+                fullFileName = toFullFileName(account),
                 profile      = profile,
             }
         end
     end
 
-    return s_PlayerProfileList[account].profile
-end
-
-function PlayerProfileManager.isAccountRegistered(account)
-    local fullFileName = toFullFileName(account)
-    local file = io.open(fullFileName, "r")
-    if (file) then
-        file:close()
-        return true
-    else
-        return false
-    end
-end
-
-function PlayerProfileManager.getSkillConfiguration(account, configurationID)
-    local profile = PlayerProfileManager.getPlayerProfile(account)
-    if (not profile) then
-        return nil, "PlayerProfileManager.getSkillConfiguration() the profile doesn't exist."
-    else
-        return profile.skillConfigurations[configurationID]
-    end
-end
-
-function PlayerProfileManager.setSkillConfiguration(account, configurationID, modelSkillConfiguration)
-    local profile = PlayerProfileManager.getPlayerProfile(account)
-    assert(profile, "PlayerProfileManager.setSkillConfiguration() the profile doesn't exist.")
-
-    profile.skillConfigurations[configurationID] = modelSkillConfiguration:toSerializableTable()
-    serialize(toFullFileName(account), profile)
-
-    return PlayerProfileManager
-end
-
-function PlayerProfileManager.isAccountAndPasswordValid(account, password)
-    local profile = PlayerProfileManager.getPlayerProfile(account)
-    return (profile) and (profile.password == password)
+    return s_PlayerProfileList[lowerAccount].profile
 end
 
 function PlayerProfileManager.createPlayerProfile(account, password)
-    if (not PlayerProfileManager.getPlayerProfile(account)) then
-        local fullFileName = toFullFileName(account)
-        local profile      = generatePlayerProfile(account, password)
-        serialize(fullFileName, profile)
-    end
+    assert(not PlayerProfileManager.getPlayerProfile(account), "PlayerProfileManager.createPlayerProfile() the profile has been created already.")
+    serializeProfile(account, generatePlayerProfile(account, password))
 
     return PlayerProfileManager.getPlayerProfile(account)
 end
 
-function PlayerProfileManager.updateProfilesWithBeginningWar(sceneWarFileName, configuration)
-    for _, player in pairs(configuration.players) do
+function PlayerProfileManager.isAccountRegistered(account)
+    return PlayerProfileManager.getPlayerProfile(account) ~= nil
+end
+
+function PlayerProfileManager.isAccountAndPasswordValid(account, password)
+    if (not account) then
+        return false
+    else
+        local profile = PlayerProfileManager.getPlayerProfile(account)
+        return (profile) and (profile.password == password)
+    end
+end
+
+function PlayerProfileManager.getSkillConfiguration(account, configurationID)
+    return PlayerProfileManager.getPlayerProfile(account).skillConfigurations[configurationID]
+end
+
+function PlayerProfileManager.setSkillConfiguration(account, configurationID, skillConfiguration)
+    local profile = PlayerProfileManager.getPlayerProfile(account)
+    assert(profile, "PlayerProfileManager.setSkillConfiguration() the profile doesn't exist.")
+
+    profile.skillConfigurations[configurationID] = skillConfiguration
+    serializeProfile(account, profile)
+
+    return PlayerProfileManager
+end
+
+function PlayerProfileManager.updateProfilesWithBeginningWar(warConfiguration)
+    local sceneWarFileName = warConfiguration.sceneWarFileName
+    for _, player in pairs(warConfiguration.players) do
         local account = player.account
         local profile = PlayerProfileManager.getPlayerProfile(account)
 
-        profile.warLists.ongoing[sceneWarFileName] = 1
-        serialize(toFullFileName(account), profile)
+        profile.warLists.ongoing[sceneWarFileName] = {sceneWarFileName = sceneWarFileName}
+        serializeProfile(account, profile)
     end
 
     return PlayerProfileManager
@@ -161,11 +150,11 @@ end
 function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
     local sceneWarFileName   = modelSceneWar:getFileName()
     local modelPlayerManager = modelSceneWar:getModelPlayerManager()
-    local playersCount       = modelPlayerManager:getPlayersCount()
     local alivePlayersCount  = 0
     local alivePlayerAccount = nil
+    local gameRecordIndex    = modelPlayerManager:getPlayersCount() * 2 - 3 + (modelSceneWar:isFogOfWarByDefault() and 1 or 0)
 
-    modelSceneWar:getModelPlayerManager():forEachModelPlayer(function(modelPlayer, playerIndex)
+    modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)
         local account = modelPlayer:getAccount()
         if (modelPlayer:isAlive()) then
             alivePlayersCount  = alivePlayersCount + 1
@@ -173,18 +162,18 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
         else
             local profile = PlayerProfileManager.getPlayerProfile(account)
             if (profile.warLists.ongoing[sceneWarFileName]) then
-                profile.gameRecords[playersCount].lose = profile.gameRecords[playersCount].lose + 1
+                profile.gameRecords[gameRecordIndex].lose = profile.gameRecords[gameRecordIndex].lose + 1
                 profile.warLists.ongoing[sceneWarFileName] = nil
-                serialize(toFullFileName(account), profile)
+                serializeProfile(account, profile)
             end
         end
     end)
 
     if (alivePlayersCount == 1) then
         local profile = PlayerProfileManager.getPlayerProfile(alivePlayerAccount)
-        profile.gameRecords[playersCount].win = profile.gameRecords[playersCount].win + 1
+        profile.gameRecords[gameRecordIndex].win = profile.gameRecords[gameRecordIndex].win + 1
         profile.warLists.ongoing[sceneWarFileName] = nil
-        serialize(toFullFileName(alivePlayerAccount), profile)
+        serializeProfile(alivePlayerAccount, profile)
     end
 
     return PlayerProfileManager
