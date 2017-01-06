@@ -1058,6 +1058,29 @@ local function translateCaptureModelTile(action)
     end
 end
 
+local function translateDestroyOwnedModelUnit(action)
+    local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
+    if (not modelSceneWar) then
+        return actionOnError
+    end
+
+    local modelUnit = getModelUnitMap(modelSceneWar):getModelUnit(action.gridIndex)
+    if ((not modelSceneWar:getModelTurnManager():isTurnPhaseMain())                          or
+        (not modelUnit)                                                                      or
+        (modelUnit:getPlayerIndex() ~= modelSceneWar:getModelTurnManager():getPlayerIndex()) or
+        (not modelUnit:isStateIdle()))                                                       then
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
+    end
+
+    local actionDestroyOwnedModelUnit = {
+        actionCode       = ACTION_CODES.ActionDestroyOwnedModelUnit,
+        actionID         = action.actionID,
+        sceneWarFileName = action.sceneWarFileName,
+        gridIndex        = action.gridIndex,
+    }
+    return actionDestroyOwnedModelUnit, createActionsForPublish(actionDestroyOwnedModelUnit), createActionForServer(actionDestroyOwnedModelUnit)
+end
+
 local function translateDive(action)
     local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
     if (not modelSceneWar) then
@@ -1581,6 +1604,7 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionBeginTurn)                    then return translateBeginTurn(                   action)
     elseif (actionCode == ACTION_CODES.ActionBuildModelTile)               then return translateBuildModelTile(              action)
     elseif (actionCode == ACTION_CODES.ActionCaptureModelTile)             then return translateCaptureModelTile(            action)
+    elseif (actionCode == ACTION_CODES.ActionDestroyOwnedModelUnit)        then return translateDestroyOwnedModelUnit(       action)
     elseif (actionCode == ACTION_CODES.ActionDive)                         then return translateDive(                        action)
     elseif (actionCode == ACTION_CODES.ActionDropModelUnit)                then return translateDropModelUnit(               action)
     elseif (actionCode == ACTION_CODES.ActionEndTurn)                      then return translateEndTurn(                     action)

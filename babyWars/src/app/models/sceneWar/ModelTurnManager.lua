@@ -163,11 +163,14 @@ end
 local function runTurnPhaseConsumeUnitFuel(self)
     if (self.m_TurnIndex > 1) then
         local sceneWarFileName = self.m_SceneWarFileName
+        local modelSceneWar    = SingletonGetters.getModelScene(sceneWarFileName)
         local playerIndex      = self.m_PlayerIndex
-        local modelTileMap     = getModelTileMap(sceneWarFileName)
-        local modelUnitMap     = getModelUnitMap(sceneWarFileName)
+        local modelTileMap     = getModelTileMap(modelSceneWar)
+        local modelUnitMap     = getModelUnitMap(modelSceneWar)
+        local modelFogMap      = getModelFogMap( modelSceneWar)
         local mapSize          = modelTileMap:getMapSize()
-        local dispatcher       = getScriptEventDispatcher(sceneWarFileName)
+        local dispatcher       = getScriptEventDispatcher(modelSceneWar)
+        local isReplay         = modelSceneWar:isTotalReplay()
 
         modelUnitMap:forEachModelUnitOnMap(function(modelUnit)
             if ((modelUnit:getPlayerIndex() == playerIndex) and
@@ -181,12 +184,14 @@ local function runTurnPhaseConsumeUnitFuel(self)
                     local modelTile = modelTileMap:getModelTile(gridIndex)
 
                     if ((not modelTile.canRepairTarget) or (not modelTile:canRepairTarget(modelUnit))) then
+                        modelFogMap:updateMapForPathsWithModelUnitAndPath(modelUnit, {gridIndex})
                         destroyActorUnitOnMap(sceneWarFileName, gridIndex, true)
                         dispatcher:dispatchEvent({
                             name      = "EvtDestroyViewUnit",
                             gridIndex = gridIndex,
                         })
-                        if (not IS_SERVER) then
+
+                        if ((not IS_SERVER) and (not isReplay)) then
                             for _, adjacentGridIndex in pairs(getAdjacentGrids(gridIndex, mapSize)) do
                                 local adjacentModelUnit = modelUnitMap:getModelUnit(adjacentGridIndex)
                                 if ((adjacentModelUnit)                                                                                                                                                               and
