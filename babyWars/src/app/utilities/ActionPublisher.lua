@@ -207,7 +207,7 @@ creators.createForActionCaptureModelTile = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
-creators.createForDestroyOwnedModelUnit = function(action, targetPlayerIndex)
+creators.createForActionDestroyOwnedModelUnit = function(action, targetPlayerIndex)
     local sceneWarFileName = action.sceneWarFileName
     local gridIndex        = action.gridIndex
     local focusModelUnit   = getModelUnitMap(sceneWarFileName):getModelUnit(gridIndex)

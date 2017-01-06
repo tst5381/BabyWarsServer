@@ -961,12 +961,17 @@ local function executeDestroyOwnedModelUnit(action, modelSceneWar)
     modelSceneWar:setExecutingAction(true)
     updateTilesAndUnitsBeforeExecutingAction(action, modelSceneWar)
 
-    local sceneWarFileName = action.sceneWarFileName
-    local gridIndex        = action.gridIndex
-    local modelUnitMap     = getModelUnitMap(modelSceneWar)
-    local isReplay         = modelSceneWar:isTotalReplay()
+    local sceneWarFileName    = action.sceneWarFileName
+    local gridIndex           = action.gridIndex
+    local modelUnitMap        = getModelUnitMap(modelSceneWar)
+    local isReplay            = modelSceneWar:isTotalReplay()
+    local playerIndexActing   = modelSceneWar:getModelTurnManager():getPlayerIndex()
+    local playerIndexLoggedIn = ((not IS_SERVER) and (not isReplay)) and (getPlayerIndexLoggedIn(modelSceneWar)) or (nil)
+
     if (gridIndex) then
-        getModelFogMap(modelSceneWar):updateMapForPathsWithModelUnitAndPath(modelUnitMap:getModelUnit(gridIndex), {gridIndex})
+        if ((IS_SERVER) or (isReplay) or (playerIndexActing == playerIndexLoggedIn)) then
+            getModelFogMap(modelSceneWar):updateMapForPathsWithModelUnitAndPath(modelUnitMap:getModelUnit(gridIndex), {gridIndex})
+        end
         destroyActorUnitOnMap(sceneWarFileName, gridIndex, true)
     else
         assert((not IS_SERVER) and (not isReplay), "ActionExecutor-executeDestroyOwnedModelUnit() the gridIndex must exist on server or in replay.")
@@ -982,12 +987,11 @@ local function executeDestroyOwnedModelUnit(action, modelSceneWar)
         if (gridIndex) then
             getModelGridEffect(modelSceneWar):showAnimationExplosion(gridIndex)
 
-            if (not isReplay) then
-                local playerIndex = modelSceneWar:getModelTurnManager():getPlayerIndex()
+            if (playerIndexActing == playerIndexLoggedIn) then
                 for _, adjacentGridIndex in pairs(GridIndexFunctions.getAdjacentGrids(gridIndex, modelUnitMap:getMapSize())) do
                     local adjacentModelUnit = modelUnitMap:getModelUnit(adjacentGridIndex)
-                    if ((adjacentModelUnit)                                                                                                                                                               and
-                        (not isUnitVisible(sceneWarFileName, adjacentGridIndex, adjacentModelUnit:getUnitType(), isModelUnitDiving(adjacentModelUnit), adjacentModelUnit:getPlayerIndex(), playerIndex))) then
+                    if ((adjacentModelUnit)                                                                                                                                                                     and
+                        (not isUnitVisible(sceneWarFileName, adjacentGridIndex, adjacentModelUnit:getUnitType(), isModelUnitDiving(adjacentModelUnit), adjacentModelUnit:getPlayerIndex(), playerIndexActing))) then
                         destroyActorUnitOnMap(sceneWarFileName, adjacentGridIndex, true)
                     end
                 end
