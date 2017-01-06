@@ -207,6 +207,18 @@ creators.createForActionCaptureModelTile = function(action, targetPlayerIndex)
     return actionForPublish
 end
 
+creators.createForActionDestroyOwnedModelUnit = function(action, targetPlayerIndex)
+    local sceneWarFileName = action.sceneWarFileName
+    local gridIndex        = action.gridIndex
+    local focusModelUnit   = getModelUnitMap(sceneWarFileName):getModelUnit(gridIndex)
+    local actionForPublish = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
+    if (not isUnitVisible(sceneWarFileName, gridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.gridIndex = nil
+    end
+
+    return actionForPublish
+end
+
 creators.createForActionDive = function(action, targetPlayerIndex)
     -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
     -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
