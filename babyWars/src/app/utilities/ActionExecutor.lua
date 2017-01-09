@@ -1620,10 +1620,14 @@ local function executeVoteForDraw(action, modelSceneWar)
             cleanupOnReceivingResponseFromServer(modelSceneWar)
         end
 
-        if (doesAgree) then
-            getModelMessageIndicator(modelSceneWar):showMessage(getLocalizedText(74, "AgreeDraw",    modelPlayer:getNickname()))
-        else
+        if (not doesAgree) then
             getModelMessageIndicator(modelSceneWar):showMessage(getLocalizedText(74, "DisagreeDraw", modelPlayer:getNickname()))
+        else
+            local modelMessageIndicator = getModelMessageIndicator(modelSceneWar)
+            modelMessageIndicator:showMessage(getLocalizedText(74, "AgreeDraw", modelPlayer:getNickname()))
+            if (modelSceneWar:isEnded()) then
+                modelMessageIndicator:showMessage(getLocalizedText(74, "EndWithDraw"))
+            end
         end
 
         if     (not modelSceneWar:isEnded())   then -- do nothing.

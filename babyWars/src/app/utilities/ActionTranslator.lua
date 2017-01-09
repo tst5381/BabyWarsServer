@@ -1175,7 +1175,10 @@ local function translateEndTurn(action)
         return actionOnError
     end
 
-    if (not modelSceneWar:getModelTurnManager():isTurnPhaseMain()) then
+    local modelTurnManager = modelSceneWar:getModelTurnManager()
+    local modelPlayer      = modelSceneWar:getModelPlayerManager():getModelPlayer(modelTurnManager:getPlayerIndex())
+    if ((not modelTurnManager:isTurnPhaseMain())                                              or
+        ((modelSceneWar:getRemainingVotesForDraw()) and (not modelPlayer:hasVotedForDraw()))) then
         return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
@@ -1556,8 +1559,9 @@ local function translateVoteForDraw(action)
         return actionOnError
     end
 
-    if ((not modelSceneWar:getModelTurnManager():isTurnPhaseMain()) or
-        (modelSceneWar:getModelPlayerManager():getModelPlayerWithAccount(action.playerAccount):hasVotedForDraw())) then
+    if ((not modelSceneWar:getModelTurnManager():isTurnPhaseMain())                                               or
+        (modelSceneWar:getModelPlayerManager():getModelPlayerWithAccount(action.playerAccount):hasVotedForDraw()) or
+        ((not modelSceneWar:getRemainingVotesForDraw()) and (not action.doesAgree)))                              then
         return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
