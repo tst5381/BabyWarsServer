@@ -299,9 +299,9 @@ local s_Texts = {
     },
     [4] = {
         [1] = function(skillID)
-            if     (skillID == 1)  then return "使我方全体部队造成的攻击伤害变为基础的"
-            elseif (skillID == 2)  then return "使我方全体部队受到的攻击伤害变为基础的"
-            elseif (skillID == 3)  then return "使我方全体部队的造价变为基础的"
+            if     (skillID == 1)  then return "改变我方全体部队的攻击力，幅度为"
+            elseif (skillID == 2)  then return "改变我方全体部队的防御力，幅度为"
+            elseif (skillID == 3)  then return "改变我方全体部队的造价，幅度为"
             elseif (skillID == 4)  then return "改变我方全体部队的当前HP，幅度为"
             elseif (skillID == 5)  then return "改变对方全体部队的当前HP，幅度为"
             elseif (skillID == 6)  then return "改变我方全体部队的移动力，幅度为"
@@ -327,23 +327,23 @@ local s_Texts = {
             elseif (skillID == 26) then return "晋升我方全体部队，幅度为"
             elseif (skillID == 27) then return "我方生产的部队自带晋升，等级为"
             elseif (skillID == 28) then return "使我方全军在全地形上的移动力消耗均变为1（不可移动的除外）"
-            elseif (skillID == 29) then return "使我方所有近战部队的攻击伤害变为基础的"
-            elseif (skillID == 30) then return "使我方所有远程部队的攻击伤害变为基础的"
-            elseif (skillID == 31) then return "使我方所有陆军的攻击伤害变为基础的"
-            elseif (skillID == 32) then return "使我方所有空军的攻击伤害变为基础的"
-            elseif (skillID == 33) then return "使我方所有海军的攻击伤害变为基础的"
-            elseif (skillID == 34) then return "使我方步兵系的攻击伤害变为基础的"
-            elseif (skillID == 35) then return "使我方车辆系的攻击伤害变为基础的"
-            elseif (skillID == 36) then return "使我方近战机械部队的攻击伤害变为基础的"
-            elseif (skillID == 37) then return "使我方所有近战部队受到的攻击伤害变为基础的"
-            elseif (skillID == 38) then return "使我方所有远程部队受到的攻击伤害变为基础的"
-            elseif (skillID == 39) then return "使我方所有陆军受到的攻击伤害变为基础的"
-            elseif (skillID == 40) then return "使我方所有空军受到的攻击伤害变为基础的"
-            elseif (skillID == 41) then return "使我方所有海军受到的攻击伤害变为基础的"
-            elseif (skillID == 42) then return "使我方步兵系受到的攻击伤害变为基础的"
-            elseif (skillID == 43) then return "使我方车辆系受到的攻击伤害变为基础的"
-            elseif (skillID == 44) then return "使我方近战机械部队受到的攻击伤害变为基础的"
-            elseif (skillID == 45) then return "使我方运输系（不含炮舰）受到的攻击伤害变为基础的"
+            elseif (skillID == 29) then return "改变我方所有近战部队（含步兵系）的攻击力，幅度为"
+            elseif (skillID == 30) then return "改变我方所有远程部队的攻击力，幅度为"
+            elseif (skillID == 31) then return "改变我方所有陆军的攻击力，幅度为"
+            elseif (skillID == 32) then return "改变我方所有空军的攻击力，幅度为"
+            elseif (skillID == 33) then return "改变我方所有海军的攻击力，幅度为"
+            elseif (skillID == 34) then return "改变我方步兵系的攻击力，幅度为"
+            elseif (skillID == 35) then return "改变我方车辆系的攻击力，幅度为"
+            elseif (skillID == 36) then return "改变我方近战机械部队的攻击力，幅度为"
+            elseif (skillID == 37) then return "改变我方所有近战部队（含步兵系）的防御力，幅度为"
+            elseif (skillID == 38) then return "改变我方所有远程部队的防御力，幅度为"
+            elseif (skillID == 39) then return "改变我方所有陆军的防御力，幅度为"
+            elseif (skillID == 40) then return "改变我方所有空军的防御力，幅度为"
+            elseif (skillID == 41) then return "改变我方所有海军的防御力，幅度为"
+            elseif (skillID == 42) then return "改变我方步兵系的防御力，幅度为"
+            elseif (skillID == 43) then return "改变我方车辆系的防御力，幅度为"
+            elseif (skillID == 44) then return "改变我方近战机械部队的防御力，幅度为"
+            elseif (skillID == 45) then return "改变我方运输系（不含炮舰）的防御力，幅度为"
             elseif (skillID == 46) then return "改变我方所有近战部队的移动力，幅度为"
             elseif (skillID == 47) then return "改变我方所有远程部队的移动力，幅度为"
             elseif (skillID == 48) then return "改变我方所有陆军的移动力，幅度为"
@@ -1110,16 +1110,29 @@ local s_Texts = {
             end
         end,
     },
-    --[[
     [74] = {
-        [1] = function() return "您 已 获 胜 ！" end,
-        [2] = function() return "You win!"      end,
+        [1] = function(textType, additionalText)
+            if     (textType == "AgreeDraw")    then return "玩家[" .. additionalText .. "]已提议和局。"
+            elseif (textType == "DisagreeDraw") then return "玩家[" .. additionalText .. "]已否决和局。"
+            elseif (textType == "Lose")         then return "玩家[" .. additionalText .. "]已战败！"
+            elseif (textType == "Surrender")    then return "玩家[" .. additionalText .. "]已投降！"
+            else                                     return "未知74:" .. (textType or "")
+            end
+        end,
+        [2] = function(textType, additionalText)
+            if     (textType == "AgreeDraw")    then return "Player [" .. additionalText .. "] proposed a draw."
+            elseif (textType == "DisagreeDraw") then return "Player [" .. additionalText .. "] declined the draw."
+            elseif (textType == "Lose")         then return "Player [" .. additionalText .. "] is defeated!"
+            elseif (textType == "Surrender")    then return "Player [" .. additionalText .. "] surrendered!"
+            else                                     return "Unknown74:" .. (textType or "")
+            end
+        end,
     },
+    --[[
     [75] = {
         [1] = function() return "您 已 战 败 …" end,
         [2] = function() return "You lose..."  end,
     },
-    --]]
     [76] = {
         [1] = function(nickname) return "玩家【" .. nickname .. "】已战败！"        end,
         [2] = function(nickname) return "Player [" .. nickname .. "] is defeated!" end,
@@ -1128,6 +1141,7 @@ local s_Texts = {
         [1] = function(nickname) return "玩家【" .. nickname .. "】已投降！"        end,
         [2] = function(nickname) return "Player [" .. nickname .. "] surrendered!" end,
     },
+    --]]
     [78] = {
         [1] = function(actionType)
             if     (actionType == "Wait")                   then return "待 机"

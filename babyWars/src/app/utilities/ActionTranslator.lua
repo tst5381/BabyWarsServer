@@ -1550,6 +1550,26 @@ local function translateSurrender(action)
     return actionSurrender, createActionsForPublish(actionSurrender), createActionForServer(actionSurrender)
 end
 
+local function translateVoteForDraw(action)
+    local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
+    if (not modelSceneWar) then
+        return actionOnError
+    end
+
+    if ((not modelSceneWar:getModelTurnManager():isTurnPhaseMain()) or
+        (modelSceneWar:getModelPlayerManager():getModelPlayerWithAccount(action.playerAccount):hasVotedForDraw())) then
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
+    end
+
+    local actionVoteForDraw = {
+        actionCode       = ACTION_CODES.ActionVoteForDraw,
+        actionID         = action.actionID,
+        sceneWarFileName = action.sceneWarFileName,
+        doesAgree        = action.doesAgree,
+    }
+    return actionVoteForDraw, createActionsForPublish(actionVoteForDraw), createActionForServer(actionVoteForDraw)
+end
+
 local function translateWait(action)
     local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
     if (not modelSceneWar) then
@@ -1617,6 +1637,7 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionSurface)                      then return translateSurface(                     action)
     elseif (actionCode == ACTION_CODES.ActionSurrender)                    then return translateSurrender(                   action)
     elseif (actionCode == ACTION_CODES.ActionSupplyModelUnit)              then return translateSupplyModelUnit(             action)
+    elseif (actionCode == ACTION_CODES.ActionVoteForDraw)                  then return translateVoteForDraw(                 action)
     elseif (actionCode == ACTION_CODES.ActionWait)                         then return translateWait(                        action)
     else                                                                        error("ActionTranslator.translate() invalid actionCode: " .. (actionCode or ""))
     end

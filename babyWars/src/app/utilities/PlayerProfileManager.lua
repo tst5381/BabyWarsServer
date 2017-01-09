@@ -63,8 +63,8 @@ local function loadProfile(account)
     end
 end
 
-local function serializeProfile(account, profile)
-    local file = io.open(toFullFileName(account), "wb")
+local function serializeProfile(profile)
+    local file = io.open(toFullFileName(profile.account), "wb")
     file:write(encode("PlayerProfile", profile))
     file:close()
 end
@@ -102,7 +102,7 @@ end
 
 function PlayerProfileManager.createPlayerProfile(account, password)
     assert(not PlayerProfileManager.getPlayerProfile(account), "PlayerProfileManager.createPlayerProfile() the profile has been created already.")
-    serializeProfile(account, generatePlayerProfile(account, password))
+    serializeProfile(generatePlayerProfile(account, password))
 
     return PlayerProfileManager.getPlayerProfile(account)
 end
@@ -129,7 +129,7 @@ function PlayerProfileManager.setSkillConfiguration(account, configurationID, sk
     assert(profile, "PlayerProfileManager.setSkillConfiguration() the profile doesn't exist.")
 
     profile.skillConfigurations[configurationID] = skillConfiguration
-    serializeProfile(account, profile)
+    serializeProfile(profile)
 
     return PlayerProfileManager
 end
@@ -141,7 +141,7 @@ function PlayerProfileManager.updateProfilesWithBeginningWar(warConfiguration)
         local profile = PlayerProfileManager.getPlayerProfile(account)
 
         profile.warLists.ongoing[sceneWarFileName] = {sceneWarFileName = sceneWarFileName}
-        serializeProfile(account, profile)
+        serializeProfile(profile)
     end
 
     return PlayerProfileManager
@@ -150,30 +150,45 @@ end
 function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
     local sceneWarFileName   = modelSceneWar:getFileName()
     local modelPlayerManager = modelSceneWar:getModelPlayerManager()
-    local alivePlayersCount  = 0
-    local alivePlayerAccount = nil
     local gameRecordIndex    = modelPlayerManager:getPlayersCount() * 2 - 3 + (modelSceneWar:isFogOfWarByDefault() and 1 or 0)
 
-    modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)
-        local account = modelPlayer:getAccount()
-        if (modelPlayer:isAlive()) then
-            alivePlayersCount  = alivePlayersCount + 1
-            alivePlayerAccount = account
-        else
-            local profile = PlayerProfileManager.getPlayerProfile(account)
-            if (profile.warLists.ongoing[sceneWarFileName]) then
-                profile.gameRecords[gameRecordIndex].lose = profile.gameRecords[gameRecordIndex].lose + 1
-                profile.warLists.ongoing[sceneWarFileName] = nil
-                serializeProfile(account, profile)
-            end
-        end
-    end)
+    if (modelSceneWar:getRemainingVotesForDraw() == 0) then
+        modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)
+            if (modelPlayer:isAlive()) then
+                local profile = PlayerProfileManager.getPlayerProfile(modelPlayer:getAccount())
+                assert(profile.warLists.ongoing[sceneWarFileName],
+                    "PlayerProfileManager.updateProfilesWithModelSceneWar() the war ends in draw, while some alive players are not participating in it.")
 
-    if (alivePlayersCount == 1) then
-        local profile = PlayerProfileManager.getPlayerProfile(alivePlayerAccount)
-        profile.gameRecords[gameRecordIndex].win = profile.gameRecords[gameRecordIndex].win + 1
-        profile.warLists.ongoing[sceneWarFileName] = nil
-        serializeProfile(alivePlayerAccount, profile)
+                profile.gameRecords[gameRecordIndex].draw  = profile.gameRecords[gameRecordIndex].draw + 1
+                profile.warLists.ongoing[sceneWarFileName] = nil
+                serializeProfile(profile)
+            end
+        end)
+
+    else
+        local alivePlayersCount  = 0
+        local alivePlayerAccount = nil
+        modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)
+            local account = modelPlayer:getAccount()
+            if (modelPlayer:isAlive()) then
+                alivePlayersCount  = alivePlayersCount + 1
+                alivePlayerAccount = account
+            else
+                local profile = PlayerProfileManager.getPlayerProfile(account)
+                if (profile.warLists.ongoing[sceneWarFileName]) then
+                    profile.gameRecords[gameRecordIndex].lose = profile.gameRecords[gameRecordIndex].lose + 1
+                    profile.warLists.ongoing[sceneWarFileName] = nil
+                    serializeProfile(profile)
+                end
+            end
+        end)
+
+        if (alivePlayersCount == 1) then
+            local profile = PlayerProfileManager.getPlayerProfile(alivePlayerAccount)
+            profile.gameRecords[gameRecordIndex].win = profile.gameRecords[gameRecordIndex].win + 1
+            profile.warLists.ongoing[sceneWarFileName] = nil
+            serializeProfile(profile)
+        end
     end
 
     return PlayerProfileManager
