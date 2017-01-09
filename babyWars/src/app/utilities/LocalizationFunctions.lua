@@ -1234,6 +1234,7 @@ local s_Texts = {
             elseif (errType == "DefeatedPlayer")                 then return "您在该战局中已被打败，无法再次进入。"
             elseif (errType == "EndedWar")                       then return "该战局已结束，无法再次进入。"
             elseif (errType == "FailToGetSkillConfiguration")    then return "无法获取技能配置，请重试。\n" .. text
+            elseif (errType == "InvalidAccountForProfile")       then return "该账号不存在，无法获取其战绩。"
             elseif (errType == "InvalidAccountOrPassword")       then return "账号/密码不正确。将自动回到主界面。" .. text
             elseif (errType == "InvalidGameVersion")             then return "游戏版本无效，请下载新版。\n新版版本号：" .. text
             elseif (errType == "InvalidLogin")                   then return "账号/密码不正确，请检查后重试。"
@@ -1259,6 +1260,7 @@ local s_Texts = {
             elseif (errType == "DefeatedPlayer")                 then return "You have been defeated in the war."
             elseif (errType == "EndedWar")                       then return "The war is ended."
             elseif (errType == "FailToGetSkillConfiguration")    then return "Failed to get the skill configuration. Please retry.\n" .. text
+            elseif (errType == "InvalidAccountForProfile")       then return "The account doesn't exist."
             elseif (errType == "InvalidAccountOrPassword")       then return "Invalid account/password." .. text
             elseif (errType == "InvalidGameVersion")             then return "Your game version is invalid. Please download the latest version:" .. text
             elseif (errType == "InvalidLogin")                   then return "Invalid account/password for login. Please check and retry."

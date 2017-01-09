@@ -24,8 +24,9 @@ for i = 1, require("src.app.utilities.SkillDataAccessors").getSkillConfiguration
     DEFAULT_SKILL_CONFIGURATIONS[i] = SINGLE_SKILL_CONFIGURATION
 end
 local DEFAULT_WAR_LIST             = {
-    created = {},
+    created = {}, -- deprecated
     ongoing = {},
+    waiting = {},
 }
 
 local s_IsInitialized     = false
@@ -134,13 +135,31 @@ function PlayerProfileManager.setSkillConfiguration(account, configurationID, sk
     return PlayerProfileManager
 end
 
-function PlayerProfileManager.updateProfilesWithBeginningWar(warConfiguration)
+function PlayerProfileManager.updateProfileOnCreatingWar(account, sceneWarFileName)
+    local profile  = PlayerProfileManager.getPlayerProfile(account)
+    local warLists = profile.warLists
+    warLists.waiting = warLists.waiting or {}
+    warLists.waiting[sceneWarFileName] = {sceneWarFileName = sceneWarFileName}
+    serializeProfile(profile)
+
+    return PlayerProfileManager
+end
+
+function PlayerProfileManager.updateProfileOnJoiningWar(account, sceneWarFileName)
+    return PlayerProfileManager.updateProfileOnCreatingWar(account, sceneWarFileName)
+end
+
+function PlayerProfileManager.updateProfilesOnBeginningWar(warConfiguration)
     local sceneWarFileName = warConfiguration.sceneWarFileName
     for _, player in pairs(warConfiguration.players) do
-        local account = player.account
-        local profile = PlayerProfileManager.getPlayerProfile(account)
+        local account  = player.account
+        local profile  = PlayerProfileManager.getPlayerProfile(account)
+        local warLists = profile.warLists
+        warLists.waiting = warLists.waiting or {}
 
-        profile.warLists.ongoing[sceneWarFileName] = {sceneWarFileName = sceneWarFileName}
+        local item = warLists.waiting[sceneWarFileName] or {sceneWarFileName = sceneWarFileName}
+        warLists.waiting[sceneWarFileName] = nil
+        warLists.ongoing[sceneWarFileName] = item
         serializeProfile(profile)
     end
 

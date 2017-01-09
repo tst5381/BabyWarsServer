@@ -356,6 +356,8 @@ function SceneWarManager.createNewWar(param)
     s_SceneWarNextName = getNextName(s_SceneWarNextName)
     serializeSceneWarNextName(s_SceneWarNextName)
 
+    PlayerProfileManager.updateProfilesOnCreatingWar(param.playerAccount, sceneWarFileName)
+
     return sceneWarFileName
 end
 
@@ -449,8 +451,10 @@ function SceneWarManager.joinWar(param)
     joiningSceneWar.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex)
     serializeWarData(joiningSceneWar)
 
+    PlayerProfileManager.updateProfilesOnJoiningWar(playerAccount, sceneWarFileName)
+
     if (isWarReadyForStart(warConfiguration)) then
-        PlayerProfileManager.updateProfilesWithBeginningWar(warConfiguration)
+        PlayerProfileManager.updateProfilesOnBeginningWar(warConfiguration)
 
         s_JoinableWarList[sceneWarFileName] = nil
         serializeJoinableWarList(s_JoinableWarList)

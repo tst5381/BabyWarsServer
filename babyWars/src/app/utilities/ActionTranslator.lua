@@ -79,6 +79,11 @@ local MESSAGE_MULTI_JOIN_WAR = {
     messageCode   = 81,
     messageParams = {"MultiJoinWar"},
 }
+local MESSAGE_INVALID_ACCOUNT_FOR_PROFILE = {
+    actionCode    = ACTION_CODES.ActionMessage,
+    messageCode   = 81,
+    messageParams = {"InvalidAccountForProfile"},
+}
 local MESSAGE_INVALID_GAME_VERSION = {
     actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
@@ -539,6 +544,50 @@ local function translateDownloadReplayData(action)
     end
 end
 
+local function translateGetJoinableWarConfigurations(action)
+    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+        return LOGOUT_INVALID_ACCOUNT_PASSWORD
+    end
+
+    return {
+        actionCode        = ACTION_CODES.ActionGetJoinableWarConfigurations,
+        warConfigurations = SceneWarManager.getJoinableWarConfigurations(action.playerAccount, action.sceneWarShortName),
+    }
+end
+
+local function translateGetOngoingWarList(action)
+    local playerAccount = action.playerAccount
+    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+        return LOGOUT_INVALID_ACCOUNT_PASSWORD
+    end
+
+    local list = {}
+    for sceneWarFileName, _ in pairs(PlayerProfileManager.getPlayerProfile(playerAccount).warLists.ongoing) do
+        list[#list + 1] = {
+            isInTurn         = isPlayerInTurnInWar(SceneWarManager.getOngoingModelSceneWar(sceneWarFileName), playerAccount),
+            warConfiguration = SceneWarManager.getOngoingSceneWarConfiguration(sceneWarFileName),
+        }
+    end
+
+    return {
+        actionCode     = ACTION_CODES.ActionGetOngoingWarList,
+        ongoingWarList = list,
+    }
+end
+
+local function translateGetPlayerProfile(action)
+    local profile = PlayerProfileManager.getPlayerProfile(action.playerAccount)
+    if (not profile) then
+        return MESSAGE_INVALID_ACCOUNT_FOR_PROFILE
+    else
+        return {
+            actionCode    = ACTION_CODES.ActionGetPlayerProfile,
+            playerAccount = action.playerAccount,
+            playerProfile = profile,
+        }
+    end
+end
+
 local function translateGetSkillConfiguration(action)
     if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
@@ -757,37 +806,6 @@ local function translateGetReplayConfigurations(action)
     return {
         actionCode           = ACTION_CODES.ActionGetReplayConfigurations,
         replayConfigurations = SceneWarManager.getReplayConfigurations(action.pageIndex),
-    }
-end
-
-local function translateGetJoinableWarConfigurations(action)
-    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
-        return LOGOUT_INVALID_ACCOUNT_PASSWORD
-    end
-
-    return {
-        actionCode        = ACTION_CODES.ActionGetJoinableWarConfigurations,
-        warConfigurations = SceneWarManager.getJoinableWarConfigurations(action.playerAccount, action.sceneWarShortName),
-    }
-end
-
-local function translateGetOngoingWarList(action)
-    local playerAccount = action.playerAccount
-    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
-        return LOGOUT_INVALID_ACCOUNT_PASSWORD
-    end
-
-    local list = {}
-    for sceneWarFileName, _ in pairs(PlayerProfileManager.getPlayerProfile(playerAccount).warLists.ongoing) do
-        list[#list + 1] = {
-            isInTurn         = isPlayerInTurnInWar(SceneWarManager.getOngoingModelSceneWar(sceneWarFileName), playerAccount),
-            warConfiguration = SceneWarManager.getOngoingSceneWarConfiguration(sceneWarFileName),
-        }
-    end
-
-    return {
-        actionCode     = ACTION_CODES.ActionGetOngoingWarList,
-        ongoingWarList = list,
     }
 end
 
@@ -1612,6 +1630,7 @@ function ActionTranslator.translate(action)
     if     (actionCode == ACTION_CODES.ActionDownloadReplayData)           then return translateDownloadReplayData(          action)
     elseif (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
     elseif (actionCode == ACTION_CODES.ActionGetOngoingWarList)            then return translateGetOngoingWarList(           action)
+    elseif (actionCode == ACTION_CODES.ActionGetPlayerProfile)             then return translateGetPlayerProfile(            action)
     elseif (actionCode == ACTION_CODES.ActionGetReplayConfigurations)      then return translateGetReplayConfigurations(     action)
     elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration)        then return translateGetSkillConfiguration(       action)
     elseif (actionCode == ACTION_CODES.ActionJoinWar)                      then return translateJoinWar(                     action)
