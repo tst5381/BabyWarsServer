@@ -589,12 +589,12 @@ local function translateGetPlayerProfile(action)
 end
 
 local function translateGetRankingList(action)
-    local list = {}
+    local rankingList = {}
     for i, item in ipairs(PlayerProfileManager.getRankingLists()[action.rankingListIndex]) do
-        if (i > 50) then
+        if ((i > 50) or (not item)) then
             break
         end
-        list[i] = item
+        rankingList[i] = item
     end
 
     return {

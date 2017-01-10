@@ -119,6 +119,10 @@ function PlayerProfileManager.init()
     return PlayerProfileManager
 end
 
+function PlayerProfileManager.getRankingLists()
+    return s_RankingLists
+end
+
 function PlayerProfileManager.getPlayerProfile(account)
     local lowerAccount = string.lower(account)
     if (not s_PlayerProfileList[lowerAccount]) then
