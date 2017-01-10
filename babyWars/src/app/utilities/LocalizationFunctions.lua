@@ -172,48 +172,54 @@ local s_LongText5_2 = "Untranslated"
 local s_Texts = {
     [1] = {
         [1] = function(textType)
-            if     (textType == "MainMenu")            then return "主  菜  单"
-            elseif (textType == "NewGame")             then return "新 建 战 局"
-            elseif (textType == "Continue")            then return "继 续"
-            elseif (textType == "JoinWar")             then return "参 战"
-            elseif (textType == "ConfigSkills")        then return "配 置 技 能"
-            elseif (textType == "ManageReplay")        then return "管 理 回 放"
-            elseif (textType == "Login")               then return "注 册 / 登 陆"
-            elseif (textType == "SetMessageIndicator") then return "开/关信息提示"
-            elseif (textType == "SetMusic")            then return "开 / 关 音 乐"
-            elseif (textType == "Help")                then return "帮 助"
-            elseif (textType == "Save")                then return "保 存"
+            if     (textType == "About")               then return "关 于 本 作"
             elseif (textType == "Back")                then return "返 回"
             elseif (textType == "Close")               then return "关 闭"
+            elseif (textType == "ConfigSkills")        then return "配 置 技 能"
+            elseif (textType == "Continue")            then return "继 续"
+            elseif (textType == "EssentialConcept")    then return "基 础 概 念"
             elseif (textType == "Exit")                then return "退 出"
             elseif (textType == "GameFlow")            then return "游 戏 流 程"
-            elseif (textType == "WarControl")          then return "战 局 操 作"
-            elseif (textType == "EssentialConcept")    then return "基 础 概 念"
+            elseif (textType == "Help")                then return "帮 助"
+            elseif (textType == "JoinWar")             then return "参 战"
+            elseif (textType == "Login")               then return "注 册 / 登 陆"
+            elseif (textType == "MainMenu")            then return "主  菜  单"
+            elseif (textType == "ManageReplay")        then return "管 理 回 放"
+            elseif (textType == "MyProfile")           then return "我 的 战 绩"
+            elseif (textType == "NewGame")             then return "新 建 战 局"
+            elseif (textType == "RankingList")         then return "排 行 榜"
+            elseif (textType == "Save")                then return "保 存"
+            elseif (textType == "SetMessageIndicator") then return "开/关信息提示"
+            elseif (textType == "SetMusic")            then return "开 / 关 音 乐"
             elseif (textType == "SkillSystem")         then return "技 能 系 统"
-            elseif (textType == "About")               then return "关 于 本 作"
+            elseif (textType == "ViewGameRecord")      then return "浏 览 战 绩"
+            elseif (textType == "WarControl")          then return "战 局 操 作"
             else                                            return "未知1:" .. (textType or "")
             end
         end,
         [2] = function(textType)
-            if     (textType == "MainMenu")            then return "Main Menu"
-            elseif (textType == "NewGame")             then return "New Game"
-            elseif (textType == "Continue")            then return "Continue"
-            elseif (textType == "JoinWar")             then return "Join"
-            elseif (textType == "ConfigSkills")        then return "Config Skills"
-            elseif (textType == "ManageReplay")        then return "ManageReplay"
-            elseif (textType == "Login")               then return "Login"
-            elseif (textType == "SetMessageIndicator") then return "Set Message"
-            elseif (textType == "SetMusic")            then return "Set Music"
-            elseif (textType == "Help")                then return "Help"
-            elseif (textType == "Save")                then return "Save"
+            if     (textType == "About")               then return "About"
             elseif (textType == "Back")                then return "Back"
             elseif (textType == "Close")               then return "Close"
+            elseif (textType == "ConfigSkills")        then return "Config Skills"
+            elseif (textType == "Continue")            then return "Continue"
+            elseif (textType == "EssentialConcept")    then return "Concept"
             elseif (textType == "Exit")                then return "Exit"
             elseif (textType == "GameFlow")            then return "Game Flow"
-            elseif (textType == "WarControl")          then return "Controlling"
-            elseif (textType == "EssentialConcept")    then return "Concept"
+            elseif (textType == "Help")                then return "Help"
+            elseif (textType == "JoinWar")             then return "Join"
+            elseif (textType == "Login")               then return "Login"
+            elseif (textType == "MainMenu")            then return "Main Menu"
+            elseif (textType == "ManageReplay")        then return "ManageReplay"
+            elseif (textType == "MyProfile")           then return "My Profile"
+            elseif (textType == "NewGame")             then return "New Game"
+            elseif (textType == "RankingList")         then return "RankingList"
+            elseif (textType == "Save")                then return "Save"
+            elseif (textType == "SetMessageIndicator") then return "Set Message"
+            elseif (textType == "SetMusic")            then return "Set Music"
             elseif (textType == "SkillSystem")         then return "Skills"
-            elseif (textType == "About")               then return "About"
+            elseif (textType == "ViewGameRecord")      then return "View Records"
+            elseif (textType == "WarControl")          then return "Controlling"
             else                                            return "Unknown1:" .. (textType or "")
             end
         end,
@@ -660,11 +666,43 @@ local s_Texts = {
             end
         end,
     },
-    --[[
     [13] = {
-        [1] = function(...) return s_LongText2_1     end,
-        [2] = function(...) return "Untranslated..." end,
+        [1] = function(textType)
+            if     (textType == "Account")         then return "账号"
+            elseif (textType == "Draw")            then return "平"
+            elseif (textType == "FogOff")          then return "明战"
+            elseif (textType == "FogOn")           then return "雾战"
+            elseif (textType == "GameRecords")     then return "战绩"
+            elseif (textType == "Lose")            then return "负"
+            elseif (textType == "Nickname")        then return "昵称"
+            elseif (textType == "None")            then return "无"
+            elseif (textType == "Players")         then return "人局"
+            elseif (textType == "RankScore")       then return "积分"
+            elseif (textType == "TransferingData") then return "正在获取数据，请稍候。"
+            elseif (textType == "WaitingWars")     then return "已参加且未满员的战局"
+            elseif (textType == "Win")             then return "胜"
+            else                                        return "未知13:" .. (textType or "")
+            end
+        end,
+        [2] = function(textType)
+            if     (textType == "Account")         then return "Account"
+            elseif (textType == "Draw")            then return "Draw"
+            elseif (textType == "FogOff")          then return "Fog Off"
+            elseif (textType == "FogOn")           then return "Fog On"
+            elseif (textType == "GameRecords")     then return "Game Records"
+            elseif (textType == "Lose")            then return "Lose"
+            elseif (textType == "Nickname")        then return "Nickname"
+            elseif (textType == "None")            then return "None"
+            elseif (textType == "Players")         then return "P"
+            elseif (textType == "RankScore")       then return "RankScore"
+            elseif (textType == "TransferingData") then return "Retrieving data from the server. Please wait."
+            elseif (textType == "WaitingWars")     then return "Waiting Wars"
+            elseif (textType == "Win")             then return "Win"
+            else                                        return "Unknown13:" .. (textType or "")
+            end
+        end,
     },
+    --[[
     [14] = {
         [1] = function(...) return s_LongText3_1     end,
         [2] = function(...) return "Untranslated..." end,
@@ -1701,7 +1739,7 @@ local s_Texts = {
             elseif (tileType == "EmptySilo")     then return "空发射塔：使用过的导弹发射塔，无法再次发射导弹。允许空军和陆军通过。"
             elseif (tileType == "Headquarters")  then return "总部：可以提供资金和维修陆军。若我方总部被占领，则我方战败。"
             elseif (tileType == "City")          then return "城市：可以提供资金和维修陆军。"
-            elseif (tileType == "CommandTower")  then return "指挥塔：可以提供资金，且为我方全体部队提供攻击加成。"
+            elseif (tileType == "CommandTower")  then return "指挥塔：可以提供资金，且为我方全体部队提供5%攻防加成。"
             elseif (tileType == "Radar")         then return "雷达：可以提供资金，且在雾战时照明5格范围内的区域。"
             elseif (tileType == "Factory")       then return "工厂：可以提供资金、生产和维修陆军。"
             elseif (tileType == "Airport")       then return "机场：可以提供资金、生产和维修空军。"

@@ -8,6 +8,8 @@ local encode = SerializationFunctions.encode
 local io     = io
 
 local PLAYER_PROFILE_PATH          = "babyWars\\res\\data\\playerProfile\\"
+local RANKING_LISTS_PATH           = PLAYER_PROFILE_PATH .. "rankingList\\"
+local RANKING_LIST_FILE_NAME       = RANKING_LISTS_PATH .. "rankingList.spdata"
 local DEFAULT_SINGLE_GAME_RECORD   = {rankScore = 1000, win = 0, lose = 0, draw = 0}
 local DEFAULT_GAME_RECORDS         = {}
 for i = 1, 6 do
@@ -31,6 +33,7 @@ local DEFAULT_WAR_LIST             = {
 
 local s_IsInitialized     = false
 local s_PlayerProfileList = {}
+local s_RankingLists
 
 --------------------------------------------------------------------------------
 -- The util functions.
@@ -70,6 +73,37 @@ local function serializeProfile(profile)
     file:close()
 end
 
+local function loadRankingLists()
+    local file = io.open(RANKING_LIST_FILE_NAME, "rb")
+    if (not file) then
+        return nil
+    else
+        local data = file:read("*a")
+        file:close()
+        return decode("RankingListsForServer", data).lists
+    end
+end
+
+local function serializeRankingLists(rankingLists)
+    local file = io.open(RANKING_LIST_FILE_NAME, "wb")
+    file:write(encode("RankingListsForServer", {lists = rankingLists}))
+    file:close()
+end
+
+--------------------------------------------------------------------------------
+-- The initializers.
+--------------------------------------------------------------------------------
+local function initRankingLists()
+    s_RankingLists = loadRankingLists()
+    if (not s_RankingLists) then
+        os.execute("mkdir " .. RANKING_LISTS_PATH)
+        s_RankingLists = {
+            {}, {}, {}, {}, {}, {},
+        }
+        serializeRankingLists(s_RankingLists)
+    end
+end
+
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
@@ -79,6 +113,7 @@ function PlayerProfileManager.init()
     end
 
     os.execute("mkdir " .. PLAYER_PROFILE_PATH)
+    initRankingLists()
 
     s_IsInitialized = true
     return PlayerProfileManager

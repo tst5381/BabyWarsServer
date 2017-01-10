@@ -588,6 +588,22 @@ local function translateGetPlayerProfile(action)
     end
 end
 
+local function translateGetRankingList(action)
+    local list = {}
+    for i, item in ipairs(PlayerProfileManager.getRankingLists()[action.rankingListIndex]) do
+        if (i > 50) then
+            break
+        end
+        list[i] = item
+    end
+
+    return {
+        actionCode       = ACTION_CODES.ActionGetRankingList,
+        rankingListIndex = action.rankingListIndex,
+        rankingList      = rankingList,
+    }
+end
+
 local function translateGetSkillConfiguration(action)
     if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
@@ -1631,6 +1647,7 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
     elseif (actionCode == ACTION_CODES.ActionGetOngoingWarList)            then return translateGetOngoingWarList(           action)
     elseif (actionCode == ACTION_CODES.ActionGetPlayerProfile)             then return translateGetPlayerProfile(            action)
+    elseif (actionCode == ACTION_CODES.ActionGetRankingList)               then return translateGetRankingList(              action)
     elseif (actionCode == ACTION_CODES.ActionGetReplayConfigurations)      then return translateGetReplayConfigurations(     action)
     elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration)        then return translateGetSkillConfiguration(       action)
     elseif (actionCode == ACTION_CODES.ActionJoinWar)                      then return translateJoinWar(                     action)

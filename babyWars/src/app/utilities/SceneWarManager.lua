@@ -356,7 +356,7 @@ function SceneWarManager.createNewWar(param)
     s_SceneWarNextName = getNextName(s_SceneWarNextName)
     serializeSceneWarNextName(s_SceneWarNextName)
 
-    PlayerProfileManager.updateProfilesOnCreatingWar(param.playerAccount, sceneWarFileName)
+    PlayerProfileManager.updateProfileOnCreatingWar(param.playerAccount, sceneWarFileName)
 
     return sceneWarFileName
 end
@@ -451,7 +451,7 @@ function SceneWarManager.joinWar(param)
     joiningSceneWar.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex)
     serializeWarData(joiningSceneWar)
 
-    PlayerProfileManager.updateProfilesOnJoiningWar(playerAccount, sceneWarFileName)
+    PlayerProfileManager.updateProfileOnJoiningWar(playerAccount, sceneWarFileName)
 
     if (isWarReadyForStart(warConfiguration)) then
         PlayerProfileManager.updateProfilesOnBeginningWar(warConfiguration)
