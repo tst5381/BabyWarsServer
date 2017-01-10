@@ -589,11 +589,13 @@ local function translateGetPlayerProfile(action)
 end
 
 local function translateGetRankingList(action)
-    local rankingList = {}
-    for i, item in ipairs(PlayerProfileManager.getRankingLists()[action.rankingListIndex]) do
-        if ((i > 50) or (not item)) then
+    local rankingList   = {}
+    local accountsCount = 0
+    for i, item in ipairs(PlayerProfileManager.getRankingLists()[action.rankingListIndex].list) do
+        if (accountsCount >= 50) then
             break
         end
+        accountsCount = accountsCount + #(item.accounts)
         rankingList[i] = item
     end
 

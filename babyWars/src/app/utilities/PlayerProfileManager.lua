@@ -3,9 +3,9 @@ local PlayerProfileManager = {}
 
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
 
-local decode = SerializationFunctions.decode
-local encode = SerializationFunctions.encode
-local io     = io
+local decode          = SerializationFunctions.decode
+local encode          = SerializationFunctions.encode
+local io, math, pairs = io, math, pairs
 
 local PLAYER_PROFILE_PATH          = "babyWars\\res\\data\\playerProfile\\"
 local RANKING_LISTS_PATH           = PLAYER_PROFILE_PATH .. "rankingList\\"
@@ -38,6 +38,20 @@ local s_RankingLists
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
+local function binarySearch(array, predicate)
+    local lowerBound, upperBound = 1, #array
+    while (lowerBound <= upperBound) do
+        local mid = math.floor((lowerBound + upperBound) / 2)
+        local p   = predicate(array[mid])
+        if     (p == 0) then return mid, true
+        elseif (p >  0) then lowerBound = mid + 1
+        else                 upperBound = mid - 1
+        end
+    end
+
+    return lowerBound, false
+end
+
 local function generatePlayerProfile(account, password)
     return {
         account  = account,
@@ -91,6 +105,80 @@ local function serializeRankingLists(rankingLists)
 end
 
 --------------------------------------------------------------------------------
+-- The functions for updating ranking list.
+--------------------------------------------------------------------------------
+local function getRankScoreModifierOnWin(winnerScore, loserScore)
+    local diff = winnerScore - loserScore
+    if     (diff == 0) then return 20
+    elseif (diff > 0)  then return 20 - math.min(20, math.floor(  diff  / 10))
+    else                    return 20 + math.min(20, math.floor((-diff) / 10))
+    end
+end
+
+local function updateRankingListOnScoreChanged(gameTypeIndex, account, oldScore, newScore)
+    local rankingList             = s_RankingLists[gameTypeIndex].list
+    local oldRankIndex, findedOld = binarySearch(rankingList, function(item)
+        return item.rankScore - oldScore
+    end)
+    if (findedOld) then
+        local accounts = rankingList[oldRankIndex].accounts
+        for i, accountInList in ipairs(accounts) do
+            if (accountInList == account) then
+                table.remove(accounts, i)
+                break
+            end
+        end
+        if (#accounts == 0) then
+            table.remove(rankingList, oldRankIndex)
+        end
+    end
+
+    local newRankIndex, findedNew = binarySearch(rankingList, function(item)
+        return item.rankScore - newScore
+    end)
+    if (findedNew) then
+        local accounts = rankingList[newRankIndex].accounts
+        accounts[#accounts + 1] = account
+    else
+        table.insert(rankingList, newRankIndex, {
+            rankScore = newScore,
+            accounts = {account},
+        })
+    end
+end
+
+local function updateRankingsOnPlayerLose(modelPlayerManager, lostPlayerIndex, gameTypeIndex)
+    local loserAccount  = modelPlayerManager:getModelPlayer(lostPlayerIndex):getAccount()
+    local loserProfile  = PlayerProfileManager.getPlayerProfile(loserAccount)
+    local loserScore    = loserProfile.gameRecords[gameTypeIndex].rankScore
+    local totalModifier = 0
+
+    modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)
+        if (modelPlayer:isAlive()) then
+            local winnerAccount = modelPlayer:getAccount()
+            local winnerProfile = PlayerProfileManager.getPlayerProfile(winnerAccount)
+            local winnerScore   = winnerProfile.gameRecords[gameTypeIndex].rankScore
+            local modifier      = getRankScoreModifierOnWin(winnerScore, loserScore)
+
+            if (modifier ~= 0) then
+                updateRankingListOnScoreChanged(gameTypeIndex, winnerAccount, winnerScore, winnerScore + modifier)
+
+                totalModifier = totalModifier + modifier
+                winnerProfile.gameRecords[gameTypeIndex].rankScore = winnerScore + modifier
+                serializeProfile(winnerProfile)
+            end
+        end
+    end)
+
+    if (totalModifier ~= 0) then
+        updateRankingListOnScoreChanged(gameTypeIndex, loserAccount, loserScore, loserScore - totalModifier)
+        serializeRankingLists(s_RankingLists)
+
+        loserProfile.gameRecords[gameTypeIndex].rankScore = loserScore - totalModifier
+    end
+end
+
+--------------------------------------------------------------------------------
 -- The initializers.
 --------------------------------------------------------------------------------
 local function initRankingLists()
@@ -98,7 +186,7 @@ local function initRankingLists()
     if (not s_RankingLists) then
         os.execute("mkdir " .. RANKING_LISTS_PATH)
         s_RankingLists = {
-            {}, {}, {}, {}, {}, {},
+            {list = {}}, {list = {}}, {list = {}}, {list = {}}, {list = {}}, {list = {}},
         }
         serializeRankingLists(s_RankingLists)
     end
@@ -208,7 +296,7 @@ end
 function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
     local sceneWarFileName   = modelSceneWar:getFileName()
     local modelPlayerManager = modelSceneWar:getModelPlayerManager()
-    local gameRecordIndex    = modelPlayerManager:getPlayersCount() * 2 - 3 + (modelSceneWar:isFogOfWarByDefault() and 1 or 0)
+    local gameTypeIndex    = modelPlayerManager:getPlayersCount() * 2 - 3 + (modelSceneWar:isFogOfWarByDefault() and 1 or 0)
 
     if (modelSceneWar:getRemainingVotesForDraw() == 0) then
         modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)
@@ -217,7 +305,7 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
                 assert(profile.warLists.ongoing[sceneWarFileName],
                     "PlayerProfileManager.updateProfilesWithModelSceneWar() the war ends in draw, while some alive players are not participating in it.")
 
-                profile.gameRecords[gameRecordIndex].draw  = profile.gameRecords[gameRecordIndex].draw + 1
+                profile.gameRecords[gameTypeIndex].draw  = profile.gameRecords[gameTypeIndex].draw + 1
                 profile.warLists.ongoing[sceneWarFileName] = nil
                 serializeProfile(profile)
             end
@@ -234,7 +322,9 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
             else
                 local profile = PlayerProfileManager.getPlayerProfile(account)
                 if (profile.warLists.ongoing[sceneWarFileName]) then
-                    profile.gameRecords[gameRecordIndex].lose = profile.gameRecords[gameRecordIndex].lose + 1
+                    updateRankingsOnPlayerLose(modelPlayerManager, playerIndex, gameTypeIndex)
+
+                    profile.gameRecords[gameTypeIndex].lose = profile.gameRecords[gameTypeIndex].lose + 1
                     profile.warLists.ongoing[sceneWarFileName] = nil
                     serializeProfile(profile)
                 end
@@ -243,7 +333,7 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
         if (alivePlayersCount == 1) then
             local profile = PlayerProfileManager.getPlayerProfile(alivePlayerAccount)
-            profile.gameRecords[gameRecordIndex].win = profile.gameRecords[gameRecordIndex].win + 1
+            profile.gameRecords[gameTypeIndex].win = profile.gameRecords[gameTypeIndex].win + 1
             profile.warLists.ongoing[sceneWarFileName] = nil
             serializeProfile(profile)
         end
