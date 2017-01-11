@@ -334,10 +334,12 @@ end
 function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
     local sceneWarFileName   = modelSceneWar:getFileName()
     local modelPlayerManager = modelSceneWar:getModelPlayerManager()
-    local gameTypeIndex    = modelPlayerManager:getPlayersCount() * 2 - 3 + (modelSceneWar:isFogOfWarByDefault() and 1 or 0)
+    local gameTypeIndex      = modelPlayerManager:getPlayersCount() * 2 - 3 + (modelSceneWar:isFogOfWarByDefault() and 1 or 0)
 
     if (modelSceneWar:getRemainingVotesForDraw() == 0) then
-        updateRankingsOnDraw(modelPlayerManager, gameTypeIndex)
+        if (modelSceneWar:isRankMatch()) then
+            updateRankingsOnDraw(modelPlayerManager, gameTypeIndex)
+        end
 
         modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)
             if (modelPlayer:isAlive()) then
@@ -362,7 +364,9 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
             else
                 local profile = PlayerProfileManager.getPlayerProfile(account)
                 if (profile.warLists.ongoing[sceneWarFileName]) then
-                    updateRankingsOnPlayerLose(modelPlayerManager, playerIndex, gameTypeIndex)
+                    if (modelSceneWar:isRankMatch()) then
+                        updateRankingsOnPlayerLose(modelPlayerManager, playerIndex, gameTypeIndex)
+                    end
 
                     profile.gameRecords[gameTypeIndex].lose = profile.gameRecords[gameTypeIndex].lose + 1
                     profile.warLists.ongoing[sceneWarFileName] = nil

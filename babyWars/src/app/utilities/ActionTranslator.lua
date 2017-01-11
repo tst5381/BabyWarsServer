@@ -119,6 +119,11 @@ local MESSAGE_OCCUPIED_PLAYER_INDEX = {
     messageCode   = 81,
     messageParams = {"OccupiedPlayerIndex"},
 }
+local MESSAGE_OVERLOADED_RANK_SCORE = {
+    actionCode    = ACTION_CODES.ActionMessage,
+    messageCode   = 81,
+    messageParams = {"OverloadedRankScore"},
+}
 local MESSAGE_OVERLOADED_SKILL_POINTS = {
     actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
@@ -143,6 +148,14 @@ local RUN_SCENE_MAIN_ENDED_WAR = {
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
+local function getPlayersCountWithWarFieldFileName(warFieldFileName)
+    return require("res.data.templateWarField." .. warFieldFileName).playersCount
+end
+
+local function getGameTypeIndexWithWarConfiguration(warConfiguration)
+    return getPlayersCountWithWarFieldFileName(warConfiguration.warFieldFileName) * 2 - 3 + (warConfiguration.isFogOfWarByDefault and 1 or 0)
+end
+
 local function isGridInPathNodes(gridIndex, pathNodes)
     for _, node in ipairs(pathNodes) do
         if (GridIndexFunctions.isEqual(gridIndex, node)) then
@@ -625,16 +638,32 @@ local function translateJoinWar(action)
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
     end
 
-    local sceneWarFileName = action.sceneWarFileName
-    local warConfiguration = SceneWarManager.getJoinableSceneWarConfiguration(sceneWarFileName)
+    local sceneWarFileName   = action.sceneWarFileName
+    local warConfiguration   = SceneWarManager.getJoinableSceneWarConfiguration(sceneWarFileName)
+    local playerIndexJoining = action.playerIndex
     if (not warConfiguration) then
         return MESSAGE_NOT_JOINABLE_WAR
     elseif (warConfiguration.warPassword ~= action.warPassword) then
         return MESSAGE_INVALID_WAR_PASSWORD
     elseif (SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)) then
         return MESSAGE_MULTI_JOIN_WAR
-    elseif (warConfiguration.players[action.playerIndex]) then
+    elseif (warConfiguration.players[playerIndexJoining]) then
         return MESSAGE_OCCUPIED_PLAYER_INDEX
+    elseif ((playerIndexJoining < 1) or (playerIndexJoining > getPlayersCountWithWarFieldFileName(warConfiguration.warFieldFileName))) then
+        return MESSAGE_OCCUPIED_PLAYER_INDEX
+    end
+
+    if (warConfiguration.maxDiffScore) then
+        local gameTypeIndex  = getGameTypeIndexWithWarConfiguration(warConfiguration)
+        local totalRankScore = 0
+        local playersCount   = 0
+        for playerIndex, playerInfo in pairs(warConfiguration.players) do
+            playersCount   = playersCount + 1
+            totalRankScore = totalRankScore + PlayerProfileManager.getPlayerProfile(playerInfo.account).gameRecords[gameTypeIndex].rankScore
+        end
+        if (math.abs(totalRankScore / playersCount - PlayerProfileManager.getPlayerProfile(playerAccount).gameRecords[gameTypeIndex].rankScore) > warConfiguration.maxDiffScore) then
+            return MESSAGE_OVERLOADED_RANK_SCORE
+        end
     end
 
     local skillConfigurationID = action.skillConfigurationID

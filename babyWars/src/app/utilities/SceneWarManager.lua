@@ -86,6 +86,8 @@ local function generateWarConfiguration(warData)
         isFogOfWarByDefault = warData.isFogOfWarByDefault,
         defaultWeatherCode  = warData.weather.defaultWeatherCode,
         isRandomWarField    = warData.isRandomWarField,
+        isRankMatch         = warData.isRankMatch,
+        maxDiffScore        = warData.maxDiffScore,
         players             = players,
     }
 end
@@ -275,6 +277,8 @@ local function generateSceneWarData(sceneWarFileName, param)
         warPassword         = param.warPassword,
         maxBaseSkillPoints  = param.maxBaseSkillPoints,
         isFogOfWarByDefault = param.isFogOfWarByDefault,
+        isRankMatch         = param.isRankMatch,
+        maxDiffScore        = param.maxDiffScore,
         isRandomWarField    = isRandom,
         isWarEnded          = false,
         isTotalReplay       = false,
