@@ -115,6 +115,14 @@ local function getRankScoreModifierOnWin(winnerScore, loserScore)
     end
 end
 
+local function getRankScoreModifierOnDraw(score1, score2)
+    local diff = score1 - score2
+    if     (diff == 0) then return 0
+    elseif (diff >  0) then return -math.min(20, math.floor(  diff  / 10))
+    else                    return  math.min(20, math.floor((-diff) / 10))
+    end
+end
+
 local function updateRankingListOnScoreChanged(gameTypeIndex, account, oldScore, newScore)
     local rankingList             = s_RankingLists[gameTypeIndex].list
     local oldRankIndex, findedOld = binarySearch(rankingList, function(item)
@@ -176,6 +184,36 @@ local function updateRankingsOnPlayerLose(modelPlayerManager, lostPlayerIndex, g
 
         loserProfile.gameRecords[gameTypeIndex].rankScore = loserScore - totalModifier
     end
+end
+
+local function updateRankingsOnDraw(modelPlayerManager, gameTypeIndex)
+    local alivePlayers      = {}
+    local alivePlayersCount = 0
+    modelPlayerManager:forEachModelPlayer(function(modelPlayer)
+        if (modelPlayer:isAlive()) then
+            alivePlayersCount = alivePlayersCount + 1
+            alivePlayers[alivePlayersCount] = {
+                modelPlayer   = modelPlayer,
+                profile       = PlayerProfileManager.getPlayerProfile(modelPlayer:getAccount()),
+                totalModifier = 0,
+            }
+        end
+    end)
+
+    for i = 1, alivePlayersCount do
+        local oldScore = alivePlayers[i].profile.gameRecords[gameTypeIndex].rankScore
+        for j = i + 1, alivePlayersCount do
+            local modifier  = getRankScoreModifierOnDraw(oldScore, alivePlayers[j].profile.gameRecords[gameTypeIndex].rankScore)
+            alivePlayers[i].totalModifier = alivePlayers[i].totalModifier + modifier
+            alivePlayers[j].totalModifier = alivePlayers[j].totalModifier - modifier
+        end
+
+        local newScore = oldScore + alivePlayers[i].totalModifier
+        updateRankingListOnScoreChanged(gameTypeIndex, alivePlayers[i].profile.account, oldScore, newScore)
+        alivePlayers[i].profile.gameRecords[gameTypeIndex].rankScore = newScore
+    end
+
+    serializeRankingLists(s_RankingLists)
 end
 
 --------------------------------------------------------------------------------
@@ -299,6 +337,8 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
     local gameTypeIndex    = modelPlayerManager:getPlayersCount() * 2 - 3 + (modelSceneWar:isFogOfWarByDefault() and 1 or 0)
 
     if (modelSceneWar:getRemainingVotesForDraw() == 0) then
+        updateRankingsOnDraw(modelPlayerManager, gameTypeIndex)
+
         modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)
             if (modelPlayer:isAlive()) then
                 local profile = PlayerProfileManager.getPlayerProfile(modelPlayer:getAccount())
