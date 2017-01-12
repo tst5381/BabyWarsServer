@@ -51,6 +51,7 @@ local ipairs, pairs, next          = ipairs, pairs, next
 local ACTION_CODES                   = ActionCodeFunctions.getFullList()
 local GAME_VERSION                   = GameConstantFunctions.getGameVersion()
 local MESSAGE_PARAM_OUT_OF_SYNC      = {"OutOfSync"}
+local MAX_PARTICIPATED_WARS_COUNT    = 20
 local IGNORED_ACTION_KEYS_FOR_SERVER = {"revealedTiles", "revealedUnits"}
 local SKILL_CONFIGURATIONS_COUNT     = SkillDataAccessors.getSkillConfigurationsCount()
 local WAR_PASSWORD_VALID_TIME        = 3600 * 24 -- seconds of a day
@@ -129,6 +130,11 @@ local MESSAGE_OVERLOADED_SKILL_POINTS = {
     actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
     messageParams = {"OverloadedSkillPoints"},
+}
+local MESSAGE_OVERLOADED_WARS_COUNT = {
+    actionCode    = ACTION_CODES.ActionMessage,
+    messageCode   = 81,
+    messageParams = {"OverloadedWarsCount"},
 }
 local MESSAGE_REGISTERED_ACCOUNT = {
     actionCode    = ACTION_CODES.ActionMessage,
@@ -637,6 +643,8 @@ local function translateJoinWar(action)
     local playerAccount = action.playerAccount
     if (not PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
+    elseif (PlayerProfileManager.getParticipatedWarsCount(playerAccount) >= MAX_PARTICIPATED_WARS_COUNT) then
+        return MESSAGE_OVERLOADED_WARS_COUNT
     end
 
     local sceneWarFileName   = action.sceneWarFileName
@@ -725,8 +733,11 @@ local function translateNetworkHeartbeat(action)
 end
 
 local function translateNewWar(action)
-    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+    local playerAccount = action.playerAccount
+    if (not PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
+    elseif (PlayerProfileManager.getParticipatedWarsCount(playerAccount) >= MAX_PARTICIPATED_WARS_COUNT) then
+        return MESSAGE_OVERLOADED_WARS_COUNT
     end
 
     local skillConfigurationID = action.skillConfigurationID
@@ -751,7 +762,6 @@ local function translateNewWar(action)
         end
     end
 
-    action.actionCode = ACTION_CODES.ActionNewWar
     -- TODO: validate more params.
 
     return {

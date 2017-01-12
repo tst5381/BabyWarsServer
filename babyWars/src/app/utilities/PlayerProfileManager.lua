@@ -2,6 +2,7 @@
 local PlayerProfileManager = {}
 
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
+local TableFunctions         = require("src.app.utilities.TableFunctions")
 
 local decode          = SerializationFunctions.decode
 local encode          = SerializationFunctions.encode
@@ -264,6 +265,11 @@ function PlayerProfileManager.getPlayerProfile(account)
     end
 
     return s_PlayerProfileList[lowerAccount].profile
+end
+
+function PlayerProfileManager.getParticipatedWarsCount(account)
+    local warLists = PlayerProfileManager.getPlayerProfile(account).warLists
+    return TableFunctions.getPairsCount(warLists.ongoing) + TableFunctions.getPairsCount(warLists.waiting)
 end
 
 function PlayerProfileManager.createPlayerProfile(account, password)
