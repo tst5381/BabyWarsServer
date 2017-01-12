@@ -652,7 +652,7 @@ local function translateJoinWar(action)
     local playerIndexJoining = action.playerIndex
     if (not warConfiguration) then
         return MESSAGE_NOT_JOINABLE_WAR
-    elseif ((warConfiguration.warPassword ~= action.warPassword) and (warConfiguration.createdTime) and (os.difftime(os.time(), warConfiguration.createdTime) < WAR_PASSWORD_VALID_TIME)) then
+    elseif ((warConfiguration.warPassword ~= action.warPassword) and (warConfiguration.createdTime) and ((ngx.time() - warConfiguration.createdTime) < WAR_PASSWORD_VALID_TIME)) then
         return MESSAGE_INVALID_WAR_PASSWORD
     elseif (SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)) then
         return MESSAGE_MULTI_JOIN_WAR
