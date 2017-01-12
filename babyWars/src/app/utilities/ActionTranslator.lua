@@ -50,9 +50,10 @@ local ipairs, pairs, next          = ipairs, pairs, next
 
 local ACTION_CODES                   = ActionCodeFunctions.getFullList()
 local GAME_VERSION                   = GameConstantFunctions.getGameVersion()
-local IGNORED_ACTION_KEYS_FOR_SERVER = {"revealedTiles", "revealedUnits"}
 local MESSAGE_PARAM_OUT_OF_SYNC      = {"OutOfSync"}
+local IGNORED_ACTION_KEYS_FOR_SERVER = {"revealedTiles", "revealedUnits"}
 local SKILL_CONFIGURATIONS_COUNT     = SkillDataAccessors.getSkillConfigurationsCount()
+local WAR_PASSWORD_VALID_TIME        = 3600 * 24 -- seconds of a day
 
 local LOGOUT_INVALID_ACCOUNT_PASSWORD = {
     actionCode    = ACTION_CODES.ActionLogout,
@@ -643,7 +644,7 @@ local function translateJoinWar(action)
     local playerIndexJoining = action.playerIndex
     if (not warConfiguration) then
         return MESSAGE_NOT_JOINABLE_WAR
-    elseif (warConfiguration.warPassword ~= action.warPassword) then
+    elseif ((warConfiguration.warPassword ~= action.warPassword) and (warConfiguration.createdTime) and (os.difftime(os.time(), warConfiguration.createdTime) < WAR_PASSWORD_VALID_TIME)) then
         return MESSAGE_INVALID_WAR_PASSWORD
     elseif (SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)) then
         return MESSAGE_MULTI_JOIN_WAR

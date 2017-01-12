@@ -8,7 +8,7 @@ local SerializationFunctions  = require("src.app.utilities.SerializationFunction
 local SkillDataAccessors      = require("src.app.utilities.SkillDataAccessors")
 local Actor                   = require("src.global.actors.Actor")
 
-local io, string, pairs = io, string, pairs
+local io, string, pairs, os = io, string, pairs, os
 
 local SCENE_WAR_PATH           = "babyWars\\res\\data\\sceneWar\\"
 local JOINABLE_WAR_LIST_PATH   = SCENE_WAR_PATH .. "JoinableList.lua"
@@ -79,16 +79,17 @@ local function generateWarConfiguration(warData)
     end
 
     return {
+        createdTime         = warData.createdTime,
+        defaultWeatherCode  = warData.weather.defaultWeatherCode,
+        isFogOfWarByDefault = warData.isFogOfWarByDefault,
+        isRandomWarField    = warData.isRandomWarField,
+        isRankMatch         = warData.isRankMatch,
+        maxBaseSkillPoints  = warData.maxBaseSkillPoints,
+        maxDiffScore        = warData.maxDiffScore,
+        players             = players,
         sceneWarFileName    = warData.sceneWarFileName,
         warFieldFileName    = warData.warField.warFieldFileName,
         warPassword         = warData.warPassword,
-        maxBaseSkillPoints  = warData.maxBaseSkillPoints,
-        isFogOfWarByDefault = warData.isFogOfWarByDefault,
-        defaultWeatherCode  = warData.weather.defaultWeatherCode,
-        isRandomWarField    = warData.isRandomWarField,
-        isRankMatch         = warData.isRankMatch,
-        maxDiffScore        = warData.maxDiffScore,
-        players             = players,
     }
 end
 
@@ -273,17 +274,18 @@ local function generateSceneWarData(sceneWarFileName, param)
     end
 
     return {
+        actionID            = 0,
+        createdTime         = os.time(),
+        executedActions     = DEFAULT_EXECUTED_ACTIONS,
+        isFogOfWarByDefault = param.isFogOfWarByDefault,
+        isRandomWarField    = isRandom,
+        isRankMatch         = param.isRankMatch,
+        isTotalReplay       = false,
+        isWarEnded          = false,
+        maxBaseSkillPoints  = param.maxBaseSkillPoints,
+        maxDiffScore        = param.maxDiffScore,
         sceneWarFileName    = sceneWarFileName,
         warPassword         = param.warPassword,
-        maxBaseSkillPoints  = param.maxBaseSkillPoints,
-        isFogOfWarByDefault = param.isFogOfWarByDefault,
-        isRankMatch         = param.isRankMatch,
-        maxDiffScore        = param.maxDiffScore,
-        isRandomWarField    = isRandom,
-        isWarEnded          = false,
-        isTotalReplay       = false,
-        actionID            = 0,
-        executedActions     = DEFAULT_EXECUTED_ACTIONS,
 
         warField = {warFieldFileName = warFieldFileName},
         turn     = DEFAULT_TURN_DATA,
