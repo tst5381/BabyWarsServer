@@ -17,7 +17,6 @@
 local AttackTaker = require("src.global.functions.class")("AttackTaker")
 
 local GameConstantFunctions  = require("src.app.utilities.GameConstantFunctions")
-local SingletonGetters       = require("src.app.utilities.SingletonGetters")
 local SkillModifierFunctions = require("src.app.utilities.SkillModifierFunctions")
 local ComponentManager       = require("src.global.components.ComponentManager")
 

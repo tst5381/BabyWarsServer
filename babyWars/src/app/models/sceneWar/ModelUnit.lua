@@ -16,7 +16,6 @@ local Destroyers            = require("src.app.utilities.Destroyers")
 local GameConstantFunctions = require("src.app.utilities.GameConstantFunctions")
 local GridIndexFunctions    = require("src.app.utilities.GridIndexFunctions")
 local LocalizationFunctions = require("src.app.utilities.LocalizationFunctions")
-local SingletonGetters      = require("src.app.utilities.SingletonGetters")
 local ComponentManager      = require("src.global.components.ComponentManager")
 
 local UNIT_STATE_CODE = {
@@ -101,11 +100,10 @@ end
 -- The callback functions on start running/script events.
 --------------------------------------------------------------------------------
 function ModelUnit:onStartRunning(modelSceneWar, sceneWarFileName)
-    self.m_SceneWarFileName = sceneWarFileName
     ComponentManager.callMethodForAllComponents(self, "onStartRunning", modelSceneWar, sceneWarFileName)
 
     if (self.m_View) then
-        self.m_View:setSceneWarFileName(sceneWarFileName)
+        self.m_View:setModelSceneWar(modelSceneWar)
         self:updateView()
     end
 
