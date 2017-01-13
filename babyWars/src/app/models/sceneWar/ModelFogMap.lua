@@ -202,11 +202,11 @@ end
 -- The callback functions on start running/script events.
 --------------------------------------------------------------------------------
 function ModelFogMap:onStartRunning(modelSceneWar, sceneWarFileName)
-    self.m_SceneWarFileName    = sceneWarFileName
-    self.m_IsFogOfWarByDefault = getModelScene(sceneWarFileName):isFogOfWarByDefault()
+    self.m_ModelSceneWar       = modelSceneWar
+    self.m_IsFogOfWarByDefault = modelSceneWar:isFogOfWarByDefault()
 
     if ((IS_SERVER) or (self.m_IsTotalReplay)) then
-        for playerIndex = 1, getModelPlayerManager(sceneWarFileName):getPlayersCount() do
+        for playerIndex = 1, getModelPlayerManager(modelSceneWar):getPlayersCount() do
             self:resetMapForTilesForPlayerIndex(playerIndex)
                 :resetMapForUnitsForPlayerIndex(playerIndex)
         end
@@ -242,7 +242,7 @@ function ModelFogMap:isDisablingFogByForce()
 end
 
 function ModelFogMap:resetMapForPathsForPlayerIndex(playerIndex, data)
-    assert((IS_SERVER) or (not self.m_SceneWarFileName) or (self.m_IsTotalReplay) or (playerIndex == getPlayerIndexLoggedIn()),
+    assert((IS_SERVER) or (not self.m_ModelSceneWar) or (self.m_IsTotalReplay) or (playerIndex == getPlayerIndexLoggedIn()),
         "ModelFogMap:resetMapForPathsForPlayerIndex() invalid playerIndex on the client: " .. (playerIndex or ""))
 
     local visibilityMap = self.m_MapsForPaths[playerIndex]
@@ -261,7 +261,7 @@ function ModelFogMap:updateMapForPathsWithModelUnitAndPath(modelUnit, path)
     assert((IS_SERVER) or (self.m_IsTotalReplay) or (playerIndex == getPlayerIndexLoggedIn()),
         "ModelFogMap:updateMapForPathsWithModelUnitAndPath() invalid playerIndex on the client: " .. (playerIndex or ""))
 
-    local canRevealHidingPlaces = canRevealHidingPlacesWithUnits(getModelPlayerManager(self.m_SceneWarFileName):getModelPlayer(playerIndex):getModelSkillConfiguration())
+    local canRevealHidingPlaces = canRevealHidingPlacesWithUnits(getModelPlayerManager(self.m_ModelSceneWar):getModelPlayer(playerIndex):getModelSkillConfiguration())
     local visibilityMap         = self.m_MapsForPaths[playerIndex]
     local mapSize               = self:getMapSize()
     for _, pathNode in ipairs(path) do
@@ -291,7 +291,7 @@ function ModelFogMap:resetMapForTilesForPlayerIndex(playerIndex, visionModifier)
     local mapSize       = self:getMapSize()
     visionModifier      = visionModifier or 0
     fillSingleMapWithValue(visibilityMap, mapSize, 0)
-    getModelTileMap(self.m_SceneWarFileName):forEachModelTile(function(modelTile)
+    getModelTileMap(self.m_ModelSceneWar):forEachModelTile(function(modelTile)
         updateMapForTilesOrUnits(visibilityMap, mapSize, modelTile:getGridIndex(), getVisionForModelTileOrUnit(modelTile, playerIndex, visionModifier) , 1)
     end)
 
@@ -318,7 +318,7 @@ function ModelFogMap:resetMapForUnitsForPlayerIndex(playerIndex, visionModifier)
     local mapSize       = self:getMapSize()
     visionModifier      = visionModifier or 0
     fillSingleMapWithValue(visibilityMap, mapSize, 0)
-    getModelUnitMap(self.m_SceneWarFileName):forEachModelUnitOnMap(function(modelUnit)
+    getModelUnitMap(self.m_ModelSceneWar):forEachModelUnitOnMap(function(modelUnit)
         updateMapForTilesOrUnits(visibilityMap, mapSize, modelUnit:getGridIndex(), getVisionForModelTileOrUnit(modelUnit, playerIndex, visionModifier), 1)
     end)
 

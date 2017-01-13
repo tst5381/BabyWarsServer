@@ -104,7 +104,10 @@ function ModelUnit:onStartRunning(modelSceneWar, sceneWarFileName)
     self.m_SceneWarFileName = sceneWarFileName
     ComponentManager.callMethodForAllComponents(self, "onStartRunning", modelSceneWar, sceneWarFileName)
 
-    self:updateView()
+    if (self.m_View) then
+        self.m_View:setSceneWarFileName(sceneWarFileName)
+        self:updateView()
+    end
 
     return self
 end
@@ -112,10 +115,6 @@ end
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
-function ModelUnit:getSceneWarFileName()
-    return self.m_SceneWarFileName
-end
-
 function ModelUnit:moveViewAlongPath(path, isDiving, callbackAfterMove)
     if (self.m_View) then
         self.m_View:moveAlongPath(path, isDiving, callbackAfterMove)

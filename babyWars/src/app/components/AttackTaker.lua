@@ -109,15 +109,6 @@ function AttackTaker:toSerializableTableWithFog()
 end
 
 --------------------------------------------------------------------------------
--- The public callback function for start running.
---------------------------------------------------------------------------------
-function AttackTaker:onStartRunning(modelSceneWar, sceneWarFileName)
-    self.m_SceneWarFileName = sceneWarFileName
-
-    return self
-end
-
---------------------------------------------------------------------------------
 -- The exported functions.
 --------------------------------------------------------------------------------
 function AttackTaker:getMaxHP()

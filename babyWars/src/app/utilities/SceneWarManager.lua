@@ -8,6 +8,7 @@ local SerializationFunctions  = require("src.app.utilities.SerializationFunction
 local SkillDataAccessors      = require("src.app.utilities.SkillDataAccessors")
 local Actor                   = require("src.global.actors.Actor")
 
+local ngx                   = ngx
 local io, string, pairs, os = io, string, pairs, os
 
 local SCENE_WAR_PATH           = "babyWars\\res\\data\\sceneWar\\"
@@ -81,6 +82,7 @@ local function generateWarConfiguration(warData)
     return {
         createdTime         = warData.createdTime,
         defaultWeatherCode  = warData.weather.defaultWeatherCode,
+        intervalUntilBoot   = warData.intervalUntilBoot,
         isFogOfWarByDefault = warData.isFogOfWarByDefault,
         isRandomWarField    = warData.isRandomWarField,
         isRankMatch         = warData.isRankMatch,
@@ -276,7 +278,7 @@ local function generateSceneWarData(sceneWarFileName, param)
     return {
         actionID                   = 0,
         createdTime                = ngx.time(),
-        defaultIntervalUntilBoot   = param.defaultIntervalUntilBoot,
+        intervalUntilBoot          = param.intervalUntilBoot,
         executedActions            = DEFAULT_EXECUTED_ACTIONS,
         isFogOfWarByDefault        = param.isFogOfWarByDefault,
         isRandomWarField           = isRandom,
@@ -285,7 +287,7 @@ local function generateSceneWarData(sceneWarFileName, param)
         isWarEnded                 = false,
         maxBaseSkillPoints         = param.maxBaseSkillPoints,
         maxDiffScore               = param.maxDiffScore,
-        remainingIntervalUntilBoot = param.defaultIntervalUntilBoot,
+        remainingIntervalUntilBoot = param.intervalUntilBoot,
         sceneWarFileName           = sceneWarFileName,
         warPassword                = param.warPassword,
 
@@ -386,6 +388,14 @@ function SceneWarManager.getOngoingSceneWarConfiguration(sceneWarFileName)
     return getOngoingWarListItem(sceneWarFileName).warConfiguration
 end
 
+function SceneWarManager.forEachOngoingModelSceneWar(callback)
+    for sceneWarFileName, _ in pairs(s_OngoingWarList) do
+        callback(SceneWarManager.getOngoingModelSceneWar(sceneWarFileName))
+    end
+
+    return SceneWarManager
+end
+
 function SceneWarManager.getJoinableSceneWarConfiguration(sceneWarFileName)
     if (not s_JoinableWarList[sceneWarFileName]) then
         return nil, "SceneWarManager.getJoinableSceneWarConfiguration() the war that the param specifies doesn't exist or is not joinable."
@@ -455,19 +465,29 @@ function SceneWarManager.joinWar(param)
         playerIndex = playerIndex,
         nickname    = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
     }
-    local joiningSceneWar = s_JoinableWarList[sceneWarFileName].warData
-    joiningSceneWar.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex)
-    serializeWarData(joiningSceneWar)
+    local joiningWarData = s_JoinableWarList[sceneWarFileName].warData
+    joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex)
 
     PlayerProfileManager.updateProfileOnJoiningWar(playerAccount, sceneWarFileName)
 
-    if (isWarReadyForStart(warConfiguration)) then
+    if (not isWarReadyForStart(warConfiguration)) then
+        serializeWarData(joiningWarData)
+    else
         PlayerProfileManager.updateProfilesOnBeginningWar(warConfiguration)
 
         s_JoinableWarList[sceneWarFileName] = nil
         serializeJoinableWarList(s_JoinableWarList)
 
-        s_OngoingWarList[sceneWarFileName] = {sceneWarFileName = sceneWarFileName}
+        joiningWarData.enterTurnTime = ngx.time()
+        local modelSceneWar = Actor.createModel("sceneWar.modelSceneWar", joiningWarData)
+        modelSceneWar:onStartRunning()
+        serializeWarData(modelSceneWar:toSerializableTable())
+
+        s_OngoingWarList[sceneWarFileName] = {
+            sceneWarFileName = sceneWarFileName,
+            warConfiguration = warConfiguration,
+            actorSceneWar    = Actor.createWithModelAndViewInstance(modelSceneWar),
+        }
         serializeOngoingWarList(s_OngoingWarList)
     end
 
@@ -500,6 +520,10 @@ function SceneWarManager.updateModelSceneWarWithAction(action)
     PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
     if (not modelSceneWar:isEnded()) then
+        if (modelSceneWar:getModelTurnManager():isTurnPhaseRequestToBegin()) then
+            modelSceneWar:setEnterTurnTime(ngx.time())
+        end
+
         serializeWarData(modelSceneWar:toSerializableTable())
     else
         s_OngoingWarList[sceneWarFileName] = nil
