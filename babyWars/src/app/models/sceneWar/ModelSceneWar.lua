@@ -38,6 +38,7 @@ local getLocalizedText = LocalizationFunctions.getLocalizedText
 
 local IGNORED_KEYS_FOR_EXECUTED_ACTIONS = {"sceneWarFileName", "actionID"}
 local TIME_INTERVAL_FOR_ACTIONS         = 1.5
+local DEFAULT_INTERVAL_UNTIL_BOOT       = 3600 * 24 * 3
 
 --------------------------------------------------------------------------------
 -- The private callback function on web socket events.
@@ -186,16 +187,20 @@ end
 -- The constructor and initializers.
 --------------------------------------------------------------------------------
 function ModelSceneWar:ctor(sceneData)
-    self.m_ExecutedActions       = sceneData.executedActions
-    self.m_SceneWarFileName      = sceneData.sceneWarFileName
-    self.m_IsWarEnded            = sceneData.isWarEnded
-    self.m_IsFogOfWarByDefault   = sceneData.isFogOfWarByDefault
-    self.m_IsRandomWarField      = sceneData.isRandomWarField
-    self.m_IsTotalReplay         = sceneData.isTotalReplay
-    self.m_MaxBaseSkillPoints    = sceneData.maxBaseSkillPoints
-    self.m_RemainingVotesForDraw = sceneData.remainingVotesForDraw
-    self.m_WarPassword           = sceneData.warPassword
-    self.m_CachedActions         = {}
+    self.m_CachedActions              = {}
+    self.m_EnterTurnTime              = sceneData.enterTurnTime     or DEFAULT_INTERVAL_UNTIL_BOOT
+    self.m_ExecutedActions            = sceneData.executedActions
+    self.m_IntervalUntilBoot          = sceneData.intervalUntilBoot or DEFAULT_INTERVAL_UNTIL_BOOT
+    self.m_SceneWarFileName           = sceneData.sceneWarFileName
+    self.m_IsWarEnded                 = sceneData.isWarEnded
+    self.m_IsFogOfWarByDefault        = sceneData.isFogOfWarByDefault
+    self.m_IsRandomWarField           = sceneData.isRandomWarField
+    self.m_IsRankMatch                = sceneData.isRankMatch
+    self.m_IsTotalReplay              = sceneData.isTotalReplay
+    self.m_MaxBaseSkillPoints         = sceneData.maxBaseSkillPoints
+    self.m_MaxDiffScore               = sceneData.maxDiffScore
+    self.m_RemainingVotesForDraw      = sceneData.remainingVotesForDraw
+    self.m_WarPassword                = sceneData.warPassword
     setActionId(self, sceneData.actionID)
 
     initScriptEventDispatcher(self)
@@ -228,16 +233,20 @@ end
 --------------------------------------------------------------------------------
 function ModelSceneWar:toSerializableTable()
     return {
+        actionID              = self:getActionId(),
+        enterTurnTime         = self.m_EnterTurnTime,
+        executedActions       = self.m_ExecutedActions,
+        intervalUntilBoot     = self.m_IntervalUntilBoot,
+        isFogOfWarByDefault   = self.m_IsFogOfWarByDefault,
+        isRandomWarField      = self.m_IsRandomWarField,
+        isRankMatch           = self.m_IsRankMatch,
+        isTotalReplay         = false,
+        isWarEnded            = self.m_IsWarEnded,
+        maxBaseSkillPoints    = self.m_MaxBaseSkillPoints,
+        maxDiffScore          = self.m_MaxDiffScore,
+        remainingVotesForDraw = self.m_RemainingVotesForDraw,
         sceneWarFileName      = self.m_SceneWarFileName,
         warPassword           = self.m_WarPassword,
-        isWarEnded            = self.m_IsWarEnded,
-        isRandomWarField      = self.m_IsRandomWarField,
-        isFogOfWarByDefault   = self.m_IsFogOfWarByDefault,
-        isTotalReplay         = false,
-        executedActions       = self.m_ExecutedActions,
-        maxBaseSkillPoints    = self.m_MaxBaseSkillPoints,
-        remainingVotesForDraw = self.m_RemainingVotesForDraw,
-        actionID              = self:getActionId(),
         players               = self:getModelPlayerManager() :toSerializableTable(),
         turn                  = self:getModelTurnManager()   :toSerializableTable(),
         warField              = self:getModelWarField()      :toSerializableTable(),
@@ -247,16 +256,20 @@ end
 
 function ModelSceneWar:toSerializableTableForPlayerIndex(playerIndex)
     return {
+        actionID              = self:getActionId(),
+        enterTurnTime         = self.m_EnterTurnTime,
+        executedActions       = nil,
+        intervalUntilBoot     = self.m_IntervalUntilBoot,
+        isFogOfWarByDefault   = self.m_IsFogOfWarByDefault,
+        isRandomWarField      = self.m_IsRandomWarField,
+        isRankMatch           = self.m_IsRankMatch,
+        isTotalReplay         = false,
+        isWarEnded            = self.m_IsWarEnded,
+        maxBaseSkillPoints    = self.m_MaxBaseSkillPoints,
+        maxDiffScore          = self.m_MaxDiffScore,
+        remainingVotesForDraw = self.m_RemainingVotesForDraw,
         sceneWarFileName      = self.m_SceneWarFileName,
         warPassword           = self.m_WarPassword,
-        isWarEnded            = self.m_IsWarEnded,
-        isRandomWarField      = self.m_IsRandomWarField,
-        isFogOfWarByDefault   = self.m_IsFogOfWarByDefault,
-        isTotalReplay         = false,
-        executedActions       = nil,
-        maxBaseSkillPoints    = self.m_MaxBaseSkillPoints,
-        remainingVotesForDraw = self.m_RemainingVotesForDraw,
-        actionID              = self:getActionId(),
         players               = self:getModelPlayerManager() :toSerializableTableForPlayerIndex(playerIndex),
         turn                  = self:getModelTurnManager()   :toSerializableTableForPlayerIndex(playerIndex),
         warField              = self:getModelWarField()      :toSerializableTableForPlayerIndex(playerIndex),
@@ -266,16 +279,20 @@ end
 
 function ModelSceneWar:toSerializableReplayData()
     return {
+        actionID              = 0,
+        enterTurnTime         = nil,
+        executedActions       = self.m_ExecutedActions,
+        intervalUntilBoot     = self.m_IntervalUntilBoot,
+        isFogOfWarByDefault   = self.m_IsFogOfWarByDefault,
+        isRandomWarField      = self.m_IsRandomWarField,
+        isRankMatch           = self.m_IsRankMatch,
+        isTotalReplay         = true,
+        isWarEnded            = false,
+        maxBaseSkillPoints    = self.m_MaxBaseSkillPoints,
+        maxDiffScore          = self.m_MaxDiffScore,
+        remainingVotesForDraw = nil,
         sceneWarFileName      = self.m_SceneWarFileName,
         warPassword           = self.m_WarPassword,
-        isWarEnded            = false,
-        isRandomWarField      = self.m_IsRandomWarField,
-        isFogOfWarByDefault   = self.m_IsFogOfWarByDefault,
-        isTotalReplay         = true,
-        executedActions       = self.m_ExecutedActions,
-        maxBaseSkillPoints    = self.m_MaxBaseSkillPoints,
-        remainingVotesForDraw = nil,
-        actionID              = 0,
         players               = self:getModelPlayerManager() :toSerializableReplayData(),
         turn                  = self:getModelTurnManager()   :toSerializableReplayData(),
         warField              = self:getModelWarField()      :toSerializableReplayData(),
@@ -436,12 +453,30 @@ function ModelSceneWar:getFileName()
     return self.m_SceneWarFileName
 end
 
+function ModelSceneWar:getIntervalUntilBoot()
+    return self.m_IntervalUntilBoot
+end
+
+function ModelSceneWar:getEnterTurnTime()
+    return self.m_EnterTurnTime
+end
+
+function ModelSceneWar:setEnterTurnTime(time)
+    self.m_EnterTurnTime = time
+
+    return self
+end
+
 function ModelSceneWar:isEnded()
     return self.m_IsWarEnded
 end
 
 function ModelSceneWar:isFogOfWarByDefault()
     return self.m_IsFogOfWarByDefault
+end
+
+function ModelSceneWar:isRankMatch()
+    return self.m_IsRankMatch
 end
 
 function ModelSceneWar:setEnded(ended)

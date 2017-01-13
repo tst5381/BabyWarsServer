@@ -8,7 +8,8 @@ local SerializationFunctions  = require("src.app.utilities.SerializationFunction
 local SkillDataAccessors      = require("src.app.utilities.SkillDataAccessors")
 local Actor                   = require("src.global.actors.Actor")
 
-local io, string, pairs = io, string, pairs
+local ngx                   = ngx
+local io, string, pairs, os = io, string, pairs, os
 
 local SCENE_WAR_PATH           = "babyWars\\res\\data\\sceneWar\\"
 local JOINABLE_WAR_LIST_PATH   = SCENE_WAR_PATH .. "JoinableList.lua"
@@ -79,14 +80,18 @@ local function generateWarConfiguration(warData)
     end
 
     return {
+        createdTime         = warData.createdTime,
+        defaultWeatherCode  = warData.weather.defaultWeatherCode,
+        intervalUntilBoot   = warData.intervalUntilBoot,
+        isFogOfWarByDefault = warData.isFogOfWarByDefault,
+        isRandomWarField    = warData.isRandomWarField,
+        isRankMatch         = warData.isRankMatch,
+        maxBaseSkillPoints  = warData.maxBaseSkillPoints,
+        maxDiffScore        = warData.maxDiffScore,
+        players             = players,
         sceneWarFileName    = warData.sceneWarFileName,
         warFieldFileName    = warData.warField.warFieldFileName,
         warPassword         = warData.warPassword,
-        maxBaseSkillPoints  = warData.maxBaseSkillPoints,
-        isFogOfWarByDefault = warData.isFogOfWarByDefault,
-        defaultWeatherCode  = warData.weather.defaultWeatherCode,
-        isRandomWarField    = warData.isRandomWarField,
-        players             = players,
     }
 end
 
@@ -271,15 +276,20 @@ local function generateSceneWarData(sceneWarFileName, param)
     end
 
     return {
-        sceneWarFileName    = sceneWarFileName,
-        warPassword         = param.warPassword,
-        maxBaseSkillPoints  = param.maxBaseSkillPoints,
-        isFogOfWarByDefault = param.isFogOfWarByDefault,
-        isRandomWarField    = isRandom,
-        isWarEnded          = false,
-        isTotalReplay       = false,
-        actionID            = 0,
-        executedActions     = DEFAULT_EXECUTED_ACTIONS,
+        actionID                   = 0,
+        createdTime                = ngx.time(),
+        intervalUntilBoot          = param.intervalUntilBoot,
+        executedActions            = DEFAULT_EXECUTED_ACTIONS,
+        isFogOfWarByDefault        = param.isFogOfWarByDefault,
+        isRandomWarField           = isRandom,
+        isRankMatch                = param.isRankMatch,
+        isTotalReplay              = false,
+        isWarEnded                 = false,
+        maxBaseSkillPoints         = param.maxBaseSkillPoints,
+        maxDiffScore               = param.maxDiffScore,
+        remainingIntervalUntilBoot = param.intervalUntilBoot,
+        sceneWarFileName           = sceneWarFileName,
+        warPassword                = param.warPassword,
 
         warField = {warFieldFileName = warFieldFileName},
         turn     = DEFAULT_TURN_DATA,
@@ -356,6 +366,8 @@ function SceneWarManager.createNewWar(param)
     s_SceneWarNextName = getNextName(s_SceneWarNextName)
     serializeSceneWarNextName(s_SceneWarNextName)
 
+    PlayerProfileManager.updateProfileOnCreatingWar(param.playerAccount, sceneWarFileName)
+
     return sceneWarFileName
 end
 
@@ -374,6 +386,14 @@ end
 
 function SceneWarManager.getOngoingSceneWarConfiguration(sceneWarFileName)
     return getOngoingWarListItem(sceneWarFileName).warConfiguration
+end
+
+function SceneWarManager.forEachOngoingModelSceneWar(callback)
+    for sceneWarFileName, _ in pairs(s_OngoingWarList) do
+        callback(SceneWarManager.getOngoingModelSceneWar(sceneWarFileName))
+    end
+
+    return SceneWarManager
 end
 
 function SceneWarManager.getJoinableSceneWarConfiguration(sceneWarFileName)
@@ -445,17 +465,29 @@ function SceneWarManager.joinWar(param)
         playerIndex = playerIndex,
         nickname    = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
     }
-    local joiningSceneWar = s_JoinableWarList[sceneWarFileName].warData
-    joiningSceneWar.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex)
-    serializeWarData(joiningSceneWar)
+    local joiningWarData = s_JoinableWarList[sceneWarFileName].warData
+    joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex)
 
-    if (isWarReadyForStart(warConfiguration)) then
-        PlayerProfileManager.updateProfilesWithBeginningWar(warConfiguration)
+    PlayerProfileManager.updateProfileOnJoiningWar(playerAccount, sceneWarFileName)
+
+    if (not isWarReadyForStart(warConfiguration)) then
+        serializeWarData(joiningWarData)
+    else
+        PlayerProfileManager.updateProfilesOnBeginningWar(warConfiguration)
 
         s_JoinableWarList[sceneWarFileName] = nil
         serializeJoinableWarList(s_JoinableWarList)
 
-        s_OngoingWarList[sceneWarFileName] = {sceneWarFileName = sceneWarFileName}
+        joiningWarData.enterTurnTime = ngx.time()
+        local modelSceneWar = Actor.createModel("sceneWar.modelSceneWar", joiningWarData)
+        modelSceneWar:onStartRunning()
+        serializeWarData(modelSceneWar:toSerializableTable())
+
+        s_OngoingWarList[sceneWarFileName] = {
+            sceneWarFileName = sceneWarFileName,
+            warConfiguration = warConfiguration,
+            actorSceneWar    = Actor.createWithModelAndViewInstance(modelSceneWar),
+        }
         serializeOngoingWarList(s_OngoingWarList)
     end
 
@@ -488,6 +520,10 @@ function SceneWarManager.updateModelSceneWarWithAction(action)
     PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
     if (not modelSceneWar:isEnded()) then
+        if (modelSceneWar:getModelTurnManager():isTurnPhaseRequestToBegin()) then
+            modelSceneWar:setEnterTurnTime(ngx.time())
+        end
+
         serializeWarData(modelSceneWar:toSerializableTable())
     else
         s_OngoingWarList[sceneWarFileName] = nil
