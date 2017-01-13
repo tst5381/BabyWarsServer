@@ -69,7 +69,7 @@ local function startSchedulerForBoot()
 end
 
 function ServerSchedulers.start()
-    startSchedulerForBoot()
+    --startSchedulerForBoot()
 
     return ServerSchedulers
 end

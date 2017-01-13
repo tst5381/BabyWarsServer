@@ -94,7 +94,7 @@ local function getNextTurnAndPlayerIndex(self, playerManager)
     end
 end
 
-local function repairModelUnit(modelUnit, repairAmount)
+local function repairModelUnit(self, modelUnit, repairAmount)
     modelUnit:setCurrentHP(modelUnit:getCurrentHP() + repairAmount)
     local hasSupplied = supplyWithAmmoAndFuel(modelUnit, true)
 
@@ -102,9 +102,9 @@ local function repairModelUnit(modelUnit, repairAmount)
         modelUnit:updateView()
 
         if (repairAmount >= 10) then
-            SingletonGetters.getModelGridEffect():showAnimationRepair(modelUnit:getGridIndex())
+            SingletonGetters.getModelGridEffect(self.m_ModelSceneWar):showAnimationRepair(modelUnit:getGridIndex())
         elseif (hasSupplied) then
-            SingletonGetters.getModelGridEffect():showAnimationSupply(modelUnit:getGridIndex())
+            SingletonGetters.getModelGridEffect(self.m_ModelSceneWar):showAnimationSupply(modelUnit:getGridIndex())
         end
     end
 end
@@ -219,13 +219,13 @@ local function runTurnPhaseRepairUnit(self)
 
         if (repairData.onMapData) then
             for unitID, data in pairs(repairData.onMapData) do
-                repairModelUnit(modelUnitMap:getModelUnit(data.gridIndex), data.repairAmount)
+                repairModelUnit(self, modelUnitMap:getModelUnit(data.gridIndex), data.repairAmount)
             end
         end
 
         if (repairData.loadedData) then
             for unitID, data in pairs(repairData.loadedData) do
-                repairModelUnit(modelUnitMap:getLoadedModelUnitWithUnitId(unitID), data.repairAmount)
+                repairModelUnit(self, modelUnitMap:getLoadedModelUnitWithUnitId(unitID), data.repairAmount)
             end
         end
 
