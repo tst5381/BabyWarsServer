@@ -257,6 +257,7 @@ function PlayerProfileManager.getPlayerProfile(account)
         if (not profile) then
             return nil
         else
+            profile.warLists.waiting = profile.warLists.waiting or {} -- For upgrading the old user data. May be removed later.
             s_PlayerProfileList[lowerAccount] = {
                 fullFileName = toFullFileName(account),
                 profile      = profile,
