@@ -65,7 +65,7 @@ local function generatePlayerProfile(account, password)
 end
 
 local function toFullFileName(account)
-    return PLAYER_PROFILE_PATH .. account .. ".lua"
+    return PLAYER_PROFILE_PATH .. account .. ".spdata"
 end
 
 local function loadProfile(account)

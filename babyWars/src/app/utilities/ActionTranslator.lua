@@ -570,7 +570,7 @@ local function translateGetJoinableWarConfigurations(action)
 
     return {
         actionCode        = ACTION_CODES.ActionGetJoinableWarConfigurations,
-        warConfigurations = SceneWarManager.getJoinableWarConfigurations(action.playerAccount, action.sceneWarShortName),
+        warConfigurations = SceneWarManager.getJoinableWarConfigurations(action.playerAccount, action.warID),
     }
 end
 

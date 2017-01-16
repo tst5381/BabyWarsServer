@@ -1,12 +1,13 @@
 
 local SceneWarManager = {}
 
-local GameConstantFunctions   = require("src.app.utilities.GameConstantFunctions")
-local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions")
-local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
-local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
-local SkillDataAccessors      = require("src.app.utilities.SkillDataAccessors")
-local Actor                   = require("src.global.actors.Actor")
+local GameConstantFunctions  = require("src.app.utilities.GameConstantFunctions")
+local LocalizationFunctions  = require("src.app.utilities.LocalizationFunctions")
+local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
+local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
+local SkillDataAccessors     = require("src.app.utilities.SkillDataAccessors")
+local TableFunctions         = require("src.app.utilities.TableFunctions")
+local Actor                  = require("src.global.actors.Actor")
 
 local ngx, io, math, os, string = ngx, io, math, os, string
 local pairs                     = pairs
@@ -17,13 +18,11 @@ local ONGOING_WAR_LIST_PATH    = SCENE_WAR_PATH .. "OngoingWarList.spdata"
 local REPLAY_LIST_PATH         = SCENE_WAR_PATH .. "ReplayList.spdata"
 local SCENE_WAR_NEXT_NAME_PATH = SCENE_WAR_PATH .. "NextWarID.spdata"
 
-local DEFAULT_EXECUTED_ACTIONS = {}
 local DEFAULT_TURN_DATA        = {
     turnIndex     = 1,
     playerIndex   = 1,
     turnPhaseCode = 1,
 }
-local DISABLED_SKILL_CONFIGURATION = {basePoints = 0}
 
 local s_IsInitialized = false
 
@@ -68,9 +67,9 @@ end
 --------------------------------------------------------------------------------
 local function generateSinglePlayerData(account, skillConfigurationID, playerIndex)
     local skillConfiguration
-    if     (not skillConfigurationID) then skillConfiguration = DISABLED_SKILL_CONFIGURATION
-    elseif (skillConfigurationID > 0) then skillConfiguration = PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID)
-    else                                   skillConfiguration = SkillDataAccessors.getSkillPresets()[-skillConfigurationID]
+    if     (not skillConfigurationID) then skillConfiguration = {basePoints = 0}
+    elseif (skillConfigurationID > 0) then skillConfiguration = TableFunctions.deepClone(PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID))
+    else                                   skillConfiguration = TableFunctions.deepClone(SkillDataAccessors.getSkillPresets()[-skillConfigurationID])
     end
     assert(skillConfiguration, "SceneWarManager-generateSinglePlayerData() failed to generate the skill configuration data.")
 
@@ -86,26 +85,16 @@ local function generateSinglePlayerData(account, skillConfigurationID, playerInd
     }
 end
 
-local function generatePlayersData(playerIndex, account, skillConfigurationID)
-    return {
-        [playerIndex] = generateSinglePlayerData(account, skillConfigurationID, playerIndex),
-    }
-end
-
 local function generateSceneWarData(warID, param)
+    local playerIndex      = param.playerIndex
     local warFieldFileName = param.warFieldFileName
-    local isRandom         = isRandomWarField(warFieldFileName)
-    if (isRandom) then
-        warFieldFileName = pickRandomWarField(warFieldFileName)
-    end
-
     return {
         actionID                   = 0,
         createdTime                = ngx.time(),
         intervalUntilBoot          = param.intervalUntilBoot,
-        executedActions            = DEFAULT_EXECUTED_ACTIONS,
+        executedActions            = {},
         isFogOfWarByDefault        = param.isFogOfWarByDefault,
-        isRandomWarField           = isRandom,
+        isRandomWarField           = isRandomWarField(warFieldFileName),
         isRankMatch                = param.isRankMatch,
         isTotalReplay              = false,
         isWarEnded                 = false,
@@ -115,9 +104,9 @@ local function generateSceneWarData(warID, param)
         warID                      = warID,
         warPassword                = param.warPassword,
 
+        players  = {[playerIndex] = generateSinglePlayerData(param.playerAccount, param.skillConfigurationID, playerIndex)},
+        turn     = TableFunctions.clone(DEFAULT_TURN_DATA),
         warField = {warFieldFileName = warFieldFileName},
-        turn     = DEFAULT_TURN_DATA,
-        players  = generatePlayersData(param.playerIndex, param.playerAccount, param.skillConfigurationID),
         weather  = {defaultWeatherCode = param.defaultWeatherCode},
     }
 end
@@ -182,9 +171,9 @@ local function loadWarData(warID)
     return warData
 end
 
-local function serializeNextWarId(name)
+local function serializeNextWarId(warID)
     local file = io.open(SCENE_WAR_NEXT_NAME_PATH, "wb")
-    file:write(name)
+    file:write(SerializationFunctions.encode("WarIdForIndexing", {warID = warID}))
     file:close()
 end
 
@@ -193,9 +182,9 @@ local function loadNextWarId()
     if (not file) then
         return nil
     else
-        local name = file:read("*a")
+        local warID = SerializationFunctions.decode("WarIdForIndexing", file:read("*a")).warID
         file:close()
-        return name
+        return warID
     end
 end
 
@@ -386,9 +375,19 @@ function SceneWarManager.getJoinableSceneWarConfiguration(warID)
     return s_JoinableWarList[warID].warConfiguration
 end
 
-function SceneWarManager.getJoinableWarConfigurations(playerAccount, warID)
-    if (s_JoinableWarList[warID]) then
-        local warConfiguration = s_JoinableWarList[warID].warConfiguration
+function SceneWarManager.getJoinableWarConfigurations(playerAccount, specifiedWarID)
+    if (not specifiedWarID) then
+        local list = {}
+        for warID, item in pairs(s_JoinableWarList) do
+            local warConfiguration = item.warConfiguration
+            if (not SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)) then
+                list[warID] = item.warConfiguration
+            end
+        end
+        return list
+
+    elseif (s_JoinableWarList[specifiedWarID]) then
+        local warConfiguration = s_JoinableWarList[specifiedWarID].warConfiguration
         if (not SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)) then
             return {warID = warConfiguration}
         end
