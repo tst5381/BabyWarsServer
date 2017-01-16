@@ -342,10 +342,10 @@ creators.createForActionProduceModelUnitOnTile = function(action, targetPlayerIn
         return TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     else
         return {
-            actionCode       = ACTION_CODES.ActionProduceModelUnitOnTile,
-            actionID         = action.actionID,
-            sceneWarFileName = action.sceneWarFileName,
-            cost             = action.cost,
+            actionCode = ACTION_CODES.ActionProduceModelUnitOnTile,
+            actionID   = action.actionID,
+            warID      = action.warID,
+            cost       = action.cost,
         }
     end
 end

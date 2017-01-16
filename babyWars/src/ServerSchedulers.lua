@@ -12,7 +12,7 @@ local log, ERR = ngx.log, ngx.ERR
 
 local ACTION_CODE_BEGIN_TURN      = ActionCodeFunctions.getActionCode("ActionBeginTurn")
 local ACTION_CODE_SURRENDER       = ActionCodeFunctions.getActionCode("ActionSurrender")
-local SCHEDULER_INTERVAL_FOR_BOOT = 30 -- 1 hour
+local SCHEDULER_INTERVAL_FOR_BOOT = 30 --3600 -- 1 hour
 
 local function startSchedulerForBoot()
     local check
@@ -22,7 +22,7 @@ local function startSchedulerForBoot()
             SceneWarManager.forEachOngoingModelSceneWar(function(modelSceneWar)
                 local intervalUntilBoot = modelSceneWar:getIntervalUntilBoot()
                 if (currentTime - modelSceneWar:getEnterTurnTime() > intervalUntilBoot) then
-                    local sceneWarFileName = modelSceneWar:getFileName()
+                    local warID            = modelSceneWar:getWarId()
                     local modelTurnManager = modelSceneWar:getModelTurnManager()
                     local playerAccount    = modelSceneWar:getModelPlayerManager():getModelPlayer(modelTurnManager:getPlayerIndex()):getAccount()
                     local playerPassword   = PlayerProfileManager.getPlayerProfile(playerAccount).password
@@ -31,7 +31,7 @@ local function startSchedulerForBoot()
                         local _1, _2, actionBeginTurn = ActionTranslator.translate({
                             actionCode       = ACTION_CODE_BEGIN_TURN,
                             actionID         = modelSceneWar:getActionId() + 1,
-                            sceneWarFileName = sceneWarFileName,
+                            warID            = warID,
                             playerAccount    = playerAccount,
                             playerPassword   = playerPassword,
                         })
@@ -45,7 +45,7 @@ local function startSchedulerForBoot()
                     local _1, _2, actionSurrender = ActionTranslator.translate({
                         actionCode       = ACTION_CODE_SURRENDER,
                         actionID         = modelSceneWar:getActionId() + 1,
-                        sceneWarFileName = sceneWarFileName,
+                        warID            = warID,
                         playerAccount    = playerAccount,
                         playerPassword   = playerPassword,
                     })
