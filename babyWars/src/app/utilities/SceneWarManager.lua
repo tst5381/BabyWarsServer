@@ -440,6 +440,11 @@ function SceneWarManager.joinWar(param)
         serializeJoinableWarList(s_JoinableWarList)
 
         joiningWarData.enterTurnTime = ngx.time()
+        if (joiningWarData.isRandomWarField) then
+            local warFieldFileName = pickRandomWarField(joiningWarData.warField.warFieldFileName)
+            joiningWarData.warField.warFieldFileName = warFieldFileName
+            warConfiguration.warFieldFileName        = warFieldFileName
+        end
         local modelSceneWar = Actor.createModel("sceneWar.modelSceneWar", joiningWarData)
         modelSceneWar:onStartRunning()
         serializeWarData(modelSceneWar:toSerializableTable())
