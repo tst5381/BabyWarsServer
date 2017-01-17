@@ -140,12 +140,14 @@ local function generateWarConfiguration(warData)
     return {
         createdTime         = warData.createdTime,
         defaultWeatherCode  = warData.weather.defaultWeatherCode,
+        enterTurnTime       = warData.enterTurnTime,
         intervalUntilBoot   = warData.intervalUntilBoot,
         isFogOfWarByDefault = warData.isFogOfWarByDefault,
         isRandomWarField    = warData.isRandomWarField,
         isRankMatch         = warData.isRankMatch,
         maxBaseSkillPoints  = warData.maxBaseSkillPoints,
         maxDiffScore        = warData.maxDiffScore,
+        playerIndexInTurn   = (warData.enterTurnTime) and (warData.turn.playerIndex) or (nil),
         players             = players,
         warFieldFileName    = warData.warField.warFieldFileName,
         warID               = warData.warID,
@@ -359,6 +361,15 @@ function SceneWarManager.getOngoingSceneWarConfiguration(warID)
     return s_OngoingWarList[warID].warConfiguration
 end
 
+function SceneWarManager.getOngoingWarConfigurationsForPlayer(playerAccount)
+    local list = {}
+    for warID, _ in pairs(PlayerProfileManager.getPlayerProfile(playerAccount).warLists.ongoing) do
+        list[warID] = SceneWarManager.getOngoingSceneWarConfiguration(warID)
+    end
+
+    return list
+end
+
 function SceneWarManager.forEachOngoingModelSceneWar(callback)
     for warID, _ in pairs(s_OngoingWarList) do
         callback(SceneWarManager.getOngoingModelSceneWar(warID))
@@ -439,12 +450,15 @@ function SceneWarManager.joinWar(param)
         s_JoinableWarList[warID] = nil
         serializeJoinableWarList(s_JoinableWarList)
 
-        joiningWarData.enterTurnTime = ngx.time()
+        warConfiguration.playerIndexInTurn = 1
+        warConfiguration.enterTurnTime     = ngx.time()
+        joiningWarData  .enterTurnTime     = warConfiguration.enterTurnTime
+
         if (joiningWarData.isRandomWarField) then
-            local warFieldFileName = pickRandomWarField(joiningWarData.warField.warFieldFileName)
-            joiningWarData.warField.warFieldFileName = warFieldFileName
-            warConfiguration.warFieldFileName        = warFieldFileName
+            warConfiguration.warFieldFileName        = pickRandomWarField(joiningWarData.warField.warFieldFileName)
+            joiningWarData.warField.warFieldFileName = warConfiguration.warFieldFileName
         end
+
         local modelSceneWar = Actor.createModel("sceneWar.modelSceneWar", joiningWarData)
         modelSceneWar:onStartRunning()
         serializeWarData(modelSceneWar:toSerializableTable())
@@ -486,7 +500,10 @@ function SceneWarManager.updateModelSceneWarWithAction(action)
 
     if (not modelSceneWar:isEnded()) then
         if (modelSceneWar:getModelTurnManager():isTurnPhaseRequestToBegin()) then
-            modelSceneWar:setEnterTurnTime(ngx.time())
+            local warConfiguration = SceneWarManager.getOngoingSceneWarConfiguration(warID)
+            warConfiguration.enterTurnTime     = ngx.time()
+            warConfiguration.playerIndexInTurn = modelSceneWar:getModelTurnManager():getPlayerIndex()
+            modelSceneWar:setEnterTurnTime(warConfiguration.enterTurnTime)
         end
 
         serializeWarData(modelSceneWar:toSerializableTable())

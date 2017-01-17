@@ -574,23 +574,15 @@ local function translateGetJoinableWarConfigurations(action)
     }
 end
 
-local function translateGetOngoingWarList(action)
+local function translateGetOngoingWarConfigurations(action)
     local playerAccount = action.playerAccount
     if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
     end
 
-    local list = {}
-    for warID, _ in pairs(PlayerProfileManager.getPlayerProfile(playerAccount).warLists.ongoing) do
-        list[#list + 1] = {
-            isInTurn         = isPlayerInTurnInWar(SceneWarManager.getOngoingModelSceneWar(warID), playerAccount),
-            warConfiguration = SceneWarManager.getOngoingSceneWarConfiguration(warID),
-        }
-    end
-
     return {
-        actionCode     = ACTION_CODES.ActionGetOngoingWarList,
-        ongoingWarList = list,
+        actionCode        = ACTION_CODES.ActionGetOngoingWarConfigurations,
+        warConfigurations = SceneWarManager.getOngoingWarConfigurationsForPlayer(playerAccount),
     }
 end
 
@@ -1661,7 +1653,7 @@ function ActionTranslator.translate(action)
 
     if     (actionCode == ACTION_CODES.ActionDownloadReplayData)           then return translateDownloadReplayData(          action)
     elseif (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
-    elseif (actionCode == ACTION_CODES.ActionGetOngoingWarList)            then return translateGetOngoingWarList(           action)
+    elseif (actionCode == ACTION_CODES.ActionGetOngoingWarConfigurations)  then return translateGetOngoingWarConfigurations( action)
     elseif (actionCode == ACTION_CODES.ActionGetPlayerProfile)             then return translateGetPlayerProfile(            action)
     elseif (actionCode == ACTION_CODES.ActionGetRankingList)               then return translateGetRankingList(              action)
     elseif (actionCode == ACTION_CODES.ActionGetReplayConfigurations)      then return translateGetReplayConfigurations(     action)
