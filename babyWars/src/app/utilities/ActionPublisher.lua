@@ -127,21 +127,17 @@ creators.createForActionActivateSkillGroup = function(action, targetPlayerIndex,
 end
 
 creators.createForActionAttack = function(action, targetPlayerIndex, modelSceneWar)
-    -- 为简单起见，目前的代码实现会把移动路线，包括合流的两个部队的数据完整广播到目标客户端（不管对目标玩家是否可见）。客户端自行判断在移动过程中是否隐藏该部队。
-    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除，同时需要计算相关结果数据一并传送（如合流收入）。
-    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
-
     local beginningGridIndex = action.path.pathNodes[1]
     local targetGridIndex    = action.targetGridIndex
     local modelUnitMap       = getModelUnitMap(modelSceneWar)
-    local focusModelUnit     = modelUnitMap:getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local modelUnit          = modelUnitMap:getModelUnit(beginningGridIndex)
     local targetModelUnit    = modelUnitMap:getModelUnit(targetGridIndex)
 
     local actingUnitsData
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, focusModelUnit))
+    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, modelUnit))
     end
-    if ((targetModelUnit)                                                                                                                                                               and
+    if ((targetModelUnit)                                                                                                                                                            and
         (not isUnitVisible(modelSceneWar, targetGridIndex, targetModelUnit:getUnitType(), isModelUnitDiving(targetModelUnit), targetModelUnit:getPlayerIndex(), targetPlayerIndex))) then
         actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, targetModelUnit))
     end
@@ -161,54 +157,47 @@ creators.createForActionBeginTurn = function(action, targetPlayerIndex, modelSce
 end
 
 creators.createForActionBuildModelTile = function(action, targetPlayerIndex, modelSceneWar)
-    -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
-    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
-    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
-
     local pathNodes          = action.path.pathNodes
     local beginningGridIndex = pathNodes[1]
     local endingGridIndex    = pathNodes[#pathNodes]
-    local focusModelUnit     = getModelUnitMap(modelSceneWar):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
+    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
 
+    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     if (not isTileVisible(modelSceneWar, endingGridIndex, targetPlayerIndex)) then
         local modelTileMap = getModelTileMap(modelSceneWar)
         actionForPublish.actingTilesData = generateTilesDataForPublish(modelTileMap:getModelTile(endingGridIndex), modelTileMap:getMapSize())
     end
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, focusModelUnit)
+    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
     end
 
     return actionForPublish
 end
 
 creators.createForActionCaptureModelTile = function(action, targetPlayerIndex, modelSceneWar)
-    -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
-    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
-    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
-
     local pathNodes          = action.path.pathNodes
     local beginningGridIndex = pathNodes[1]
     local endingGridIndex    = pathNodes[#pathNodes]
-    local focusModelUnit     = getModelUnitMap(modelSceneWar):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
+    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
 
+    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     if (not isTileVisible(modelSceneWar, endingGridIndex, targetPlayerIndex)) then
         local modelTileMap = getModelTileMap(modelSceneWar)
         actionForPublish.actingTilesData = generateTilesDataForPublish(modelTileMap:getModelTile(endingGridIndex), modelTileMap:getMapSize())
     end
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, focusModelUnit)
+    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
     end
 
     return actionForPublish
 end
 
 creators.createForActionDestroyOwnedModelUnit = function(action, targetPlayerIndex, modelSceneWar)
-    local gridIndex        = action.gridIndex
-    local focusModelUnit   = getModelUnitMap(modelSceneWar):getModelUnit(gridIndex)
+    local gridIndex = action.gridIndex
+    local modelUnit = getModelUnitMap(modelSceneWar):getModelUnit(gridIndex)
+
     local actionForPublish = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, gridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
+    if (not isUnitVisible(modelSceneWar, gridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.gridIndex = nil
     end
 
@@ -216,32 +205,24 @@ creators.createForActionDestroyOwnedModelUnit = function(action, targetPlayerInd
 end
 
 creators.createForActionDive = function(action, targetPlayerIndex, modelSceneWar)
-    -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
-    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
-    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
-
     local beginningGridIndex = action.path.pathNodes[1]
-    local focusModelUnit     = getModelUnitMap(modelSceneWar):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
 
     local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, focusModelUnit)
+    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
     end
 
     return actionForPublish
 end
 
 creators.createForActionDropModelUnit = function(action, targetPlayerIndex, modelSceneWar)
-    -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
-    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
-    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
-
     local beginningGridIndex = action.path.pathNodes[1]
-    local focusModelUnit     = getModelUnitMap(modelSceneWar):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
 
     local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, focusModelUnit)
+    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
     end
 
     return actionForPublish
@@ -252,21 +233,17 @@ creators.createForActionEndTurn = function(action, targetPlayerIndex, modelScene
 end
 
 creators.createForActionJoinModelUnit = function(action, targetPlayerIndex, modelSceneWar)
-    -- 为简单起见，目前的代码实现会把移动路线，包括合流的两个部队的数据完整广播到目标客户端（不管对目标玩家是否可见）。客户端自行判断在移动过程中是否隐藏该部队。
-    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除，同时需要计算相关结果数据一并传送（如合流收入）。
-    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
-
-    local pathNodes           = action.path.pathNodes
-    local beginningGridIndex  = pathNodes[1]
-    local endingGridIndex     = pathNodes[#pathNodes]
-    local modelUnitMap        = getModelUnitMap(modelSceneWar)
-    local focusModelUnit      = modelUnitMap:getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-    local joiningModelUnit    = modelUnitMap:getModelUnit(endingGridIndex)
-    local unitPlayerIndex     = focusModelUnit:getPlayerIndex()
+    local pathNodes          = action.path.pathNodes
+    local beginningGridIndex = pathNodes[1]
+    local endingGridIndex    = pathNodes[#pathNodes]
+    local modelUnitMap       = getModelUnitMap(modelSceneWar)
+    local modelUnit          = modelUnitMap:getModelUnit(beginningGridIndex)
+    local joiningModelUnit   = modelUnitMap:getModelUnit(endingGridIndex)
+    local unitPlayerIndex    = modelUnit:getPlayerIndex()
 
     local actingUnitsData
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), unitPlayerIndex, targetPlayerIndex)) then
-        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, focusModelUnit))
+    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), unitPlayerIndex, targetPlayerIndex)) then
+        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, modelUnit))
     end
     if (not isUnitVisible(modelSceneWar, endingGridIndex, joiningModelUnit:getUnitType(), isModelUnitDiving(joiningModelUnit), unitPlayerIndex, targetPlayerIndex)) then
         actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, joiningModelUnit))
@@ -280,50 +257,42 @@ end
 
 creators.createForActionLaunchFlare = function(action, targetPlayerIndex, modelSceneWar)
     local beginningGridIndex = action.path.pathNodes[1]
-    local focusModelUnit     = getModelUnitMap(modelSceneWar):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
+    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
+
+    local actionForPublish           = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     actionForPublish.actionCode      = ACTION_CODES.ActionWait
     actionForPublish.targetGridIndex = nil
-
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, focusModelUnit)
+    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
     end
 
     return actionForPublish
 end
 
 creators.createForActionLaunchSilo = function(action, targetPlayerIndex, modelSceneWar)
-    -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
-    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
-    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
-
     local beginningGridIndex = action.path.pathNodes[1]
-    local focusModelUnit     = getModelUnitMap(modelSceneWar):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
 
     local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, focusModelUnit)
+    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
     end
 
     return actionForPublish
 end
 
 creators.createForActionLoadModelUnit = function(action, targetPlayerIndex, modelSceneWar)
-    -- 为简单起见，目前的代码实现会把移动路线完整广播到目标客户端（除非移动前后都对目标玩家不可见）。客户端自行判断在移动过程中是否隐藏该部队。
-    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
-    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
-
     local pathNodes          = action.path.pathNodes
     local modelUnitMap       = getModelUnitMap(modelSceneWar)
     local endingGridIndex    = pathNodes[#pathNodes]
     local loaderModelUnit    = modelUnitMap:getModelUnit(endingGridIndex)
     local playerIndex        = loaderModelUnit:getPlayerIndex()
     local beginningGridIndex = pathNodes[1]
-    local focusModelUnit     = modelUnitMap:getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local modelUnit          = modelUnitMap:getModelUnit(beginningGridIndex)
 
     local actingUnitsData
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), playerIndex, targetPlayerIndex)) then
-        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, focusModelUnit))
+    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), playerIndex, targetPlayerIndex)) then
+        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, modelUnit))
     end
     if (not isUnitVisible(modelSceneWar, endingGridIndex, loaderModelUnit:getUnitType(), isModelUnitDiving(loaderModelUnit), playerIndex, targetPlayerIndex)) then
         actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, loaderModelUnit))
@@ -342,57 +311,45 @@ creators.createForActionProduceModelUnitOnTile = function(action, targetPlayerIn
         return TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     else
         return {
-            actionCode       = ACTION_CODES.ActionProduceModelUnitOnTile,
-            actionID         = action.actionID,
-            sceneWarFileName = action.sceneWarFileName,
-            cost             = action.cost,
+            actionCode = ACTION_CODES.ActionProduceModelUnitOnTile,
+            actionID   = action.actionID,
+            warID      = action.warID,
+            cost       = action.cost,
         }
     end
 end
 
 creators.createForActionProduceModelUnitOnUnit = function(action, targetPlayerIndex, modelSceneWar)
-    -- 为简单起见，目前的代码实现会把移动路线完整广播到目标客户端（除非移动前后都对目标玩家不可见）。客户端自行判断在移动过程中是否隐藏该部队。
-    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
-    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
-
     local beginningGridIndex = action.path.pathNodes[1]
-    local focusModelUnit     = getModelUnitMap(modelSceneWar):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
 
     local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, focusModelUnit)
+    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
     end
 
     return actionForPublish
 end
 
 creators.createForActionSupplyModelUnit = function(action, targetPlayerIndex, modelSceneWar)
-    -- 为简单起见，目前的代码实现会把移动路线完整广播到目标客户端（除非移动前后都对目标玩家不可见）。客户端自行判断在移动过程中是否隐藏该部队。
-    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
-    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
-
     local beginningGridIndex = action.path.pathNodes[1]
-    local focusModelUnit     = getModelUnitMap(modelSceneWar):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
 
     local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, focusModelUnit)
+    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
     end
 
     return actionForPublish
 end
 
 creators.createForActionSurface = function(action, targetPlayerIndex, modelSceneWar)
-    -- 为简单起见，目前的代码实现会把移动路线及相关单位数据完整广播到目标客户端。客户端自行判断在移动过程中是否隐藏该部队。
-    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
-    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
-
     local beginningGridIndex = action.path.pathNodes[1]
-    local focusModelUnit     = getModelUnitMap(modelSceneWar):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
 
     local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, focusModelUnit)
+    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
     end
 
     return actionForPublish
@@ -407,16 +364,12 @@ creators.createForActionVoteForDraw = function(action, targetPlayerIndex, modelS
 end
 
 creators.createForActionWait = function(action, targetPlayerIndex, modelSceneWar)
-    -- 为简单起见，目前的代码实现会把移动路线完整广播到目标客户端（除非移动前后都对目标玩家不可见）。客户端自行判断在移动过程中是否隐藏该部队。
-    -- 这种实现存在被破解作弊的可能。完美防作弊的实现需要对移动路线以及单位的数据也做出适当的删除。
-    -- 行动玩家在移动后，可能会发现隐藏的敌方部队revealedUnits。这对于目标玩家不可见，因此广播的action须删除这些数据。
-
     local beginningGridIndex = action.path.pathNodes[1]
-    local focusModelUnit     = getModelUnitMap(modelSceneWar):getFocusModelUnit(beginningGridIndex, action.launchUnitID)
+    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
 
     local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, focusModelUnit:getUnitType(), isModelUnitDiving(focusModelUnit), focusModelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, focusModelUnit)
+    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
     end
 
     return actionForPublish

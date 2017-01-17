@@ -27,7 +27,6 @@ for i = 1, require("src.app.utilities.SkillDataAccessors").getSkillConfiguration
     DEFAULT_SKILL_CONFIGURATIONS[i] = SINGLE_SKILL_CONFIGURATION
 end
 local DEFAULT_WAR_LIST             = {
-    created = {}, -- deprecated
     ongoing = {},
     waiting = {},
 }
@@ -66,7 +65,7 @@ local function generatePlayerProfile(account, password)
 end
 
 local function toFullFileName(account)
-    return PLAYER_PROFILE_PATH .. account .. ".lua"
+    return PLAYER_PROFILE_PATH .. account .. ".spdata"
 end
 
 local function loadProfile(account)
@@ -257,7 +256,6 @@ function PlayerProfileManager.getPlayerProfile(account)
         if (not profile) then
             return nil
         else
-            profile.warLists.waiting = profile.warLists.waiting or {} -- For upgrading the old user data. May be removed later.
             s_PlayerProfileList[lowerAccount] = {
                 fullFileName = toFullFileName(account),
                 profile      = profile,
@@ -307,31 +305,26 @@ function PlayerProfileManager.setSkillConfiguration(account, configurationID, sk
     return PlayerProfileManager
 end
 
-function PlayerProfileManager.updateProfileOnCreatingWar(account, sceneWarFileName)
+function PlayerProfileManager.updateProfileOnCreatingWar(account, warID)
     local profile  = PlayerProfileManager.getPlayerProfile(account)
-    local warLists = profile.warLists
-    warLists.waiting = warLists.waiting or {}
-    warLists.waiting[sceneWarFileName] = {sceneWarFileName = sceneWarFileName}
+    profile.warLists.waiting[warID] = {warID = warID}
     serializeProfile(profile)
 
     return PlayerProfileManager
 end
 
-function PlayerProfileManager.updateProfileOnJoiningWar(account, sceneWarFileName)
-    return PlayerProfileManager.updateProfileOnCreatingWar(account, sceneWarFileName)
+function PlayerProfileManager.updateProfileOnJoiningWar(account, warID)
+    return PlayerProfileManager.updateProfileOnCreatingWar(account, warID)
 end
 
 function PlayerProfileManager.updateProfilesOnBeginningWar(warConfiguration)
-    local sceneWarFileName = warConfiguration.sceneWarFileName
+    local warID = warConfiguration.warID
     for _, player in pairs(warConfiguration.players) do
-        local account  = player.account
-        local profile  = PlayerProfileManager.getPlayerProfile(account)
+        local profile  = PlayerProfileManager.getPlayerProfile(player.account)
         local warLists = profile.warLists
-        warLists.waiting = warLists.waiting or {}
+        warLists.ongoing[warID] = warLists.waiting[warID]
+        warLists.waiting[warID] = nil
 
-        local item = warLists.waiting[sceneWarFileName] or {sceneWarFileName = sceneWarFileName}
-        warLists.waiting[sceneWarFileName] = nil
-        warLists.ongoing[sceneWarFileName] = item
         serializeProfile(profile)
     end
 
@@ -339,7 +332,7 @@ function PlayerProfileManager.updateProfilesOnBeginningWar(warConfiguration)
 end
 
 function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
-    local sceneWarFileName   = modelSceneWar:getFileName()
+    local warID              = modelSceneWar:getWarId()
     local modelPlayerManager = modelSceneWar:getModelPlayerManager()
     local gameTypeIndex      = modelPlayerManager:getPlayersCount() * 2 - 3 + (modelSceneWar:isFogOfWarByDefault() and 1 or 0)
 
@@ -351,11 +344,11 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
         modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)
             if (modelPlayer:isAlive()) then
                 local profile = PlayerProfileManager.getPlayerProfile(modelPlayer:getAccount())
-                assert(profile.warLists.ongoing[sceneWarFileName],
+                assert(profile.warLists.ongoing[warID],
                     "PlayerProfileManager.updateProfilesWithModelSceneWar() the war ends in draw, while some alive players are not participating in it.")
 
-                profile.gameRecords[gameTypeIndex].draw  = profile.gameRecords[gameTypeIndex].draw + 1
-                profile.warLists.ongoing[sceneWarFileName] = nil
+                profile.warLists.ongoing[warID]         = nil
+                profile.gameRecords[gameTypeIndex].draw = profile.gameRecords[gameTypeIndex].draw + 1
                 serializeProfile(profile)
             end
         end)
@@ -370,13 +363,13 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
                 alivePlayerAccount = account
             else
                 local profile = PlayerProfileManager.getPlayerProfile(account)
-                if (profile.warLists.ongoing[sceneWarFileName]) then
+                if (profile.warLists.ongoing[warID]) then
                     if (modelSceneWar:isRankMatch()) then
                         updateRankingsOnPlayerLose(modelPlayerManager, playerIndex, gameTypeIndex)
                     end
 
+                    profile.warLists.ongoing[warID]         = nil
                     profile.gameRecords[gameTypeIndex].lose = profile.gameRecords[gameTypeIndex].lose + 1
-                    profile.warLists.ongoing[sceneWarFileName] = nil
                     serializeProfile(profile)
                 end
             end
@@ -384,8 +377,8 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
         if (alivePlayersCount == 1) then
             local profile = PlayerProfileManager.getPlayerProfile(alivePlayerAccount)
+            profile.warLists.ongoing[warID]        = nil
             profile.gameRecords[gameTypeIndex].win = profile.gameRecords[gameTypeIndex].win + 1
-            profile.warLists.ongoing[sceneWarFileName] = nil
             serializeProfile(profile)
         end
     end
