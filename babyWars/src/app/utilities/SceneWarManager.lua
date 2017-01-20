@@ -476,9 +476,17 @@ end
 
 function SceneWarManager.getReplayConfigurations(pageIndex)
     -- TODO: limit the length of the list.
-    local list = {}
-    for warID, listItem in pairs(s_ReplayList) do
-        list[#list + 1] = listItem.replayConfiguration
+    local minWarID = (pageIndex - 1) * 20 + 1
+    if (minWarID >= s_NextWarID) then
+        return nil
+    end
+
+    local list
+    for warID = minWarID, minWarID + 20 - 1 do
+        if (s_ReplayList[warID]) then
+            list = list or {}
+            list[#list + 1] = s_ReplayList[warID].replayConfiguration
+        end
     end
 
     return list

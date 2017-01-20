@@ -298,12 +298,7 @@ local function generateRepairDataOnBeginTurn(modelSceneWar)
     local skillConfiguration        = modelPlayer:getModelSkillConfiguration()
     local fund                      = modelPlayer:getFund() + getIncomeOnBeginTurn(modelSceneWar)
     local maxNormalizedRepairAmount = GameConstantFunctions.getBaseNormalizedRepairAmount() + SkillModifierFunctions.getRepairAmountModifier(skillConfiguration)
-    local costModifier              = SkillModifierFunctions.getRepairCostModifier(skillConfiguration)
-    if (costModifier >= 0) then
-        costModifier = (100 + costModifier) / 100
-    else
-        costModifier = 100 / (100 - costModifier)
-    end
+    local costModifier              = 1 + SkillModifierFunctions.getRepairCostModifier(skillConfiguration) / 100
 
     local onMapData, loadedData
     for _, modelUnit in ipairs(getRepairableModelUnits(modelSceneWar)) do
@@ -336,6 +331,7 @@ end
 local function generateSupplyDataOnBeginTurn(modelSceneWar, repairData)
     local modelUnitMap          = getModelUnitMap(modelSceneWar)
     local playerIndex           = getModelTurnManager(modelSceneWar):getPlayerIndex()
+    local mapSize               = modelUnitMap:getMapSize()
     local repairDataOnMap       = repairData.onMapData
     local repairDataLoaded      = repairData.loadedData
     local onMapData, loadedData
@@ -345,7 +341,7 @@ local function generateSupplyDataOnBeginTurn(modelSceneWar, repairData)
             if (((repairDataOnMap) and (repairDataOnMap[supplier:getUnitId()]))                                                        or
                 (not ((supplier:shouldDestroyOnOutOfFuel()) and (supplier:getCurrentFuel() <= supplier:getFuelConsumptionPerTurn())))) then
 
-                for _, adjacentGridIndex in pairs(GridIndexFunctions.getAdjacentGrids(supplier:getGridIndex())) do
+                for _, adjacentGridIndex in pairs(GridIndexFunctions.getAdjacentGrids(supplier:getGridIndex(), mapSize)) do
                     local target = modelUnitMap:getModelUnit(adjacentGridIndex)
                     if ((target) and (supplier:canSupplyModelUnit(target))) then
                         local unitID = target:getUnitId()
@@ -854,6 +850,7 @@ end
 local function translateGetReplayConfigurations(action)
     return {
         actionCode           = ACTION_CODES.ActionGetReplayConfigurations,
+        pageIndex            = action.pageIndex,
         replayConfigurations = SceneWarManager.getReplayConfigurations(action.pageIndex),
     }
 end
