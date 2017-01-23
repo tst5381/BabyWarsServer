@@ -1,11 +1,15 @@
 
 local ServerInitializer = {}
 
+local ngx = ngx
+
 local s_IsInitialized = false
 
 function ServerInitializer.init()
     if (not s_IsInitialized) then
         s_IsInitialized = true
+
+        math.randomseed(ngx.time())
 
         package.path = package.path .. ";./babyWars/?.lua"
         require("src.app.utilities.GameConstantFunctions") .init(true)
