@@ -16,6 +16,7 @@ function ServerInitializer.init()
         require("src.app.utilities.SerializationFunctions").init()
         require("src.app.utilities.SceneWarManager")       .init()
         require("src.app.utilities.PlayerProfileManager")  .init()
+        require("src.app.utilities.WarFieldManager")       .init()
         require("src.Session")
 
         ngx.log(ngx.CRIT, "ServerInitializer.init() completed.")
