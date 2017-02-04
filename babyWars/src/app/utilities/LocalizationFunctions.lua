@@ -177,6 +177,7 @@ local s_Texts = {
             elseif (textType == "Back")                then return "返 回"
             elseif (textType == "Close")               then return "关 闭"
             elseif (textType == "ConfigSkills")        then return "配 置 技 能"
+            elseif (textType == "Confirm")             then return "确 定"
             elseif (textType == "Continue")            then return "继 续"
             elseif (textType == "EssentialConcept")    then return "基 础 概 念"
             elseif (textType == "Exit")                then return "退 出"
@@ -205,6 +206,7 @@ local s_Texts = {
             elseif (textType == "Back")                then return "Back"
             elseif (textType == "Close")               then return "Close"
             elseif (textType == "ConfigSkills")        then return "Config Skills"
+            elseif (textType == "Confirm")             then return "Confirm"
             elseif (textType == "Continue")            then return "Continue"
             elseif (textType == "EssentialConcept")    then return "Concept"
             elseif (textType == "Exit")                then return "Exit"
@@ -730,12 +732,50 @@ local s_Texts = {
             end
         end,
     },
-    --[[
     [14] = {
-        [1] = function(...) return s_LongText3_1     end,
-        [2] = function(...) return "Untranslated..." end,
+        [1] = function(textType)
+            if     (textType == "ConfirmCreateWar")             then return "确 认 新 建 战 局"
+            elseif (textType == "CustomConfiguration")          then return "自定义配置"
+            elseif (textType == "DisableSkills")                then return "禁用技能"
+            elseif (textType == "FogOfWar")                     then return "战争迷雾"
+            elseif (textType == "IntervalUntilBoot")            then return "回合限时"
+            elseif (textType == "MaxBaseSkillPoints")           then return "全员技能基准点上限"
+            elseif (textType == "MaxDiffScore")                 then return "最大分差"
+            elseif (textType == "No")                           then return "否"
+            elseif (textType == "NoLimit")                      then return "不限"
+            elseif (textType == "None")                         then return "无"
+            elseif (textType == "Overview")                     then return "战局设定总览"
+            elseif (textType == "PlayerIndex")                  then return "行动次序"
+            elseif (textType == "RankMatch")                    then return "积分赛"
+            elseif (textType == "RetrievingSkillConfiguration") then return "正在获取技能数据，请稍候。"
+            elseif (textType == "SkillConfiguration")           then return "我方技能配置"
+            elseif (textType == "WarFieldName")                 then return "地图名称"
+            elseif (textType == "Yes")                          then return "是"
+            else                                                     return "未知14:" .. (textType or "")
+            end
+        end,
+        [2] = function(textType)
+            if     (textType == "ConfirmCreateWar")             then return "Confirm"
+            elseif (textType == "CustomConfiguration")          then return "Custom"
+            elseif (textType == "DisableSkills")                then return "Disable Skills"
+            elseif (textType == "FogOfWar")                     then return "Fog of War"
+            elseif (textType == "IntervalUntilBoot")            then return "Interval until Boot"
+            elseif (textType == "MaxBaseSkillPoints")           then return "Max Skill Points"
+            elseif (textType == "MaxDiffScore")                 then return "Max Diff Score"
+            elseif (textType == "No")                           then return "No"
+            elseif (textType == "NoLimit")                      then return "No Limit"
+            elseif (textType == "None")                         then return "None"
+            elseif (textType == "Overview")                     then return "Overview"
+            elseif (textType == "PlayerIndex")                  then return "Player Index"
+            elseif (textType == "RankMatch")                    then return "Ranking Match"
+            elseif (textType == "RetrievingSkillConfiguration") then return "Retrieving data..."
+            elseif (textType == "SkillConfiguration")           then return "Skill Configuration"
+            elseif (textType == "WarFieldName")                 then return "Map"
+            elseif (textType == "Yes")                          then return "Yes"
+            else                                                     return "Unknown14:" .. (textType or "")
+            end
+        end,
     },
-    --]]
     [15] = {
         [1] = function(...) return "账 号："  end,
         [2] = function(...) return "Account:" end,
@@ -832,49 +872,51 @@ local s_Texts = {
     },
     [34] = {
         [1] = function(textType)
-            if     (textType == "BaseSkillPoints")    then return "全员技能基准点上限"
-            elseif (textType == "Black")              then return "黑方"
-            elseif (textType == "Blue")               then return "蓝方"
-            elseif (textType == "BootCountdown")      then return "自动投降倒计时"
-            elseif (textType == "Day")                then return "天"
-            elseif (textType == "FogOfWar")           then return "战 争 迷 雾"
-            elseif (textType == "Hour")               then return "时"
-            elseif (textType == "MaxDiffScore")       then return "最 大 分 差"
-            elseif (textType == "Minute")             then return "分"
-            elseif (textType == "No")                 then return "否"
-            elseif (textType == "Password")           then return "密 码 (可 选)"
-            elseif (textType == "PlayerIndex")        then return "行 动 次 序"
-            elseif (textType == "RankMatch")          then return "积 分 赛"
-            elseif (textType == "Red")                then return "红方"
-            elseif (textType == "Second")             then return "秒"
-            elseif (textType == "SkillConfiguration") then return "我方技能配置(可点击查看)"
-            elseif (textType == "Weather")            then return "天 气"
-            elseif (textType == "Yellow")             then return "黄方"
-            elseif (textType == "Yes")                then return "是"
-            else                                           return "未知34:" .. (textType or "")
+            if     (textType == "BaseSkillPoints")      then return "全员技能基准点上限"
+            elseif (textType == "BaseSkillPointsShort") then return "技能点上限"
+            elseif (textType == "Black")                then return "黑方"
+            elseif (textType == "Blue")                 then return "蓝方"
+            elseif (textType == "BootCountdown")        then return "自动投降倒计时"
+            elseif (textType == "Day")                  then return "天"
+            elseif (textType == "FogOfWar")             then return "战 争 迷 雾"
+            elseif (textType == "Hour")                 then return "时"
+            elseif (textType == "MaxDiffScore")         then return "最 大 分 差"
+            elseif (textType == "Minute")               then return "分"
+            elseif (textType == "No")                   then return "否"
+            elseif (textType == "Password")             then return "输入密码(可选)"
+            elseif (textType == "PlayerIndex")          then return "行 动 次 序"
+            elseif (textType == "RankMatch")            then return "积 分 赛"
+            elseif (textType == "Red")                  then return "红方"
+            elseif (textType == "Second")               then return "秒"
+            elseif (textType == "SkillConfiguration")   then return "我方技能配置"
+            elseif (textType == "Weather")              then return "天 气"
+            elseif (textType == "Yellow")               then return "黄方"
+            elseif (textType == "Yes")                  then return "是"
+            else                                             return "未知34:" .. (textType or "")
             end
         end,
         [2] = function(textType)
-            if     (textType == "BaseSkillPoints")    then return "Max Base Skill Points"
-            elseif (textType == "Black")              then return "Black"
-            elseif (textType == "Blue")               then return "Blue"
-            elseif (textType == "BootCountdown")      then return "BootCountdown"
-            elseif (textType == "Day")                then return "d"
-            elseif (textType == "FogOfWar")           then return "Fog of War"
-            elseif (textType == "Hour")               then return "h"
-            elseif (textType == "MaxDiffScore")       then return "Max Diff Score"
-            elseif (textType == "Minute")             then return "m"
-            elseif (textType == "No")                 then return "No"
-            elseif (textType == "Password")           then return "Password (optional)"
-            elseif (textType == "PlayerIndex")        then return "Player Index"
-            elseif (textType == "RankMatch")          then return "Ranking Match"
-            elseif (textType == "Red")                then return "Red"
-            elseif (textType == "Second")             then return "s"
-            elseif (textType == "SkillConfiguration") then return "Skill Configuration"
-            elseif (textType == "Weather")            then return "Weather"
-            elseif (textType == "Yellow")             then return "Yellow"
-            elseif (textType == "Yes")                then return "Yes"
-            else                                           return "Unknown34:" .. (textType or "")
+            if     (textType == "BaseSkillPoints")      then return "Max Base Skill Points"
+            elseif (textType == "BaseSkillPointsShort") then return "SkillPoints"
+            elseif (textType == "Black")                then return "Black"
+            elseif (textType == "Blue")                 then return "Blue"
+            elseif (textType == "BootCountdown")        then return "BootCountdown"
+            elseif (textType == "Day")                  then return "d"
+            elseif (textType == "FogOfWar")             then return "Fog of War"
+            elseif (textType == "Hour")                 then return "h"
+            elseif (textType == "MaxDiffScore")         then return "Max Diff Score"
+            elseif (textType == "Minute")               then return "m"
+            elseif (textType == "No")                   then return "No"
+            elseif (textType == "Password")             then return "Password (optional)"
+            elseif (textType == "PlayerIndex")          then return "Player Index"
+            elseif (textType == "RankMatch")            then return "Ranking Match"
+            elseif (textType == "Red")                  then return "Red"
+            elseif (textType == "Second")               then return "s"
+            elseif (textType == "SkillConfiguration")   then return "Skill Configuration"
+            elseif (textType == "Weather")              then return "Weather"
+            elseif (textType == "Yellow")               then return "Yellow"
+            elseif (textType == "Yes")                  then return "Yes"
+            else                                             return "Unknown34:" .. (textType or "")
             end
         end,
     },

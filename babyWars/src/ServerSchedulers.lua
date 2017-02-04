@@ -12,7 +12,7 @@ local log, ERR = ngx.log, ngx.ERR
 
 local ACTION_CODE_BEGIN_TURN      = ActionCodeFunctions.getActionCode("ActionBeginTurn")
 local ACTION_CODE_SURRENDER       = ActionCodeFunctions.getActionCode("ActionSurrender")
-local SCHEDULER_INTERVAL_FOR_BOOT = 3600 -- 1 hour
+local SCHEDULER_INTERVAL_FOR_BOOT = 300 -- 5 minutes
 
 local function startSchedulerForBoot()
     local check
