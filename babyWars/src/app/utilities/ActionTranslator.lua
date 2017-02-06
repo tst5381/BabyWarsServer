@@ -626,6 +626,18 @@ local function translateGetSkillConfiguration(action)
     }
 end
 
+local function translateGetWaitingWarConfigurations(action)
+    local playerAccount = action.playerAccount
+    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+        return LOGOUT_INVALID_ACCOUNT_PASSWORD
+    end
+
+    return {
+        actionCode        = ACTION_CODES.ActionGetWaitingWarConfigurations,
+        warConfigurations = SceneWarManager.getWaitingWarConfigurationsForPlayer(playerAccount),
+    }
+end
+
 local function translateJoinWar(action)
     local playerAccount = action.playerAccount
     if (not PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
@@ -1655,6 +1667,7 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionGetRankingList)               then return translateGetRankingList(              action)
     elseif (actionCode == ACTION_CODES.ActionGetReplayConfigurations)      then return translateGetReplayConfigurations(     action)
     elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration)        then return translateGetSkillConfiguration(       action)
+    elseif (actionCode == ACTION_CODES.ActionGetWaitingWarConfigurations)  then return translateGetWaitingWarConfigurations( action)
     elseif (actionCode == ACTION_CODES.ActionJoinWar)                      then return translateJoinWar(                     action)
     elseif (actionCode == ACTION_CODES.ActionLogin)                        then return translateLogin(                       action)
     elseif (actionCode == ACTION_CODES.ActionNetworkHeartbeat)             then return translateNetworkHeartbeat(            action)

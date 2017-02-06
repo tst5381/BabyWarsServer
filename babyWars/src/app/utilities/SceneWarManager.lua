@@ -370,6 +370,15 @@ function SceneWarManager.getOngoingWarConfigurationsForPlayer(playerAccount)
     return list
 end
 
+function SceneWarManager.getWaitingWarConfigurationsForPlayer(playerAccount)
+    local list = {}
+    for warID, _ in pairs(PlayerProfileManager.getPlayerProfile(playerAccount).warLists.waiting) do
+        list[warID] = s_JoinableWarList[warID].warConfiguration
+    end
+
+    return list
+end
+
 function SceneWarManager.forEachOngoingModelSceneWar(callback)
     for warID, _ in pairs(s_OngoingWarList) do
         callback(SceneWarManager.getOngoingModelSceneWar(warID))
