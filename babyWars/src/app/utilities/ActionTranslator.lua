@@ -111,6 +111,11 @@ local MESSAGE_NO_REPLAY_DATA = {
     messageCode   = 81,
     messageParams = {"NoReplayData"},
 }
+local MESSAGE_NOT_EXITABLE_WAR = {
+    actionCode    = ACTION_CODES.ActionMessage,
+    messageCode   = 81,
+    messageParams = {"NotExitableWar"},
+}
 local MESSAGE_NOT_JOINABLE_WAR = {
     actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
@@ -557,6 +562,20 @@ local function translateDownloadReplayData(action)
             encodedReplayData = encodedReplayData,
         }
     end
+end
+
+local function translateExitWar(action)
+    local playerAccount = action.playerAccount
+    if (not PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
+        return LOGOUT_INVALID_ACCOUNT_PASSWORD
+    elseif (not SceneWarManager.isPlayerWaitingForWarId(playerAccount, action.warID)) then
+        return MESSAGE_NOT_EXITABLE_WAR
+    end
+
+    return {
+        actionCode = ACTION_CODES.ActionExitWar,
+        warID      = action.warID,
+    }, nil, action
 end
 
 local function translateGetJoinableWarConfigurations(action)
@@ -1661,6 +1680,7 @@ function ActionTranslator.translate(action)
     assert(ActionCodeFunctions.getActionName(actionCode), "ActionTranslator.translate() invalid actionCode: " .. (actionCode or ""))
 
     if     (actionCode == ACTION_CODES.ActionDownloadReplayData)           then return translateDownloadReplayData(          action)
+    elseif (actionCode == ACTION_CODES.ActionExitWar)                      then return translateExitWar(                     action)
     elseif (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
     elseif (actionCode == ACTION_CODES.ActionGetOngoingWarConfigurations)  then return translateGetOngoingWarConfigurations( action)
     elseif (actionCode == ACTION_CODES.ActionGetPlayerProfile)             then return translateGetPlayerProfile(            action)

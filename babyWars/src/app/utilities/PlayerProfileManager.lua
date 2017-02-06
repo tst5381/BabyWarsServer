@@ -313,6 +313,14 @@ function PlayerProfileManager.updateProfileOnCreatingWar(account, warID)
     return PlayerProfileManager
 end
 
+function PlayerProfileManager.updateProfileOnExitWar(account, warID)
+    local profile = PlayerProfileManager.getPlayerProfile(account)
+    profile.warLists.waiting[warID] = nil
+    serializeProfile(profile)
+
+    return PlayerProfileManager
+end
+
 function PlayerProfileManager.updateProfileOnJoiningWar(account, warID)
     return PlayerProfileManager.updateProfileOnCreatingWar(account, warID)
 end

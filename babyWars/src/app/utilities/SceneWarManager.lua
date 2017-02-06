@@ -7,6 +7,7 @@ local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
 local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
 local SkillDataAccessors     = require("src.app.utilities.SkillDataAccessors")
 local TableFunctions         = require("src.app.utilities.TableFunctions")
+local WarFieldManager        = require("src.app.utilities.WarFieldManager")
 local Actor                  = require("src.global.actors.Actor")
 
 local ngx, io, math, os, string = ngx, io, math, os, string
@@ -34,14 +35,6 @@ local s_ReplayList
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
-local function getPlayersCount(warFieldFileName)
-    return require("res.data.templateWarField." .. warFieldFileName).playersCount
-end
-
-local function isRandomWarField(warFieldFileName)
-    return string.find(warFieldFileName, "Random", 1, true) == 1
-end
-
 local function pickRandomWarField(warFieldFileName)
     local list = require("res.data.templateWarField." .. warFieldFileName).list
     return list[math.random(#list)]
@@ -53,13 +46,33 @@ end
 
 local function isWarReadyForStart(warConfiguration)
     local players = warConfiguration.players
-    for i = 1, getPlayersCount(warConfiguration.warFieldFileName) do
+    for i = 1, WarFieldManager.getPlayersCount(warConfiguration.warFieldFileName) do
         if (not players[i]) then
             return false
         end
     end
 
     return true
+end
+
+local function removePlayerFromPlayersData(playersData, playerAccount)
+    for playerIndex, player in pairs(playersData) do
+        if (player.account == playerAccount) then
+            playersData[playerIndex] = nil
+            return
+        end
+    end
+
+    error("SceneWarManager-removePlayerFromPlayersData() failed to find the player data with account: " .. (playerAccount or ""))
+end
+
+local function getJoinedPlayersCount(warConfiguration)
+    local count = 0
+    for playerIndex, _ in pairs(warConfiguration.players) do
+        count = count + 1
+    end
+
+    return count
 end
 
 --------------------------------------------------------------------------------
@@ -94,7 +107,7 @@ local function generateSceneWarData(warID, param)
         intervalUntilBoot          = param.intervalUntilBoot,
         executedActions            = {},
         isFogOfWarByDefault        = param.isFogOfWarByDefault,
-        isRandomWarField           = isRandomWarField(warFieldFileName),
+        isRandomWarField           = WarFieldManager.isRandomWarField(warFieldFileName),
         isRankMatch                = param.isRankMatch,
         isTotalReplay              = false,
         isWarEnded                 = false,
@@ -379,6 +392,27 @@ function SceneWarManager.getWaitingWarConfigurationsForPlayer(playerAccount)
     return list
 end
 
+function SceneWarManager.isPlayerWaitingForWarId(playerAccount, warID)
+    return PlayerProfileManager.getPlayerProfile(playerAccount).warLists.waiting[warID] ~= nil
+end
+
+function SceneWarManager.exitWar(playerAccount, warID)
+    local warItem = s_JoinableWarList[warID]
+    removePlayerFromPlayersData(warItem.warData, playerAccount)
+    serializeWarData(warItem.warData)
+
+    PlayerProfileManager.updateProfileOnExitWar(playerAccount, warID)
+
+    local warConfiguration = warItem.warConfiguration
+    removePlayerFromPlayersData(warConfiguration, playerAccount)
+    if (getJoinedPlayersCount(warConfiguration) == 0) then
+        s_JoinableWarList[warID] = nil
+        serializeJoinableWarList(s_JoinableWarList)
+    end
+
+    return self
+end
+
 function SceneWarManager.forEachOngoingModelSceneWar(callback)
     for warID, _ in pairs(s_OngoingWarList) do
         callback(SceneWarManager.getOngoingModelSceneWar(warID))
@@ -432,7 +466,7 @@ function SceneWarManager.isWarReadyForStartAfterJoin(warConfiguration)
         joinedPlayersCount = joinedPlayersCount + 1
     end
 
-    return joinedPlayersCount == getPlayersCount(warConfiguration.warFieldFileName) - 1
+    return joinedPlayersCount == WarFieldManager.getPlayersCount(warConfiguration.warFieldFileName) - 1
 end
 
 function SceneWarManager.joinWar(param)
