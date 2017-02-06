@@ -734,20 +734,31 @@ local s_Texts = {
     },
     [14] = {
         [1] = function(textType)
-            if     (textType == "ConfirmCreateWar")             then return "确 认 新 建 战 局"
+            if     (textType == "ConfirmContinueWar")           then return "进 入 战 局"
+            elseif (textType == "ConfirmCreateWar")             then return "确 认 新 建 战 局"
+            elseif (textType == "ConfirmJoinWar")               then return "确 认 参 战"
+            elseif (textType == "ContinueWar")                  then return "继 续"
+            elseif (textType == "CreateWar")                    then return "新 建 战 局"
             elseif (textType == "CustomConfiguration")          then return "自定义配置"
             elseif (textType == "DisableSkills")                then return "禁用技能"
             elseif (textType == "FogOfWar")                     then return "战争迷雾"
             elseif (textType == "IntervalUntilBoot")            then return "回合限时"
+            elseif (textType == "InvalidWarPassword")           then return "您输入的密码不符合要求，请重新输入。"
+            elseif (textType == "JoinWar")                      then return "参 战"
             elseif (textType == "MaxBaseSkillPoints")           then return "全员技能基准点上限"
             elseif (textType == "MaxDiffScore")                 then return "最大分差"
             elseif (textType == "No")                           then return "否"
+            elseif (textType == "NoAvailableOption")            then return "无可用选项"
             elseif (textType == "NoLimit")                      then return "不限"
             elseif (textType == "None")                         then return "无"
             elseif (textType == "Overview")                     then return "战局设定总览"
             elseif (textType == "PlayerIndex")                  then return "行动次序"
             elseif (textType == "RankMatch")                    then return "积分赛"
+            elseif (textType == "RetrievingCreateWarResult")    then return "正在创建战局，请稍候，若长时间没有反应，请返回重试。"
+            elseif (textType == "RetrievingJoinWarResult")      then return "正在参战，请稍候。若长时间没有反应，请返回重试。"
             elseif (textType == "RetrievingSkillConfiguration") then return "正在获取技能数据，请稍候。"
+            elseif (textType == "RetrievingWarData")            then return "正在进入战局，请稍候。若长时间没有反应，请返回重试。"
+            elseif (textType == "Selected")                     then return "已选定"
             elseif (textType == "SkillConfiguration")           then return "我方技能配置"
             elseif (textType == "WarFieldName")                 then return "地图名称"
             elseif (textType == "Yes")                          then return "是"
@@ -755,20 +766,31 @@ local s_Texts = {
             end
         end,
         [2] = function(textType)
-            if     (textType == "ConfirmCreateWar")             then return "Confirm"
+            if     (textType == "ConfirmContinueWar")           then return "Confirm"
+            elseif (textType == "ConfirmCreateWar")             then return "Confirm"
+            elseif (textType == "ConfirmJoinWar")               then return "Confirm"
+            elseif (textType == "ContinueWar")                  then return "Continue"
+            elseif (textType == "CreateWar")                    then return "New War"
             elseif (textType == "CustomConfiguration")          then return "Custom"
             elseif (textType == "DisableSkills")                then return "Disable Skills"
             elseif (textType == "FogOfWar")                     then return "Fog of War"
             elseif (textType == "IntervalUntilBoot")            then return "Interval until Boot"
+            elseif (textType == "InvalidWarPassword")           then return "The password is not valid. Please reenter it."
+            elseif (textType == "JoinWar")                      then return "Join War"
             elseif (textType == "MaxBaseSkillPoints")           then return "Max Skill Points"
             elseif (textType == "MaxDiffScore")                 then return "Max Diff Score"
             elseif (textType == "No")                           then return "No"
+            elseif (textType == "NoAvailableOption")            then return "No Options"
             elseif (textType == "NoLimit")                      then return "No Limit"
             elseif (textType == "None")                         then return "None"
             elseif (textType == "Overview")                     then return "Overview"
             elseif (textType == "PlayerIndex")                  then return "Player Index"
             elseif (textType == "RankMatch")                    then return "Ranking Match"
+            elseif (textType == "RetrievingCreateWarResult")    then return "Creating the war, please wait."
+            elseif (textType == "RetrievingJoinWarResult")      then return "Joining the war, please wait."
             elseif (textType == "RetrievingSkillConfiguration") then return "Retrieving data..."
+            elseif (textType == "RetrievingWarData")            then return "Retrieving war data, please wait."
+            elseif (textType == "Selected")                     then return "Selected"
             elseif (textType == "SkillConfiguration")           then return "Skill Configuration"
             elseif (textType == "WarFieldName")                 then return "Map"
             elseif (textType == "Yes")                          then return "Yes"
@@ -1076,10 +1098,12 @@ local s_Texts = {
         [1] = function() return "当前没有可加入（或符合查找条件）的战局。请等候，或自行建立战局。"                    end,
         [2] = function() return "Sorry, but no war is currently joinable. Please wait for or create a new war." end,
     },
+    --[[
     [61] = {
         [1] = function() return "您输入的密码无效，请重试。"                   end,
         [2] = function() return "The password is invalid. Please try again." end,
     },
+    ]]
     [62] = {
         [1] = function(nickname) return "玩家：" .. nickname    end,
         [2] = function(nickname) return "Player:  " .. nickname end,
