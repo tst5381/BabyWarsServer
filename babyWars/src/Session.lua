@@ -19,6 +19,7 @@ local DEFAULT_CONFIGURATION = {
     max_payload_len = 1048575,
 }
 
+local ACTION_CODE_EXIT_WAR                = ActionCodeFunctions.getActionCode("ActionExitWar")
 local ACTION_CODE_HEARTBEAT               = ActionCodeFunctions.getActionCode("ActionNetworkHeartbeat")
 local ACTION_CODE_JOIN_WAR                = ActionCodeFunctions.getActionCode("ActionJoinWar")
 local ACTION_CODE_LOGIN                   = ActionCodeFunctions.getActionCode("ActionLogin")
@@ -141,7 +142,8 @@ local function executeActionForServer(action)
     local actionCode = action.actionCode
     assert(actionCode, "Session-executeActionForServer() invalid actionCode: " .. (actionCode or ""))
 
-    if ((actionCode == ACTION_CODE_JOIN_WAR)                 or
+    if ((actionCode == ACTION_CODE_EXIT_WAR)                 or
+        (actionCode == ACTION_CODE_JOIN_WAR)                 or
         (actionCode == ACTION_CODE_NEW_WAR)                  or
         (actionCode == ACTION_CODE_REGISTER)                 or
         (actionCode == ACTION_CODE_SET_SKILL_CONFIGURATION)) then
