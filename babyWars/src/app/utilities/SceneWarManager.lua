@@ -398,13 +398,13 @@ end
 
 function SceneWarManager.exitWar(playerAccount, warID)
     local warItem = s_JoinableWarList[warID]
-    removePlayerFromPlayersData(warItem.warData, playerAccount)
+    removePlayerFromPlayersData(warItem.warData.players, playerAccount)
     serializeWarData(warItem.warData)
 
     PlayerProfileManager.updateProfileOnExitWar(playerAccount, warID)
 
     local warConfiguration = warItem.warConfiguration
-    removePlayerFromPlayersData(warConfiguration, playerAccount)
+    removePlayerFromPlayersData(warConfiguration.players, playerAccount)
     if (getJoinedPlayersCount(warConfiguration) == 0) then
         s_JoinableWarList[warID] = nil
         serializeJoinableWarList(s_JoinableWarList)
