@@ -632,19 +632,6 @@ local function translateGetRankingList(action)
     }
 end
 
-local function translateGetSkillConfiguration(action)
-    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
-        return LOGOUT_INVALID_ACCOUNT_PASSWORD
-    end
-
-    local skillConfigurationID = action.skillConfigurationID
-    return {
-        actionCode           = ACTION_CODES.ActionGetSkillConfiguration,
-        skillConfigurationID = skillConfigurationID,
-        skillConfiguration   = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID),
-    }
-end
-
 local function translateGetWaitingWarConfigurations(action)
     local playerAccount = action.playerAccount
     if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
@@ -837,22 +824,6 @@ local function translateRunSceneWar(action)
             actionCode = ACTION_CODES.ActionRunSceneWar,
             warData    = modelSceneWar:toSerializableTableForPlayerIndex(playerIndex),
         }
-    end
-end
-
-local function translateSetSkillConfiguration(action)
-    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
-        return LOGOUT_INVALID_ACCOUNT_PASSWORD
-    end
-
-    local skillConfiguration, skillConfigurationID = action.skillConfiguration, action.skillConfigurationID
-    if ((skillConfigurationID < 1)                                          or
-        (skillConfigurationID > SKILL_CONFIGURATIONS_COUNT)                 or
-        (not ModelSkillConfiguration:create(skillConfiguration):isValid())) then
-        return MESSAGE_INVALID_SKILL_CONFIGURATION
-    else
-        action.actionCode = ACTION_CODES.ActionSetSkillConfiguration
-        return {actionCode = ACTION_CODES.ActionSetSkillConfiguration}, nil, action
     end
 end
 
@@ -1686,7 +1657,6 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionGetPlayerProfile)             then return translateGetPlayerProfile(            action)
     elseif (actionCode == ACTION_CODES.ActionGetRankingList)               then return translateGetRankingList(              action)
     elseif (actionCode == ACTION_CODES.ActionGetReplayConfigurations)      then return translateGetReplayConfigurations(     action)
-    elseif (actionCode == ACTION_CODES.ActionGetSkillConfiguration)        then return translateGetSkillConfiguration(       action)
     elseif (actionCode == ACTION_CODES.ActionGetWaitingWarConfigurations)  then return translateGetWaitingWarConfigurations( action)
     elseif (actionCode == ACTION_CODES.ActionJoinWar)                      then return translateJoinWar(                     action)
     elseif (actionCode == ACTION_CODES.ActionLogin)                        then return translateLogin(                       action)
@@ -1695,7 +1665,6 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionRegister)                     then return translateRegister(                    action)
     elseif (actionCode == ACTION_CODES.ActionReloadSceneWar)               then return translateReloadSceneWar(              action)
     elseif (actionCode == ACTION_CODES.ActionRunSceneWar)                  then return translateRunSceneWar(                 action)
-    elseif (actionCode == ACTION_CODES.ActionSetSkillConfiguration)        then return translateSetSkillConfiguration(       action)
     elseif (actionCode == ACTION_CODES.ActionSyncSceneWar)                 then return translateSyncSceneWar(                action)
     elseif (actionCode == ACTION_CODES.ActionActivateSkillGroup)           then return translateActivateSkillGroup(          action)
     elseif (actionCode == ACTION_CODES.ActionAttack)                       then return translateAttack(                      action)
