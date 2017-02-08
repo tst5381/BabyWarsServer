@@ -8,23 +8,15 @@ local decode          = SerializationFunctions.decode
 local encode          = SerializationFunctions.encode
 local io, math, pairs = io, math, pairs
 
-local PLAYER_PROFILE_PATH          = "FreeWars\\res\\data\\playerProfile\\"
-local RANKING_LISTS_PATH           = PLAYER_PROFILE_PATH .. "rankingList\\"
-local RANKING_LIST_FILE_NAME       = RANKING_LISTS_PATH .. "rankingList.spdata"
+local PLAYER_PROFILE_PATH           = "FreeWars\\res\\data\\playerProfile\\"
+local DATA_LISTS_PATH               = PLAYER_PROFILE_PATH .. "dataLists\\"
+local PLAYER_ACCOUNT_LIST_FILE_NAME = DATA_LISTS_PATH .. "playerAccountList.spdata"
+local RANKING_LIST_FILE_NAME        = DATA_LISTS_PATH .. "rankingList.spdata"
+
 local DEFAULT_SINGLE_GAME_RECORD   = {rankScore = 1000, win = 0, lose = 0, draw = 0}
 local DEFAULT_GAME_RECORDS         = {}
 for i = 1, 6 do
     DEFAULT_GAME_RECORDS[i] = DEFAULT_SINGLE_GAME_RECORD
-end
-local SINGLE_SKILL_CONFIGURATION   = {
-    basePoints = 100,
-    passive    = {},
-    active1    = {},
-    active2    = {},
-}
-local DEFAULT_SKILL_CONFIGURATIONS = {}
-for i = 1, requireFW("src.app.utilities.SkillDataAccessors").getSkillConfigurationsCount() do
-    DEFAULT_SKILL_CONFIGURATIONS[i] = SINGLE_SKILL_CONFIGURATION
 end
 local DEFAULT_WAR_LIST             = {
     ongoing = {},
@@ -33,6 +25,7 @@ local DEFAULT_WAR_LIST             = {
 
 local s_IsInitialized     = false
 local s_PlayerProfileList = {}
+local s_PlayerAccountList, s_NextPlayerID
 local s_RankingLists
 
 --------------------------------------------------------------------------------
@@ -52,15 +45,15 @@ local function binarySearch(array, predicate)
     return lowerBound, false
 end
 
-local function generatePlayerProfile(account, password)
+local function generatePlayerProfile(account, password, playerID)
     return {
+        playerID = playerID,
         account  = account,
         password = password,
         nickname = account,
 
-        gameRecords         = DEFAULT_GAME_RECORDS,
-        skillConfigurations = DEFAULT_SKILL_CONFIGURATIONS,
-        warLists            = DEFAULT_WAR_LIST,
+        gameRecords = DEFAULT_GAME_RECORDS,
+        warLists    = DEFAULT_WAR_LIST,
     }
 end
 
@@ -84,6 +77,23 @@ end
 local function serializeProfile(profile)
     local file = io.open(toFullFileName(profile.account), "wb")
     file:write(encode("PlayerProfile", profile))
+    file:close()
+end
+
+local function loadPlayerAccountList()
+    local file = io.open(PLAYER_ACCOUNT_LIST_FILE_NAME, "rb")
+    if (not file) then
+        return nil
+    else
+        local data = file:read("*a")
+        file:close()
+        return decode("PlayerAccountList", data).list
+    end
+end
+
+local function serializePlayerAccountList(list)
+    local file = io.open(PLAYER_ACCOUNT_LIST_FILE_NAME, "wb")
+    file:write(encode("PlayerAccountList", {list = list}))
     file:close()
 end
 
@@ -219,10 +229,18 @@ end
 --------------------------------------------------------------------------------
 -- The initializers.
 --------------------------------------------------------------------------------
+local function initPlayerIdList()
+    s_PlayerAccountList = loadPlayerAccountList()
+    if (not s_PlayerAccountList) then
+        s_PlayerAccountList = {}
+        serializePlayerAccountList(s_PlayerAccountList)
+    end
+    s_NextPlayerID = #s_PlayerAccountList + 1
+end
+
 local function initRankingLists()
     s_RankingLists = loadRankingLists()
     if (not s_RankingLists) then
-        os.execute("mkdir " .. RANKING_LISTS_PATH)
         s_RankingLists = {
             {list = {}}, {list = {}}, {list = {}}, {list = {}}, {list = {}}, {list = {}},
         }
@@ -239,6 +257,8 @@ function PlayerProfileManager.init()
     end
 
     os.execute("mkdir " .. PLAYER_PROFILE_PATH)
+    os.execute("mkdir " .. DATA_LISTS_PATH)
+    initPlayerIdList()
     initRankingLists()
 
     s_IsInitialized = true
@@ -273,7 +293,11 @@ end
 
 function PlayerProfileManager.createPlayerProfile(account, password)
     assert(not PlayerProfileManager.getPlayerProfile(account), "PlayerProfileManager.createPlayerProfile() the profile has been created already.")
-    serializeProfile(generatePlayerProfile(account, password))
+    serializeProfile(generatePlayerProfile(account, password, s_NextPlayerID))
+
+    s_PlayerAccountList[s_NextPlayerID] = account
+    serializePlayerAccountList(s_PlayerAccountList)
+    s_NextPlayerID = s_NextPlayerID + 1
 
     return PlayerProfileManager.getPlayerProfile(account)
 end
