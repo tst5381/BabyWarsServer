@@ -1,14 +1,14 @@
 
-local Session = requireBW("src.global.functions.class")("Session")
+local Session = requireFW("src.global.functions.class")("Session")
 
 local WebSocketServer        = require("resty.websocket.server")
 local Redis                  = require("resty.redis")
-local ActionCodeFunctions    = requireBW("src.app.utilities.ActionCodeFunctions")
-local ActionExecutor         = requireBW("src.app.utilities.ActionExecutor")
-local ActionTranslator       = requireBW("src.app.utilities.ActionTranslator")
-local PlayerProfileManager   = requireBW("src.app.utilities.PlayerProfileManager")
-local SceneWarManager        = requireBW("src.app.utilities.SceneWarManager")
-local SerializationFunctions = requireBW("src.app.utilities.SerializationFunctions")
+local ActionCodeFunctions    = requireFW("src.app.utilities.ActionCodeFunctions")
+local ActionExecutor         = requireFW("src.app.utilities.ActionExecutor")
+local ActionTranslator       = requireFW("src.app.utilities.ActionTranslator")
+local PlayerProfileManager   = requireFW("src.app.utilities.PlayerProfileManager")
+local SceneWarManager        = requireFW("src.app.utilities.SceneWarManager")
+local SerializationFunctions = requireFW("src.app.utilities.SerializationFunctions")
 
 local decode = SerializationFunctions.decode
 local encode = SerializationFunctions.encode
@@ -73,7 +73,7 @@ local function initRedisForSubscribe(self, account)
         ngx.log(ngx.ERR, "Session-initRedisForSubscribe() failed to connect to redis for subscribe: ", err)
         return
     end
-    red:subscribe("BabyWars." .. account)
+    red:subscribe("FreeWars." .. account)
 
     self.m_RedisForSubscribe = red
     return red
@@ -162,7 +162,7 @@ local function publishTranslatedActions(actions)
 
     for account, action in pairs(actions) do
         local actionCode = action.actionCode
-        red:publish("BabyWars." .. account, encode("ActionRedis", {
+        red:publish("FreeWars." .. account, encode("ActionRedis", {
             actionCode           = actionCode,
             encodedActionGeneric = encode("ActionGeneric", {[ActionCodeFunctions.getActionName(actionCode)] = action}),
         }))

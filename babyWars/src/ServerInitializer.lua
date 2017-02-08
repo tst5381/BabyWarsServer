@@ -22,7 +22,7 @@ function ServerInitializer.init()
         requireBW("src.app.utilities.WarFieldManager")       .init()
         requireBW("src.Session")
 
-        ngx.log(ngx.CRIT, "ServerInitializer.init() completed.")
+        ngx.log(ngx.CRIT, "BabyWars-ServerInitializer.init() completed.")
     end
 
     return ServerInitializer
