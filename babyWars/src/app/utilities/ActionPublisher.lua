@@ -1,12 +1,12 @@
 
 local ActionPublisher = {}
 
-local ActionCodeFunctions   = require("src.app.utilities.ActionCodeFunctions")
-local GameConstantFunctions = require("src.app.utilities.GameConstantFunctions")
-local GridIndexFunctions    = require("src.app.utilities.GridIndexFunctions")
-local SingletonGetters      = require("src.app.utilities.SingletonGetters")
-local TableFunctions        = require("src.app.utilities.TableFunctions")
-local VisibilityFunctions   = require("src.app.utilities.VisibilityFunctions")
+local ActionCodeFunctions   = requireBW("src.app.utilities.ActionCodeFunctions")
+local GameConstantFunctions = requireBW("src.app.utilities.GameConstantFunctions")
+local GridIndexFunctions    = requireBW("src.app.utilities.GridIndexFunctions")
+local SingletonGetters      = requireBW("src.app.utilities.SingletonGetters")
+local TableFunctions        = requireBW("src.app.utilities.TableFunctions")
+local VisibilityFunctions   = requireBW("src.app.utilities.VisibilityFunctions")
 
 local getAdjacentGrids          = GridIndexFunctions.getAdjacentGrids
 local getModelPlayerManager     = SingletonGetters.getModelPlayerManager

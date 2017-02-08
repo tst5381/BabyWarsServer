@@ -1,14 +1,14 @@
 
-local Session = require("src.global.functions.class")("Session")
+local Session = requireBW("src.global.functions.class")("Session")
 
 local WebSocketServer        = require("resty.websocket.server")
 local Redis                  = require("resty.redis")
-local ActionCodeFunctions    = require("src.app.utilities.ActionCodeFunctions")
-local ActionExecutor         = require("src.app.utilities.ActionExecutor")
-local ActionTranslator       = require("src.app.utilities.ActionTranslator")
-local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
-local SceneWarManager        = require("src.app.utilities.SceneWarManager")
-local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
+local ActionCodeFunctions    = requireBW("src.app.utilities.ActionCodeFunctions")
+local ActionExecutor         = requireBW("src.app.utilities.ActionExecutor")
+local ActionTranslator       = requireBW("src.app.utilities.ActionTranslator")
+local PlayerProfileManager   = requireBW("src.app.utilities.PlayerProfileManager")
+local SceneWarManager        = requireBW("src.app.utilities.SceneWarManager")
+local SerializationFunctions = requireBW("src.app.utilities.SerializationFunctions")
 
 local decode = SerializationFunctions.decode
 local encode = SerializationFunctions.encode

@@ -1,14 +1,14 @@
 
 local PlayerProfileManager = {}
 
-local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
-local TableFunctions         = require("src.app.utilities.TableFunctions")
+local SerializationFunctions = requireBW("src.app.utilities.SerializationFunctions")
+local TableFunctions         = requireBW("src.app.utilities.TableFunctions")
 
 local decode          = SerializationFunctions.decode
 local encode          = SerializationFunctions.encode
 local io, math, pairs = io, math, pairs
 
-local PLAYER_PROFILE_PATH          = "babyWars\\res\\data\\playerProfile\\"
+local PLAYER_PROFILE_PATH          = "BabyWars\\res\\data\\playerProfile\\"
 local RANKING_LISTS_PATH           = PLAYER_PROFILE_PATH .. "rankingList\\"
 local RANKING_LIST_FILE_NAME       = RANKING_LISTS_PATH .. "rankingList.spdata"
 local DEFAULT_SINGLE_GAME_RECORD   = {rankScore = 1000, win = 0, lose = 0, draw = 0}
@@ -23,7 +23,7 @@ local SINGLE_SKILL_CONFIGURATION   = {
     active2    = {},
 }
 local DEFAULT_SKILL_CONFIGURATIONS = {}
-for i = 1, require("src.app.utilities.SkillDataAccessors").getSkillConfigurationsCount() do
+for i = 1, requireBW("src.app.utilities.SkillDataAccessors").getSkillConfigurationsCount() do
     DEFAULT_SKILL_CONFIGURATIONS[i] = SINGLE_SKILL_CONFIGURATION
 end
 local DEFAULT_WAR_LIST             = {

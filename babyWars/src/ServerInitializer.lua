@@ -11,13 +11,16 @@ function ServerInitializer.init()
 
         math.randomseed(ngx.time())
 
-        package.path = package.path .. ";./babyWars/?.lua"
-        require("src.app.utilities.GameConstantFunctions") .init(true)
-        require("src.app.utilities.SerializationFunctions").init()
-        require("src.app.utilities.SceneWarManager")       .init()
-        require("src.app.utilities.PlayerProfileManager")  .init()
-        require("src.app.utilities.WarFieldManager")       .init()
-        require("src.Session")
+        requireBW = function(modName)
+            return require("BabyWars." .. modName)
+        end
+
+        requireBW("src.app.utilities.GameConstantFunctions") .init(true)
+        requireBW("src.app.utilities.SerializationFunctions").init()
+        requireBW("src.app.utilities.SceneWarManager")       .init()
+        requireBW("src.app.utilities.PlayerProfileManager")  .init()
+        requireBW("src.app.utilities.WarFieldManager")       .init()
+        requireBW("src.Session")
 
         ngx.log(ngx.CRIT, "ServerInitializer.init() completed.")
     end

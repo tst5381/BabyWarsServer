@@ -1,4 +1,6 @@
 *.log
 *.pid
-/babyWars/res/data/playerProfile
-/babyWars/res/data/sceneWar
+/BabyWars/res/data/playerProfile
+/BabyWars/res/data/sceneWar
+/FreeWars/res/data/playerProfile
+/FreeWars/res/data/sceneWar
