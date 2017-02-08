@@ -5,7 +5,6 @@ local GameConstantFunctions  = requireFW("src.app.utilities.GameConstantFunction
 local LocalizationFunctions  = requireFW("src.app.utilities.LocalizationFunctions")
 local PlayerProfileManager   = requireFW("src.app.utilities.PlayerProfileManager")
 local SerializationFunctions = requireFW("src.app.utilities.SerializationFunctions")
-local SkillDataAccessors     = requireFW("src.app.utilities.SkillDataAccessors")
 local TableFunctions         = requireFW("src.app.utilities.TableFunctions")
 local WarFieldManager        = requireFW("src.app.utilities.WarFieldManager")
 local Actor                  = requireFW("src.global.actors.Actor")
@@ -78,23 +77,14 @@ end
 --------------------------------------------------------------------------------
 -- The functions for generating the new game data.
 --------------------------------------------------------------------------------
-local function generateSinglePlayerData(account, skillConfigurationID, playerIndex)
-    local skillConfiguration
-    if     (not skillConfigurationID) then skillConfiguration = {basePoints = 0}
-    elseif (skillConfigurationID > 0) then skillConfiguration = TableFunctions.deepClone(PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID))
-    else                                   skillConfiguration = TableFunctions.deepClone(SkillDataAccessors.getSkillPresets()[-skillConfigurationID])
-    end
-    assert(skillConfiguration, "SceneWarManager-generateSinglePlayerData() failed to generate the skill configuration data.")
-
+local function generateSinglePlayerData(account, playerIndex)
     return {
-        playerIndex         = playerIndex,
-        account             = account,
-        nickname            = PlayerProfileManager.getPlayerProfile(account).nickname,
-        fund                = 0,
-        isAlive             = true,
-        damageCost          = 0,
-        skillActivatedCount = 0,
-        skillConfiguration  = skillConfiguration,
+        playerIndex = playerIndex,
+        account     = account,
+        nickname    = PlayerProfileManager.getPlayerProfile(account).nickname,
+        fund        = 0,
+        isAlive     = true,
+        damageCost  = 0,
     }
 end
 
@@ -104,20 +94,19 @@ local function generateSceneWarData(warID, param)
     return {
         actionID                   = 0,
         createdTime                = ngx.time(),
-        intervalUntilBoot          = param.intervalUntilBoot,
         executedActions            = {},
+        intervalUntilBoot          = param.intervalUntilBoot,
         isFogOfWarByDefault        = param.isFogOfWarByDefault,
         isRandomWarField           = WarFieldManager.isRandomWarField(warFieldFileName),
         isRankMatch                = param.isRankMatch,
         isTotalReplay              = false,
         isWarEnded                 = false,
-        maxBaseSkillPoints         = param.maxBaseSkillPoints,
         maxDiffScore               = param.maxDiffScore,
         remainingIntervalUntilBoot = param.intervalUntilBoot,
         warID                      = warID,
         warPassword                = param.warPassword,
 
-        players  = {[playerIndex] = generateSinglePlayerData(param.playerAccount, param.skillConfigurationID, playerIndex)},
+        players  = {[playerIndex] = generateSinglePlayerData(param.playerAccount, playerIndex)},
         turn     = TableFunctions.clone(DEFAULT_TURN_DATA),
         warField = {warFieldFileName = warFieldFileName},
         weather  = {defaultWeatherCode = param.defaultWeatherCode},
@@ -158,7 +147,6 @@ local function generateWarConfiguration(warData)
         isFogOfWarByDefault = warData.isFogOfWarByDefault,
         isRandomWarField    = warData.isRandomWarField,
         isRankMatch         = warData.isRankMatch,
-        maxBaseSkillPoints  = warData.maxBaseSkillPoints,
         maxDiffScore        = warData.maxDiffScore,
         playerIndexInTurn   = (warData.enterTurnTime) and (warData.turn.playerIndex) or (nil),
         players             = players,
@@ -481,7 +469,7 @@ function SceneWarManager.joinWar(param)
         nickname    = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
     }
     local joiningWarData = s_JoinableWarList[warID].warData
-    joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex)
+    joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, playerIndex)
 
     PlayerProfileManager.updateProfileOnJoiningWar(playerAccount, warID)
 

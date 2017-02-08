@@ -19,7 +19,6 @@
 local ActionTranslator = {}
 
 local Producible              = requireFW("src.app.components.Producible")
-local ModelSkillConfiguration = requireFW("src.app.models.common.ModelSkillConfiguration")
 local Actor                   = requireFW("src.global.actors.Actor")
 local ActionCodeFunctions     = requireFW("src.app.utilities.ActionCodeFunctions")
 local ActionPublisher         = requireFW("src.app.utilities.ActionPublisher")
@@ -30,7 +29,6 @@ local LocalizationFunctions   = requireFW("src.app.utilities.LocalizationFunctio
 local PlayerProfileManager    = requireFW("src.app.utilities.PlayerProfileManager")
 local SceneWarManager         = requireFW("src.app.utilities.SceneWarManager")
 local SerializationFunctions  = requireFW("src.app.utilities.SerializationFunctions")
-local SkillDataAccessors      = requireFW("src.app.utilities.SkillDataAccessors")
 local SkillModifierFunctions  = requireFW("src.app.utilities.SkillModifierFunctions")
 local SingletonGetters        = requireFW("src.app.utilities.SingletonGetters")
 local TableFunctions          = requireFW("src.app.utilities.TableFunctions")
@@ -53,7 +51,6 @@ local GAME_VERSION                   = GameConstantFunctions.getGameVersion()
 local MESSAGE_PARAM_OUT_OF_SYNC      = {"OutOfSync"}
 local MAX_PARTICIPATED_WARS_COUNT    = 20
 local IGNORED_ACTION_KEYS_FOR_SERVER = {"revealedTiles", "revealedUnits"}
-local SKILL_CONFIGURATIONS_COUNT     = SkillDataAccessors.getSkillConfigurationsCount()
 local WAR_PASSWORD_VALID_TIME        = 3600 * 24 -- seconds of a day
 
 local LOGOUT_INVALID_ACCOUNT_PASSWORD = {
@@ -96,11 +93,6 @@ local MESSAGE_INVALID_LOGIN = {
     messageCode   = 81,
     messageParams = {"InvalidLogin"},
 }
-local MESSAGE_INVALID_SKILL_CONFIGURATION = {
-    actionCode    = ACTION_CODES.ActionMessage,
-    messageCode   = 81,
-    messageParams = {"InvalidSkillConfiguration"},
-}
 local MESSAGE_INVALID_WAR_PASSWORD = {
     actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
@@ -130,11 +122,6 @@ local MESSAGE_OVERLOADED_RANK_SCORE = {
     actionCode    = ACTION_CODES.ActionMessage,
     messageCode   = 81,
     messageParams = {"OverloadedRankScore"},
-}
-local MESSAGE_OVERLOADED_SKILL_POINTS = {
-    actionCode    = ACTION_CODES.ActionMessage,
-    messageCode   = 81,
-    messageParams = {"OverloadedSkillPoints"},
 }
 local MESSAGE_OVERLOADED_WARS_COUNT = {
     actionCode    = ACTION_CODES.ActionMessage,
@@ -680,28 +667,6 @@ local function translateJoinWar(action)
         end
     end
 
-    local skillConfigurationID = action.skillConfigurationID
-    if (skillConfigurationID) then
-        local maxBaseSkillPoints = warConfiguration.maxBaseSkillPoints
-        if (not maxBaseSkillPoints) then
-            return MESSAGE_OVERLOADED_SKILL_POINTS
-
-        elseif (skillConfigurationID < 0) then
-            if (maxBaseSkillPoints < 100) then
-                return MESSAGE_OVERLOADED_SKILL_POINTS
-            end
-
-        else
-            local skillConfiguration      = PlayerProfileManager.getSkillConfiguration(playerAccount, skillConfigurationID)
-            local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-            if (modelSkillConfiguration:getBaseSkillPoints() > maxBaseSkillPoints) then
-                return MESSAGE_OVERLOADED_SKILL_POINTS
-            elseif (not modelSkillConfiguration:isValid()) then
-                return MESSAGE_INVALID_SKILL_CONFIGURATION
-            end
-        end
-    end
-
     return {
         actionCode   = ACTION_CODES.ActionJoinWar,
         warID        = warID,
@@ -745,33 +710,11 @@ local function translateNewWar(action)
         return MESSAGE_OVERLOADED_WARS_COUNT
     end
 
-    local skillConfigurationID = action.skillConfigurationID
-    if (skillConfigurationID) then
-        local maxBaseSkillPoints = action.maxBaseSkillPoints
-        if (not maxBaseSkillPoints) then
-            return MESSAGE_OVERLOADED_SKILL_POINTS
-
-        elseif (skillConfigurationID < 0) then
-            if (maxBaseSkillPoints < 100) then
-                return MESSAGE_OVERLOADED_SKILL_POINTS
-            end
-
-        else
-            local skillConfiguration      = PlayerProfileManager.getSkillConfiguration(action.playerAccount, skillConfigurationID)
-            local modelSkillConfiguration = ModelSkillConfiguration:create(skillConfiguration)
-            if (modelSkillConfiguration:getBaseSkillPoints() > maxBaseSkillPoints) then
-                return MESSAGE_OVERLOADED_SKILL_POINTS
-            elseif (not modelSkillConfiguration:isValid()) then
-                return MESSAGE_INVALID_SKILL_CONFIGURATION
-            end
-        end
-    end
-
     -- TODO: validate more params.
 
     return {
         actionCode = ACTION_CODES.ActionNewWar,
-        warID      = SceneWarManager.getNextWarId()
+        warID      = SceneWarManager.getNextWarId(),
     }, nil, action
 end
 
