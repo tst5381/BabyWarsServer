@@ -12,7 +12,7 @@ local Actor                  = requireFW("src.global.actors.Actor")
 local ngx, io, math, os, string = ngx, io, math, os, string
 local pairs                     = pairs
 
-local SCENE_WAR_PATH           = "FreeWars\\res\\data\\sceneWar\\"
+local SCENE_WAR_PATH           = "FreeWarsServer\\userdata\\sceneWar\\"
 local JOINABLE_WAR_LIST_PATH   = SCENE_WAR_PATH .. "JoinableWarList.spdata"
 local ONGOING_WAR_LIST_PATH    = SCENE_WAR_PATH .. "OngoingWarList.spdata"
 local REPLAY_LIST_PATH         = SCENE_WAR_PATH .. "ReplayList.spdata"

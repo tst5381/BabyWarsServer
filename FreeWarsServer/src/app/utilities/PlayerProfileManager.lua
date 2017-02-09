@@ -8,7 +8,7 @@ local decode          = SerializationFunctions.decode
 local encode          = SerializationFunctions.encode
 local io, math, pairs = io, math, pairs
 
-local PLAYER_PROFILE_PATH           = "FreeWars\\res\\data\\playerProfile\\"
+local PLAYER_PROFILE_PATH           = "FreeWarsServer\\userdata\\playerProfile\\"
 local DATA_LISTS_PATH               = PLAYER_PROFILE_PATH .. "dataLists\\"
 local PLAYER_ACCOUNT_LIST_FILE_NAME = DATA_LISTS_PATH .. "playerAccountList.spdata"
 local RANKING_LIST_FILE_NAME        = DATA_LISTS_PATH .. "rankingList.spdata"

@@ -12,7 +12,7 @@ function ServerInitializer.init()
         math.randomseed(ngx.time())
 
         requireFW = function(modName)
-            return require("FreeWars." .. modName)
+            return require("FreeWarsServer." .. modName)
         end
 
         requireFW("src.app.utilities.GameConstantFunctions") .init(true)

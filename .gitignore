@@ -2,5 +2,4 @@
 *.pid
 /BabyWars/res/data/playerProfile
 /BabyWars/res/data/sceneWar
-/FreeWars/res/data/playerProfile
-/FreeWars/res/data/sceneWar
+/FreeWarsServer/userdata
