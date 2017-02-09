@@ -79,12 +79,13 @@ end
 --------------------------------------------------------------------------------
 local function generateSinglePlayerData(account, playerIndex)
     return {
-        playerIndex = playerIndex,
-        account     = account,
-        nickname    = PlayerProfileManager.getPlayerProfile(account).nickname,
-        fund        = 0,
-        isAlive     = true,
-        damageCost  = 0,
+        playerIndex       = playerIndex,
+        account           = account,
+        nickname          = PlayerProfileManager.getPlayerProfile(account).nickname,
+        fund              = 0,
+        isAlive           = true,
+        energy            = 0,
+        isActivatingSkill = false,
     }
 end
 
