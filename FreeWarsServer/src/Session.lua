@@ -181,9 +181,13 @@ local function doAction(self, rawAction, actionForRequester, actionsForPublish, 
     local translatedActionCode = actionForRequester.actionCode
     if (rawActionCode ~= ACTION_CODE_HEARTBEAT) then
         local account, password = getAccountAndPasswordWithAction(rawAction, rawActionCode)
-        if ((translatedActionCode == ACTION_CODE_LOGOUT) or (not PlayerProfileManager.isAccountAndPasswordValid(account, password))) then
+        if (translatedActionCode == ACTION_CODE_LOGOUT) then
             self:unsubscribeFromPlayerChannel()
-        elseif ((rawActionCode ~= ACTION_CODE_REGISTER) or (rawActionCode == translatedActionCode)) then
+        elseif (not PlayerProfileManager.isAccountAndPasswordValid(account, password)) then
+            if (self.m_PlayerAccount == account) then
+                self:unsubscribeFromPlayerChannel()
+            end
+        elseif ((rawActionCode ~= ACTION_CODE_REGISTER) or (translatedActionCode == rawActionCode)) then
             self:subscribeToPlayerChannel(account, password)
         end
     end
