@@ -287,7 +287,7 @@ function PlayerProfileManager.isAccountAndPasswordValid(account, password)
         return false
     else
         local profile = PlayerProfileManager.getPlayerProfile(account)
-        return (profile) and (profile.password == password)
+        return (profile) and (profile.account == account) and (profile.password == password)
     end
 end
 
