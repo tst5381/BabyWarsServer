@@ -192,6 +192,10 @@ creators.createForActionCaptureModelTile = function(action, targetPlayerIndex, m
     return actionForPublish
 end
 
+creators.createForActionDeclareSkill = function(action, targetPlayerIndex, modelSceneWar)
+    return TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
+end
+
 creators.createForActionDestroyOwnedModelUnit = function(action, targetPlayerIndex, modelSceneWar)
     local gridIndex = action.gridIndex
     local modelUnit = getModelUnitMap(modelSceneWar):getModelUnit(gridIndex)
