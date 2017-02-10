@@ -29,6 +29,7 @@ local LocalizationFunctions   = requireFW("src.app.utilities.LocalizationFunctio
 local PlayerProfileManager    = requireFW("src.app.utilities.PlayerProfileManager")
 local SceneWarManager         = requireFW("src.app.utilities.SceneWarManager")
 local SerializationFunctions  = requireFW("src.app.utilities.SerializationFunctions")
+local SkillDataAccessors      = requireFW("src.app.utilities.SkillDataAccessors")
 local SkillModifierFunctions  = requireFW("src.app.utilities.SkillModifierFunctions")
 local SingletonGetters        = requireFW("src.app.utilities.SingletonGetters")
 local TableFunctions          = requireFW("src.app.utilities.TableFunctions")
