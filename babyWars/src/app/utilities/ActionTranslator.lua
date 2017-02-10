@@ -18,24 +18,24 @@
 
 local ActionTranslator = {}
 
-local Producible              = require("src.app.components.Producible")
-local ModelSkillConfiguration = require("src.app.models.common.ModelSkillConfiguration")
-local Actor                   = require("src.global.actors.Actor")
-local ActionCodeFunctions     = require("src.app.utilities.ActionCodeFunctions")
-local ActionPublisher         = require("src.app.utilities.ActionPublisher")
-local DamageCalculator        = require("src.app.utilities.DamageCalculator")
-local GameConstantFunctions   = require("src.app.utilities.GameConstantFunctions")
-local GridIndexFunctions      = require("src.app.utilities.GridIndexFunctions")
-local LocalizationFunctions   = require("src.app.utilities.LocalizationFunctions")
-local PlayerProfileManager    = require("src.app.utilities.PlayerProfileManager")
-local SceneWarManager         = require("src.app.utilities.SceneWarManager")
-local SerializationFunctions  = require("src.app.utilities.SerializationFunctions")
-local SkillDataAccessors      = require("src.app.utilities.SkillDataAccessors")
-local SkillModifierFunctions  = require("src.app.utilities.SkillModifierFunctions")
-local SingletonGetters        = require("src.app.utilities.SingletonGetters")
-local TableFunctions          = require("src.app.utilities.TableFunctions")
-local VisibilityFunctions     = require("src.app.utilities.VisibilityFunctions")
-local ComponentManager        = require("src.global.components.ComponentManager")
+local Producible              = requireBW("src.app.components.Producible")
+local ModelSkillConfiguration = requireBW("src.app.models.common.ModelSkillConfiguration")
+local Actor                   = requireBW("src.global.actors.Actor")
+local ActionCodeFunctions     = requireBW("src.app.utilities.ActionCodeFunctions")
+local ActionPublisher         = requireBW("src.app.utilities.ActionPublisher")
+local DamageCalculator        = requireBW("src.app.utilities.DamageCalculator")
+local GameConstantFunctions   = requireBW("src.app.utilities.GameConstantFunctions")
+local GridIndexFunctions      = requireBW("src.app.utilities.GridIndexFunctions")
+local LocalizationFunctions   = requireBW("src.app.utilities.LocalizationFunctions")
+local PlayerProfileManager    = requireBW("src.app.utilities.PlayerProfileManager")
+local SceneWarManager         = requireBW("src.app.utilities.SceneWarManager")
+local SerializationFunctions  = requireBW("src.app.utilities.SerializationFunctions")
+local SkillDataAccessors      = requireBW("src.app.utilities.SkillDataAccessors")
+local SkillModifierFunctions  = requireBW("src.app.utilities.SkillModifierFunctions")
+local SingletonGetters        = requireBW("src.app.utilities.SingletonGetters")
+local TableFunctions          = requireBW("src.app.utilities.TableFunctions")
+local VisibilityFunctions     = requireBW("src.app.utilities.VisibilityFunctions")
+local ComponentManager        = requireBW("src.global.components.ComponentManager")
 
 local createActionsForPublish      = ActionPublisher.createActionsForPublish
 local getLocalizedText             = LocalizationFunctions.getLocalizedText
@@ -161,7 +161,7 @@ local RUN_SCENE_MAIN_ENDED_WAR = {
 -- The util functions.
 --------------------------------------------------------------------------------
 local function getPlayersCountWithWarFieldFileName(warFieldFileName)
-    return require("res.data.templateWarField." .. warFieldFileName).playersCount
+    return requireBW("res.data.templateWarField." .. warFieldFileName).playersCount
 end
 
 local function getGameTypeIndexWithWarConfiguration(warConfiguration)

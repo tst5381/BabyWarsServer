@@ -1,10 +1,10 @@
 
 local ServerSchedulers = {}
 
-local ActionCodeFunctions  = require("src.app.utilities.ActionCodeFunctions")
-local ActionTranslator     = require("src.app.utilities.ActionTranslator")
-local PlayerProfileManager = require("src.app.utilities.PlayerProfileManager")
-local SceneWarManager      = require("src.app.utilities.SceneWarManager")
+local ActionCodeFunctions  = requireBW("src.app.utilities.ActionCodeFunctions")
+local ActionTranslator     = requireBW("src.app.utilities.ActionTranslator")
+local PlayerProfileManager = requireBW("src.app.utilities.PlayerProfileManager")
+local SceneWarManager      = requireBW("src.app.utilities.SceneWarManager")
 
 local ngx      = ngx
 local newTimer = ngx.timer.at

@@ -2,9 +2,9 @@
 local SerializationFunctions = {}
 
 local io     = io
-local sproto = require("src.global.functions.sproto")
+local sproto = requireBW("src.global.functions.sproto")
 
-local IS_SERVER         = require("src.app.utilities.GameConstantFunctions").isServer()
+local IS_SERVER         = requireBW("src.app.utilities.GameConstantFunctions").isServer()
 local WRITABLE_PATH     = (not IS_SERVER) and (cc.FileUtils:getInstance():getWritablePath() .. "writablePath/") or (nil)
 local ACCOUNT_FILE_PATH = (not IS_SERVER) and (WRITABLE_PATH  .. "LoggedInAccount.lua")                         or (nil)
 
@@ -22,7 +22,7 @@ local function loadBinarySprotoSchema()
         local filename = cc.FileUtils:getInstance():fullPathForFilename("sproto/BabyWarsSprotoSchema.sp")
         return read_sproto_file_c(filename)
     else
-        local f            = io.open("babyWars/res/sproto/BabyWarsSprotoSchema.sp", "rb")
+        local f            = io.open("BabyWars/res/sproto/BabyWarsSprotoSchema.sp", "rb")
         local binarySchema = f:read("*a")
         f:close()
 

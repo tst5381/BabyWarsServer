@@ -1,19 +1,19 @@
 
 local SceneWarManager = {}
 
-local GameConstantFunctions  = require("src.app.utilities.GameConstantFunctions")
-local LocalizationFunctions  = require("src.app.utilities.LocalizationFunctions")
-local PlayerProfileManager   = require("src.app.utilities.PlayerProfileManager")
-local SerializationFunctions = require("src.app.utilities.SerializationFunctions")
-local SkillDataAccessors     = require("src.app.utilities.SkillDataAccessors")
-local TableFunctions         = require("src.app.utilities.TableFunctions")
-local WarFieldManager        = require("src.app.utilities.WarFieldManager")
-local Actor                  = require("src.global.actors.Actor")
+local GameConstantFunctions  = requireBW("src.app.utilities.GameConstantFunctions")
+local LocalizationFunctions  = requireBW("src.app.utilities.LocalizationFunctions")
+local PlayerProfileManager   = requireBW("src.app.utilities.PlayerProfileManager")
+local SerializationFunctions = requireBW("src.app.utilities.SerializationFunctions")
+local SkillDataAccessors     = requireBW("src.app.utilities.SkillDataAccessors")
+local TableFunctions         = requireBW("src.app.utilities.TableFunctions")
+local WarFieldManager        = requireBW("src.app.utilities.WarFieldManager")
+local Actor                  = requireBW("src.global.actors.Actor")
 
 local ngx, io, math, os, string = ngx, io, math, os, string
 local pairs                     = pairs
 
-local SCENE_WAR_PATH           = "babyWars\\res\\data\\sceneWar\\"
+local SCENE_WAR_PATH           = "BabyWars\\res\\data\\sceneWar\\"
 local JOINABLE_WAR_LIST_PATH   = SCENE_WAR_PATH .. "JoinableWarList.spdata"
 local ONGOING_WAR_LIST_PATH    = SCENE_WAR_PATH .. "OngoingWarList.spdata"
 local REPLAY_LIST_PATH         = SCENE_WAR_PATH .. "ReplayList.spdata"
@@ -36,7 +36,7 @@ local s_ReplayList
 -- The util functions.
 --------------------------------------------------------------------------------
 local function pickRandomWarField(warFieldFileName)
-    local list = require("res.data.templateWarField." .. warFieldFileName).list
+    local list = requireBW("res.data.templateWarField." .. warFieldFileName).list
     return list[math.random(#list)]
 end
 
