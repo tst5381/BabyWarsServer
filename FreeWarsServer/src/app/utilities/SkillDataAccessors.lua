@@ -40,7 +40,7 @@ function SkillDataAccessors.getDamageCostGrowthRates()
 end
 
 function SkillDataAccessors.getSkillDeclarationCost()
-    return SKILL_DATA.skillDecrationCost
+    return SKILL_DATA.skillDeclarationCost
 end
 
 function SkillDataAccessors.getSkillPoints(id, level, isActive)
