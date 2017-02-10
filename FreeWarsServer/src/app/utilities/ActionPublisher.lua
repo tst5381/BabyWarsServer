@@ -122,7 +122,7 @@ end
 -- The private functions that create actions for publish.
 --------------------------------------------------------------------------------
 local creators = {}
-creators.createForActionActivateSkillGroup = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionActivateSkill = function(action, targetPlayerIndex, modelSceneWar)
     return TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
 end
 

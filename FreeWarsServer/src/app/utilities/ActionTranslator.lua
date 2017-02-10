@@ -867,29 +867,33 @@ local function translatePath(path, launchUnitID, modelSceneWar)
     return translatedPath
 end
 
-local function translateActivateSkillGroup(action)
+local function translateActivateSkill(action)
     local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
     if (not modelSceneWar) then
         return actionOnError
     end
 
-    local skillGroupID     = action.skillGroupID
+    local skillID          = action.skillID
+    local skillLevel       = action.skillLevel
+    local isActiveSkill    = action.isActiveSkill
     local modelTurnManager = getModelTurnManager(modelSceneWar)
     local modelPlayer      = getModelPlayerManager(modelSceneWar):getModelPlayer(modelTurnManager:getPlayerIndex())
-    if ((not modelTurnManager:isTurnPhaseMain()) or (not modelPlayer:canActivateSkillGroup(skillGroupID))) then
+    if ((not modelTurnManager:isTurnPhaseMain()) or (modelPlayer:getEnergy() < SkillDataAccessors.getSkillPoints(skillID, skillLevel, isActiveSkill))) then
         return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
-    local revealedTiles, revealedUnits = VisibilityFunctions.getRevealedTilesAndUnitsDataForSkillActivation(modelSceneWar, skillGroupID)
-    local actionActivateSkillGroup = {
-        actionCode    = ACTION_CODES.ActionActivateSkillGroup,
+    local revealedTiles, revealedUnits = VisibilityFunctions.getRevealedTilesAndUnitsDataForSkillActivation(modelSceneWar, skillID)
+    local actionActivateSkill = {
+        actionCode    = ACTION_CODES.ActionActivateSkill,
         actionID      = action.actionID,
         warID         = action.warID,
-        skillGroupID  = skillGroupID,
+        skillID       = skillID,
+        skillLevel    = skillLevel,
+        isActiveSkill = isActiveSkill,
         revealedTiles = revealedTiles,
         revealedUnits = revealedUnits,
     }
-    return actionActivateSkillGroup, createActionsForPublish(actionActivateSkillGroup, modelSceneWar), createActionForServer(actionActivateSkillGroup)
+    return actionActivateSkill, createActionsForPublish(actionActivateSkill, modelSceneWar), createActionForServer(actionActivateSkill)
 end
 
 local function translateAttack(action)
@@ -1609,7 +1613,7 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionReloadSceneWar)               then return translateReloadSceneWar(              action)
     elseif (actionCode == ACTION_CODES.ActionRunSceneWar)                  then return translateRunSceneWar(                 action)
     elseif (actionCode == ACTION_CODES.ActionSyncSceneWar)                 then return translateSyncSceneWar(                action)
-    elseif (actionCode == ACTION_CODES.ActionActivateSkillGroup)           then return translateActivateSkillGroup(          action)
+    elseif (actionCode == ACTION_CODES.ActionActivateSkill)                then return translateActivateSkill(               action)
     elseif (actionCode == ACTION_CODES.ActionAttack)                       then return translateAttack(                      action)
     elseif (actionCode == ACTION_CODES.ActionBeginTurn)                    then return translateBeginTurn(                   action)
     elseif (actionCode == ACTION_CODES.ActionBuildModelTile)               then return translateBuildModelTile(              action)
