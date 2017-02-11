@@ -879,7 +879,9 @@ local function translateActivateSkill(action)
     local isActiveSkill    = action.isActiveSkill
     local modelTurnManager = getModelTurnManager(modelSceneWar)
     local modelPlayer      = getModelPlayerManager(modelSceneWar):getModelPlayer(modelTurnManager:getPlayerIndex())
-    if ((not modelTurnManager:isTurnPhaseMain()) or (modelPlayer:getEnergy() < SkillDataAccessors.getSkillPoints(skillID, skillLevel, isActiveSkill))) then
+    if ((not modelTurnManager:isTurnPhaseMain())                                                           or
+        (not modelPlayer:canActivateSkill())                                                               or
+        (modelPlayer:getEnergy() < SkillDataAccessors.getSkillPoints(skillID, skillLevel, isActiveSkill))) then
         return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
@@ -1064,6 +1066,23 @@ local function translateCaptureModelTile(action)
         }
         return actionCapture, createActionsForPublish(actionCapture, modelSceneWar), createActionForServer(actionCapture)
     end
+end
+
+local function translateDeclareSkill(action)
+    local modelSceneWar, actionOnError = getModelSceneWarWithAction(action)
+    if (not modelSceneWar) then
+        return actionOnError
+    end
+
+    local modelTurnManager = getModelTurnManager(modelSceneWar)
+    local modelPlayer      = getModelPlayerManager(modelSceneWar):getModelPlayer(modelTurnManager:getPlayerIndex())
+    if ((not modelTurnManager:isTurnPhaseMain())                                  or
+        (modelPlayer:isSkillDeclared())                                           or
+        (modelPlayer:getEnergy() < SkillDataAccessors.getSkillDeclarationCost())) then
+        return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
+    end
+
+    return action, createActionsForPublish(action, modelSceneWar), createActionForServer(action)
 end
 
 local function translateDestroyOwnedModelUnit(action)
@@ -1619,6 +1638,7 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionBeginTurn)                    then return translateBeginTurn(                   action)
     elseif (actionCode == ACTION_CODES.ActionBuildModelTile)               then return translateBuildModelTile(              action)
     elseif (actionCode == ACTION_CODES.ActionCaptureModelTile)             then return translateCaptureModelTile(            action)
+    elseif (actionCode == ACTION_CODES.ActionDeclareSkill)                 then return translateDeclareSkill(                action)
     elseif (actionCode == ACTION_CODES.ActionDestroyOwnedModelUnit)        then return translateDestroyOwnedModelUnit(       action)
     elseif (actionCode == ACTION_CODES.ActionDive)                         then return translateDive(                        action)
     elseif (actionCode == ACTION_CODES.ActionDropModelUnit)                then return translateDropModelUnit(               action)
