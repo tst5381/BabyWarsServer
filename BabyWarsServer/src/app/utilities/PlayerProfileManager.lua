@@ -8,7 +8,7 @@ local decode          = SerializationFunctions.decode
 local encode          = SerializationFunctions.encode
 local io, math, pairs = io, math, pairs
 
-local PLAYER_PROFILE_PATH          = "BabyWars\\res\\data\\playerProfile\\"
+local PLAYER_PROFILE_PATH          = "BabyWarsServer\\userdata\\playerProfile\\"
 local RANKING_LISTS_PATH           = PLAYER_PROFILE_PATH .. "rankingList\\"
 local RANKING_LIST_FILE_NAME       = RANKING_LISTS_PATH .. "rankingList.spdata"
 local DEFAULT_SINGLE_GAME_RECORD   = {rankScore = 1000, win = 0, lose = 0, draw = 0}
