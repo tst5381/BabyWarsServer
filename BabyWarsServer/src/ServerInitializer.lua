@@ -12,7 +12,7 @@ function ServerInitializer.init()
         math.randomseed(ngx.time())
 
         requireBW = function(modName)
-            return require("BabyWars." .. modName)
+            return require("BabyWarsServer." .. modName)
         end
 
         requireBW("src.app.utilities.GameConstantFunctions") .init(true)

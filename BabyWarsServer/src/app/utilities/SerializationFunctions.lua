@@ -22,7 +22,7 @@ local function loadBinarySprotoSchema()
         local filename = cc.FileUtils:getInstance():fullPathForFilename("sproto/BabyWarsSprotoSchema.sp")
         return read_sproto_file_c(filename)
     else
-        local f            = io.open("BabyWars/res/sproto/BabyWarsSprotoSchema.sp", "rb")
+        local f            = io.open("BabyWarsServer/res/sproto/BabyWarsSprotoSchema.sp", "rb")
         local binarySchema = f:read("*a")
         f:close()
 
