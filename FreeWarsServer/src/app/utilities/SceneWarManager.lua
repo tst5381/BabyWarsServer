@@ -97,6 +97,7 @@ local function generateSceneWarData(warID, param)
     return {
         actionID                   = 0,
         createdTime                = ngx.time(),
+        energyGainModifier         = param.energyGainModifier,
         executedActions            = {},
         intervalUntilBoot          = param.intervalUntilBoot,
         isFogOfWarByDefault        = param.isFogOfWarByDefault,
@@ -145,6 +146,7 @@ local function generateWarConfiguration(warData)
     return {
         createdTime         = warData.createdTime,
         defaultWeatherCode  = warData.weather.defaultWeatherCode,
+        energyGainModifier  = warData.energyGainModifier,
         enterTurnTime       = warData.enterTurnTime,
         intervalUntilBoot   = warData.intervalUntilBoot,
         isFogOfWarByDefault = warData.isFogOfWarByDefault,
