@@ -104,8 +104,9 @@ local function generateSceneWarData(warID, param)
     return {
         actionID                   = 0,
         createdTime                = ngx.time(),
-        intervalUntilBoot          = param.intervalUntilBoot,
         executedActions            = {},
+        incomeModifier             = param.incomeModifier,
+        intervalUntilBoot          = param.intervalUntilBoot,
         isFogOfWarByDefault        = param.isFogOfWarByDefault,
         isRandomWarField           = WarFieldManager.isRandomWarField(warFieldFileName),
         isRankMatch                = param.isRankMatch,
@@ -154,6 +155,7 @@ local function generateWarConfiguration(warData)
         createdTime         = warData.createdTime,
         defaultWeatherCode  = warData.weather.defaultWeatherCode,
         enterTurnTime       = warData.enterTurnTime,
+        incomeModifier      = warData.incomeModifier,
         intervalUntilBoot   = warData.intervalUntilBoot,
         isFogOfWarByDefault = warData.isFogOfWarByDefault,
         isRandomWarField    = warData.isRandomWarField,
