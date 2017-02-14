@@ -879,9 +879,10 @@ local function translateActivateSkill(action)
     local isActiveSkill    = action.isActiveSkill
     local modelTurnManager = getModelTurnManager(modelSceneWar)
     local modelPlayer      = getModelPlayerManager(modelSceneWar):getModelPlayer(modelTurnManager:getPlayerIndex())
-    if ((not modelTurnManager:isTurnPhaseMain())                                                           or
-        (not modelPlayer:canActivateSkill())                                                               or
-        (modelPlayer:getEnergy() < SkillDataAccessors.getSkillPoints(skillID, skillLevel, isActiveSkill))) then
+    if ((not modelTurnManager:isTurnPhaseMain())                                                                   or
+        ((isActiveSkill) and ((not modelPlayer:canActivateSkill()) or (not modelSceneWar:isActiveSkillEnabled()))) or
+        ((not isActiveSkill) and (not modelSceneWar:isPassiveSkillEnabled()))                                      or
+        (modelPlayer:getEnergy() < SkillDataAccessors.getSkillPoints(skillID, skillLevel, isActiveSkill)))         then
         return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
@@ -1077,6 +1078,7 @@ local function translateDeclareSkill(action)
     local modelTurnManager = getModelTurnManager(modelSceneWar)
     local modelPlayer      = getModelPlayerManager(modelSceneWar):getModelPlayer(modelTurnManager:getPlayerIndex())
     if ((not modelTurnManager:isTurnPhaseMain())                                  or
+        (not modelSceneWar:isActiveSkillEnabled())                                or
         (modelPlayer:isSkillDeclared())                                           or
         (modelPlayer:getEnergy() < SkillDataAccessors.getSkillDeclarationCost())) then
         return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
