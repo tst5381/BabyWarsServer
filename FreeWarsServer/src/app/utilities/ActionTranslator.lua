@@ -1078,6 +1078,7 @@ local function translateDeclareSkill(action)
     local modelTurnManager = getModelTurnManager(modelSceneWar)
     local modelPlayer      = getModelPlayerManager(modelSceneWar):getModelPlayer(modelTurnManager:getPlayerIndex())
     if ((not modelTurnManager:isTurnPhaseMain())                                  or
+        (not modelSceneWar:isActiveSkillEnabled())                                or
         (modelPlayer:isSkillDeclared())                                           or
         (modelPlayer:getEnergy() < SkillDataAccessors.getSkillDeclarationCost())) then
         return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
