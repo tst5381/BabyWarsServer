@@ -796,8 +796,7 @@ end
 local function translateGetReplayConfigurations(action)
     return {
         actionCode           = ACTION_CODES.ActionGetReplayConfigurations,
-        pageIndex            = action.pageIndex,
-        replayConfigurations = SceneWarManager.getReplayConfigurations(action.pageIndex),
+        replayConfigurations = SceneWarManager.getReplayConfigurations(action.warID),
     }
 end
 

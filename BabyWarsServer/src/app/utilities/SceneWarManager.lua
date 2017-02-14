@@ -10,8 +10,8 @@ local TableFunctions         = requireBW("src.app.utilities.TableFunctions")
 local WarFieldManager        = requireBW("src.app.utilities.WarFieldManager")
 local Actor                  = requireBW("src.global.actors.Actor")
 
-local ngx, io, math, os, string = ngx, io, math, os, string
-local pairs                     = pairs
+local ngx, io, math, os, string, table = ngx, io, math, os, string, table
+local pairs, ipairs                    = pairs, ipairs
 
 local SCENE_WAR_PATH           = "BabyWarsServer\\userdata\\sceneWar\\"
 local JOINABLE_WAR_LIST_PATH   = SCENE_WAR_PATH .. "JoinableWarList.spdata"
@@ -19,7 +19,8 @@ local ONGOING_WAR_LIST_PATH    = SCENE_WAR_PATH .. "OngoingWarList.spdata"
 local REPLAY_LIST_PATH         = SCENE_WAR_PATH .. "ReplayList.spdata"
 local SCENE_WAR_NEXT_NAME_PATH = SCENE_WAR_PATH .. "NextWarID.spdata"
 
-local DEFAULT_TURN_DATA        = {
+local REPLAY_RECENT_LIST_CAPACITY = 30
+local DEFAULT_TURN_DATA           = {
     turnIndex     = 1,
     playerIndex   = 1,
     turnPhaseCode = 1,
@@ -259,7 +260,7 @@ end
 
 local function serializeReplayList(list)
     local file = io.open(REPLAY_LIST_PATH, "wb")
-    file:write(SerializationFunctions.encode("ReplayListForServer", {list = list}))
+    file:write(SerializationFunctions.encode("ReplayListForServer", list))
     file:close()
 end
 
@@ -268,13 +269,8 @@ local function loadReplayList()
     if (not file) then
         return nil
     else
-        local list = SerializationFunctions.decode("ReplayListForServer", file:read("*a")).list
+        local list = SerializationFunctions.decode("ReplayListForServer", file:read("*a"))
         file:close()
-
-        for warID, replayListItem in pairs(list) do
-            replayListItem.replayConfiguration = generateReplayConfiguration(loadWarData(warID))
-        end
-
         return list
     end
 end
@@ -308,7 +304,10 @@ end
 local function initReplayList()
     s_ReplayList = loadReplayList()
     if (not s_ReplayList) then
-        s_ReplayList = {}
+        s_ReplayList = {
+            fullList   = {},
+            recentList = {},
+        }
         serializeReplayList(s_ReplayList)
     end
 end
@@ -519,26 +518,29 @@ function SceneWarManager.joinWar(param)
     return SceneWarManager
 end
 
-function SceneWarManager.getReplayConfigurations(pageIndex)
-    -- TODO: limit the length of the list.
-    local minWarID = (pageIndex - 1) * 20 + 1
-    if (minWarID >= s_NextWarID) then
-        return nil
-    end
-
-    local list
-    for warID = minWarID, minWarID + 20 - 1 do
-        if (s_ReplayList[warID]) then
-            list = list or {}
-            list[#list + 1] = s_ReplayList[warID].replayConfiguration
+function SceneWarManager.getReplayConfigurations(warID)
+    if (warID) then
+        local item = s_ReplayList.fullList[warID]
+        if (not item) then
+            return nil
+        else
+            item.replayConfiguration = item.replayConfiguration or generateReplayConfiguration(loadWarData(warID))
+            return {[warID] = item.replayConfiguration}
         end
-    end
+    else
+        local list = {}
+        for _, warID in ipairs(s_ReplayList.recentList) do
+            local item = s_ReplayList.fullList[warID]
+            item.replayConfiguration = item.replayConfiguration or generateReplayConfiguration(loadWarData(warID))
+            list[warID] = item.replayConfiguration
+        end
 
-    return list
+        return list
+    end
 end
 
 function SceneWarManager.getEncodedReplayData(warID)
-    if (not s_ReplayList[warID]) then
+    if (not s_ReplayList.fullList[warID]) then
         return nil
     else
         return loadReplayData(warID)
@@ -567,7 +569,12 @@ function SceneWarManager.updateModelSceneWarWithAction(action)
         local warData = modelSceneWar:toSerializableReplayData()
         serializeWarData(warData)
 
-        s_ReplayList[warID] = {
+        local recentList = s_ReplayList.recentList
+        recentList[#recentList + 1] = warID
+        if (#recentList > REPLAY_RECENT_LIST_CAPACITY) then
+            table.remove(recentList, 1)
+        end
+        s_ReplayList.fullList[warID] = {
             warID               = warID,
             replayConfiguration = generateReplayConfiguration(warData),
         }
