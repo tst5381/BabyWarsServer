@@ -1,7 +1,8 @@
 
 local ServerInitializer = {}
 
-local ngx = ngx
+local ngx               = ngx
+local require, math, os = require, math, os
 
 local s_IsInitialized = false
 
@@ -9,6 +10,7 @@ function ServerInitializer.init()
     if (not s_IsInitialized) then
         s_IsInitialized = true
 
+        os.execute("mkdir FreeWarsServer\\logs")
         math.randomseed(ngx.time())
 
         requireFW = function(modName)
