@@ -11,6 +11,10 @@ local io, math, pairs = io, math, pairs
 local PLAYER_PROFILE_PATH          = "BabyWarsServer\\userdata\\playerProfile\\"
 local RANKING_LISTS_PATH           = PLAYER_PROFILE_PATH .. "rankingList\\"
 local RANKING_LIST_FILE_NAME       = RANKING_LISTS_PATH .. "rankingList.spdata"
+
+local HEARTBEAT_INTERVAL             = 10                          -- 10 seconds, the same as the WebSocketManager on clients.
+local ONLINE_DURATION_UPDATE_COUNTER = 60 * 5 / HEARTBEAT_INTERVAL -- serialize the duration every 5 minutes.
+
 local DEFAULT_SINGLE_GAME_RECORD   = {rankScore = 1000, win = 0, lose = 0, draw = 0}
 local DEFAULT_GAME_RECORDS         = {}
 for i = 1, 6 do
@@ -29,6 +33,7 @@ end
 local DEFAULT_WAR_LIST             = {
     ongoing = {},
     waiting = {},
+    recent  = {},
 }
 
 local s_IsInitialized     = false
@@ -54,9 +59,10 @@ end
 
 local function generatePlayerProfile(account, password)
     return {
-        account  = account,
-        password = password,
-        nickname = account,
+        account             = account,
+        password            = password,
+        nickname            = account,
+        totalOnlineDuration = 0,
 
         gameRecords         = DEFAULT_GAME_RECORDS,
         skillConfigurations = DEFAULT_SKILL_CONFIGURATIONS,
@@ -256,6 +262,8 @@ function PlayerProfileManager.getPlayerProfile(account)
         if (not profile) then
             return nil
         else
+            profile.totalOnlineDuration = profile.totalOnlineDuration or 0
+            profile.heartbeatCounter    = 0
             s_PlayerProfileList[lowerAccount] = {
                 fullFileName = toFullFileName(account),
                 profile      = profile,
@@ -301,6 +309,18 @@ function PlayerProfileManager.setSkillConfiguration(account, configurationID, sk
 
     profile.skillConfigurations[configurationID] = skillConfiguration
     serializeProfile(profile)
+
+    return PlayerProfileManager
+end
+
+function PlayerProfileManager.updateProfileWithNetworkHeartbeat(account)
+    local profile = PlayerProfileManager.getPlayerProfile(account)
+    profile.heartbeatCounter    = profile.heartbeatCounter    + 1
+    profile.totalOnlineDuration = profile.totalOnlineDuration + HEARTBEAT_INTERVAL
+    if (profile.heartbeatCounter >= ONLINE_DURATION_UPDATE_COUNTER) then
+        profile.heartbeatCounter = 0
+        serializeProfile(profile)
+    end
 
     return PlayerProfileManager
 end

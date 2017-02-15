@@ -142,10 +142,11 @@ local function executeActionForServer(action)
     assert(actionCode, "Session-executeActionForServer() invalid actionCode: " .. (actionCode or ""))
 
     if ((actionCode == ACTION_CODE_EXIT_WAR)  or
+        (actionCode == ACTION_CODE_HEARTBEAT) or
         (actionCode == ACTION_CODE_JOIN_WAR)  or
         (actionCode == ACTION_CODE_NEW_WAR)   or
         (actionCode == ACTION_CODE_REGISTER)) then
-        ActionExecutor.execute(action, actionCode)
+        ActionExecutor.execute(action)
     else
         SceneWarManager.updateModelSceneWarWithAction(action)
     end
