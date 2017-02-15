@@ -4,9 +4,9 @@ local PlayerProfileManager = {}
 local SerializationFunctions = requireBW("src.app.utilities.SerializationFunctions")
 local TableFunctions         = requireBW("src.app.utilities.TableFunctions")
 
-local decode          = SerializationFunctions.decode
-local encode          = SerializationFunctions.encode
-local io, math, pairs = io, math, pairs
+local decode                 = SerializationFunctions.decode
+local encode                 = SerializationFunctions.encode
+local io, math, pairs, table = io, math, pairs, table
 
 local PLAYER_PROFILE_PATH          = "BabyWarsServer\\userdata\\playerProfile\\"
 local RANKING_LISTS_PATH           = PLAYER_PROFILE_PATH .. "rankingList\\"
@@ -14,6 +14,7 @@ local RANKING_LIST_FILE_NAME       = RANKING_LISTS_PATH .. "rankingList.spdata"
 
 local HEARTBEAT_INTERVAL             = 10                          -- 10 seconds, the same as the WebSocketManager on clients.
 local ONLINE_DURATION_UPDATE_COUNTER = 60 * 5 / HEARTBEAT_INTERVAL -- serialize the duration every 5 minutes.
+local RECENT_WAR_LIST_CAPACITY       = 20
 
 local DEFAULT_SINGLE_GAME_RECORD   = {rankScore = 1000, win = 0, lose = 0, draw = 0}
 local DEFAULT_GAME_RECORDS         = {}
@@ -55,6 +56,15 @@ local function binarySearch(array, predicate)
     end
 
     return lowerBound, false
+end
+
+local function updateRecentWarList(profile, warID)
+    profile.warLists.recent = profile.warLists.recent or {}
+    local list = profile.warLists.recent
+    list[#list + 1] = warID
+    if (#list > RECENT_WAR_LIST_CAPACITY) then
+        table.remove(list, 1)
+    end
 end
 
 local function generatePlayerProfile(account, password)
@@ -377,6 +387,7 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
                 profile.warLists.ongoing[warID]         = nil
                 profile.gameRecords[gameTypeIndex].draw = profile.gameRecords[gameTypeIndex].draw + 1
+                updateRecentWarList(profile, warID)
                 serializeProfile(profile)
             end
         end)
@@ -398,6 +409,7 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
 
                     profile.warLists.ongoing[warID]         = nil
                     profile.gameRecords[gameTypeIndex].lose = profile.gameRecords[gameTypeIndex].lose + 1
+                    updateRecentWarList(profile, warID)
                     serializeProfile(profile)
                 end
             end
@@ -407,6 +419,7 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
             local profile = PlayerProfileManager.getPlayerProfile(alivePlayerAccount)
             profile.warLists.ongoing[warID]        = nil
             profile.gameRecords[gameTypeIndex].win = profile.gameRecords[gameTypeIndex].win + 1
+            updateRecentWarList(profile, warID)
             serializeProfile(profile)
         end
     end
