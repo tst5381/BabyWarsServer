@@ -744,10 +744,20 @@ local function translateLogin(action)
 end
 
 local function translateNetworkHeartbeat(action)
-    return {
+    local playerAccount = action.playerAccount
+    local actionNetworkHeartbeat = {
         actionCode       = ACTION_CODES.ActionNetworkHeartbeat,
         heartbeatCounter = action.heartbeatCounter,
     }
+
+    if (not PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
+        return actionNetworkHeartbeat
+    else
+        return actionNetworkHeartbeat, nil, {
+            actionCode    = ACTION_CODES.ActionNetworkHeartbeat,
+            playerAccount = playerAccount,
+        }
+    end
 end
 
 local function translateNewWar(action)

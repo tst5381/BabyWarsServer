@@ -144,10 +144,11 @@ local function executeActionForServer(action)
 
     if ((actionCode == ACTION_CODE_EXIT_WAR)                 or
         (actionCode == ACTION_CODE_JOIN_WAR)                 or
+        (actionCode == ACTION_CODE_HEARTBEAT)                or
         (actionCode == ACTION_CODE_NEW_WAR)                  or
         (actionCode == ACTION_CODE_REGISTER)                 or
         (actionCode == ACTION_CODE_SET_SKILL_CONFIGURATION)) then
-        ActionExecutor.execute(action, actionCode)
+        ActionExecutor.execute(action)
     else
         SceneWarManager.updateModelSceneWarWithAction(action)
     end
