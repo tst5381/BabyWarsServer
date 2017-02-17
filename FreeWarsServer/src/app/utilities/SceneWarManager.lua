@@ -78,12 +78,12 @@ end
 --------------------------------------------------------------------------------
 -- The functions for generating the new game data.
 --------------------------------------------------------------------------------
-local function generateSinglePlayerData(account, playerIndex)
+local function generateSinglePlayerData(account, playerIndex, startingEnergy, startingFund)
     return {
         account           = account,
-        energy            = 0,
+        energy            = startingEnergy,
         canActivateSkill  = false,
-        fund              = 0,
+        fund              = startingFund,
         isAlive           = true,
         isActivatingSkill = false,
         isSkillDeclared   = false,
@@ -111,10 +111,12 @@ local function generateSceneWarData(warID, param)
         isWarEnded                 = false,
         maxDiffScore               = param.maxDiffScore,
         remainingIntervalUntilBoot = param.intervalUntilBoot,
+        startingEnergy             = param.startingEnergy,
+        startingFund               = param.startingFund,
         warID                      = warID,
         warPassword                = param.warPassword,
 
-        players  = {[playerIndex] = generateSinglePlayerData(param.playerAccount, playerIndex)},
+        players  = {[playerIndex] = generateSinglePlayerData(param.playerAccount, playerIndex, param.startingEnergy, param.startingFund)},
         turn     = TableFunctions.clone(DEFAULT_TURN_DATA),
         warField = {warFieldFileName = warFieldFileName},
         weather  = {defaultWeatherCode = param.defaultWeatherCode},
@@ -162,6 +164,8 @@ local function generateWarConfiguration(warData)
         maxDiffScore          = warData.maxDiffScore,
         playerIndexInTurn     = (warData.enterTurnTime) and (warData.turn.playerIndex) or (nil),
         players               = players,
+        startingEnergy        = warData.startingEnergy,
+        startingFund          = warData.startingFund,
         warFieldFileName      = warData.warField.warFieldFileName,
         warID                 = warData.warID,
         warPassword           = warData.warPassword,
@@ -479,7 +483,7 @@ function SceneWarManager.joinWar(param)
         nickname    = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
     }
     local joiningWarData = s_JoinableWarList[warID].warData
-    joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, playerIndex)
+    joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, playerIndex, joiningWarData.startingEnergy, joiningWarData.startingFund)
 
     PlayerProfileManager.updateProfileOnJoiningWar(playerAccount, warID)
 
