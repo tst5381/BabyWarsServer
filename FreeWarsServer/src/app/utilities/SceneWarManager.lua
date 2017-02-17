@@ -78,10 +78,10 @@ end
 --------------------------------------------------------------------------------
 -- The functions for generating the new game data.
 --------------------------------------------------------------------------------
-local function generateSinglePlayerData(account, playerIndex)
+local function generateSinglePlayerData(account, playerIndex, startingEnergy)
     return {
         account           = account,
-        energy            = 0,
+        energy            = startingEnergy,
         canActivateSkill  = false,
         fund              = 0,
         isAlive           = true,
@@ -111,10 +111,11 @@ local function generateSceneWarData(warID, param)
         isWarEnded                 = false,
         maxDiffScore               = param.maxDiffScore,
         remainingIntervalUntilBoot = param.intervalUntilBoot,
+        startingEnergy             = param.startingEnergy,
         warID                      = warID,
         warPassword                = param.warPassword,
 
-        players  = {[playerIndex] = generateSinglePlayerData(param.playerAccount, playerIndex)},
+        players  = {[playerIndex] = generateSinglePlayerData(param.playerAccount, playerIndex, param.startingEnergy)},
         turn     = TableFunctions.clone(DEFAULT_TURN_DATA),
         warField = {warFieldFileName = warFieldFileName},
         weather  = {defaultWeatherCode = param.defaultWeatherCode},
@@ -162,6 +163,7 @@ local function generateWarConfiguration(warData)
         maxDiffScore          = warData.maxDiffScore,
         playerIndexInTurn     = (warData.enterTurnTime) and (warData.turn.playerIndex) or (nil),
         players               = players,
+        startingEnergy        = warData.startingEnergy,
         warFieldFileName      = warData.warField.warFieldFileName,
         warID                 = warData.warID,
         warPassword           = warData.warPassword,
@@ -479,7 +481,7 @@ function SceneWarManager.joinWar(param)
         nickname    = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
     }
     local joiningWarData = s_JoinableWarList[warID].warData
-    joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, playerIndex)
+    joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, playerIndex, joiningWarData.startingEnergy)
 
     PlayerProfileManager.updateProfileOnJoiningWar(playerAccount, warID)
 
