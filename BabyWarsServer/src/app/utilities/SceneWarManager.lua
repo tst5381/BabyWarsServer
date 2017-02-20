@@ -79,7 +79,7 @@ end
 --------------------------------------------------------------------------------
 -- The functions for generating the new game data.
 --------------------------------------------------------------------------------
-local function generateSinglePlayerData(account, skillConfigurationID, playerIndex)
+local function generateSinglePlayerData(account, skillConfigurationID, playerIndex, startingFund)
     local skillConfiguration
     if     (not skillConfigurationID) then skillConfiguration = {basePoints = 0}
     elseif (skillConfigurationID > 0) then skillConfiguration = TableFunctions.deepClone(PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID))
@@ -91,7 +91,7 @@ local function generateSinglePlayerData(account, skillConfigurationID, playerInd
         playerIndex         = playerIndex,
         account             = account,
         nickname            = PlayerProfileManager.getPlayerProfile(account).nickname,
-        fund                = 0,
+        fund                = startingFund,
         isAlive             = true,
         damageCost          = 0,
         skillActivatedCount = 0,
@@ -116,10 +116,11 @@ local function generateSceneWarData(warID, param)
         maxBaseSkillPoints         = param.maxBaseSkillPoints,
         maxDiffScore               = param.maxDiffScore,
         remainingIntervalUntilBoot = param.intervalUntilBoot,
+        startingFund               = param.startingFund,
         warID                      = warID,
         warPassword                = param.warPassword,
 
-        players  = {[playerIndex] = generateSinglePlayerData(param.playerAccount, param.skillConfigurationID, playerIndex)},
+        players  = {[playerIndex] = generateSinglePlayerData(param.playerAccount, param.skillConfigurationID, playerIndex, param.startingFund)},
         turn     = TableFunctions.clone(DEFAULT_TURN_DATA),
         warField = {warFieldFileName = warFieldFileName},
         weather  = {defaultWeatherCode = param.defaultWeatherCode},
@@ -165,6 +166,7 @@ local function generateWarConfiguration(warData)
         maxDiffScore        = warData.maxDiffScore,
         playerIndexInTurn   = (warData.enterTurnTime) and (warData.turn.playerIndex) or (nil),
         players             = players,
+        startingFund        = warData.startingFund,
         warFieldFileName    = warData.warField.warFieldFileName,
         warID               = warData.warID,
         warPassword         = warData.warPassword,
@@ -185,6 +187,7 @@ local function loadWarData(warID)
     assert(file, "SceneWarManager-loadWarData() invalid warID: " .. (warID or ""))
 
     local warData = SerializationFunctions.decode("SceneWar", file:read("*a"))
+    warData.startingFund = warData.startingFund or 0
     file:close()
     return warData
 end
@@ -482,7 +485,7 @@ function SceneWarManager.joinWar(param)
         nickname    = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
     }
     local joiningWarData = s_JoinableWarList[warID].warData
-    joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex)
+    joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex, joiningWarData.startingFund)
 
     PlayerProfileManager.updateProfileOnJoiningWar(playerAccount, warID)
 
