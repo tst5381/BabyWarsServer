@@ -540,6 +540,31 @@ end
 --------------------------------------------------------------------------------
 -- The translate functions.
 --------------------------------------------------------------------------------
+local function translateChat(action)
+    local playerAccount = action.playerAccount
+    if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
+        return nil, LOGOUT_INVALID_ACCOUNT_PASSWORD
+    end
+
+    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(action.warID)
+    if (not modelSceneWar) then
+        return nil, RUN_SCENE_MAIN_ENDED_WAR
+    elseif (not isPlayerAliveInWar(modelSceneWar, playerAccount)) then
+        return nil, RUN_SCENE_MAIN_DEFEATED_PLAYER
+    end
+
+    -- TODO: validate more params.
+    local _, playerIndex = SingletonGetters.getModelPlayerManager(modelSceneWar):getModelPlayerWithAccount(playerAccount)
+    local actionChat = {
+        actionCode        = ACTION_CODES.ActionChat,
+        senderPlayerIndex = playerIndex,
+        warID             = action.warID,
+        channelID         = action.channelID,
+        chatText          = action.chatText,
+    }
+    return actionChat, createActionsForPublish(actionChat, modelSceneWar), createActionForServer(actionChat)
+end
+
 local function translateDownloadReplayData(action)
     local encodedReplayData = SceneWarManager.getEncodedReplayData(action.warID)
     if (not encodedReplayData) then
@@ -1628,7 +1653,8 @@ function ActionTranslator.translate(action)
     local actionCode = action.actionCode
     assert(ActionCodeFunctions.getActionName(actionCode), "ActionTranslator.translate() invalid actionCode: " .. (actionCode or ""))
 
-    if     (actionCode == ACTION_CODES.ActionDownloadReplayData)           then return translateDownloadReplayData(          action)
+    if     (actionCode == ACTION_CODES.ActionChat)                         then return translateChat(                        action)
+    elseif (actionCode == ACTION_CODES.ActionDownloadReplayData)           then return translateDownloadReplayData(          action)
     elseif (actionCode == ACTION_CODES.ActionExitWar)                      then return translateExitWar(                     action)
     elseif (actionCode == ACTION_CODES.ActionGetJoinableWarConfigurations) then return translateGetJoinableWarConfigurations(action)
     elseif (actionCode == ACTION_CODES.ActionGetOngoingWarConfigurations)  then return translateGetOngoingWarConfigurations( action)

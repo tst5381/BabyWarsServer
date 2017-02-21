@@ -363,6 +363,12 @@ function SceneWarManager.getNextWarId()
     return s_NextWarID
 end
 
+function SceneWarManager.serializeOngoingModelSceneWar(warID)
+    serializeWarData(SceneWarManager.getOngoingModelSceneWar(warID):toSerializableTable())
+
+    return SceneWarManager
+end
+
 function SceneWarManager.getOngoingModelSceneWar(warID)
     local item = s_OngoingWarList[warID]
     if (not item) then

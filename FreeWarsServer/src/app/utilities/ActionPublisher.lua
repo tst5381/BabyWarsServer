@@ -20,6 +20,7 @@ local isUnitVisible             = VisibilityFunctions.isUnitOnMapVisibleToPlayer
 local next, pairs               = next, pairs
 
 local ACTION_CODES                = ActionCodeFunctions.getFullList()
+local ACTION_CODE_CHAT            = ActionCodeFunctions.getActionCode("ActionChat")
 local IGNORED_KEYS_FOR_PUBLISHING = {"revealedTiles", "revealedUnits"}
 
 --------------------------------------------------------------------------------
@@ -190,6 +191,16 @@ creators.createForActionCaptureModelTile = function(action, targetPlayerIndex, m
     end
 
     return actionForPublish
+end
+
+creators.createForActionChat = function(action, targetPlayerIndex, modelSceneWar)
+    local channelID = action.channelID
+    if ((not channelID)                                                                                                                                or
+        (SingletonGetters.getModelChatManager(modelSceneWar):getChannelIdWithPlayerIndices(action.senderPlayerIndex, targetPlayerIndex) == channelID)) then
+        return action
+    else
+        return nil
+    end
 end
 
 creators.createForActionDeclareSkill = function(action, targetPlayerIndex, modelSceneWar)
@@ -383,13 +394,13 @@ end
 -- The public functions.
 --------------------------------------------------------------------------------
 function ActionPublisher.createActionsForPublish(action, modelSceneWar)
-    local playerIndexInTurn  = getModelTurnManager(modelSceneWar):getPlayerIndex()
-    local modelPlayerManager = getModelPlayerManager(modelSceneWar)
-    local generator          = creators["createFor" .. ActionCodeFunctions.getActionName(action.actionCode)]
+    local actionCode        = action.actionCode
+    local playerIndexActing = (actionCode == ACTION_CODE_CHAT) and (action.senderPlayerIndex) or (getModelTurnManager(modelSceneWar):getPlayerIndex())
+    local generator         = creators["createFor" .. ActionCodeFunctions.getActionName(actionCode)]
 
     local actionsForPublish  = {}
-    modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)
-        if ((playerIndex ~= playerIndexInTurn) and
+    getModelPlayerManager(modelSceneWar):forEachModelPlayer(function(modelPlayer, playerIndex)
+        if ((playerIndex ~= playerIndexActing) and
             (modelPlayer:isAlive()))           then
             actionsForPublish[modelPlayer:getAccount()] = generator(action, playerIndex, modelSceneWar)
         end
