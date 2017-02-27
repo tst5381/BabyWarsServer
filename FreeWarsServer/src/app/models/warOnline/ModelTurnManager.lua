@@ -266,7 +266,7 @@ end
 
 local function runTurnPhaseMain(self)
     local modelWar    = self.m_ModelWar
-    local playerIndex = self.m_PlayerIndex
+    local playerIndex      = self.m_PlayerIndex
     getScriptEventDispatcher(modelWar):dispatchEvent({
             name        = "EvtModelPlayerUpdated",
             modelPlayer = getModelPlayerManager(modelWar):getModelPlayer(playerIndex),

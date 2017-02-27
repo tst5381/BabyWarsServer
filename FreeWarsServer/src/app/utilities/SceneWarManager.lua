@@ -12,7 +12,7 @@ local Actor                  = requireFW("src.global.actors.Actor")
 local ngx, io, math, os, string, table = ngx, io, math, os, string, table
 local pairs, ipairs                    = pairs, ipairs
 
-local SCENE_WAR_PATH           = "FreeWarsServer\\userdata\\sceneWar\\"
+local SCENE_WAR_PATH           = "FreeWarsServer\\userdata\\wars\\"
 local JOINABLE_WAR_LIST_PATH   = SCENE_WAR_PATH .. "JoinableWarList.spdata"
 local ONGOING_WAR_LIST_PATH    = SCENE_WAR_PATH .. "OngoingWarList.spdata"
 local REPLAY_LIST_PATH         = SCENE_WAR_PATH .. "ReplayList.spdata"
@@ -248,7 +248,7 @@ local function loadOngoingWarList()
         for warID, item in pairs(list) do
             local warData       = loadWarData(warID)
             assert(not warData.isEnded, "SceneWarManager-loadOngoingWarList() the war is ended.")
-            local modelSceneWar = Actor.createModel("sceneWar.modelSceneWar", warData)
+            local modelSceneWar = Actor.createModel("warOnline.ModelSceneWar", warData)
             modelSceneWar:onStartRunning()
 
             item.actorSceneWar    = Actor.createWithModelAndViewInstance(modelSceneWar)
@@ -510,7 +510,7 @@ function SceneWarManager.joinWar(param)
             joiningWarData.warField.warFieldFileName = warConfiguration.warFieldFileName
         end
 
-        local modelSceneWar = Actor.createModel("sceneWar.modelSceneWar", joiningWarData)
+        local modelSceneWar = Actor.createModel("warOnline.ModelSceneWar", joiningWarData)
         modelSceneWar:onStartRunning()
         serializeWarData(modelSceneWar:toSerializableTable())
 
