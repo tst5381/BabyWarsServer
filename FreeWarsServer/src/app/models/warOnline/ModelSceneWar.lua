@@ -124,7 +124,7 @@ local function initActorMessageIndicator(self)
 end
 
 local function initActorPlayerManager(self, playersData)
-    self.m_ActorPlayerManager = Actor.createWithModelAndViewName("warOnline.ModelPlayerManager", playersData)
+    self.m_ActorPlayerManager = Actor.createWithModelAndViewName("common.ModelPlayerManager", playersData)
 end
 
 local function initActorWeatherManager(self, weatherData)
@@ -136,7 +136,7 @@ local function initActorWarField(self, warFieldData)
 end
 
 local function initActorWarHud(self)
-    self.m_ActorWarHud = Actor.createWithModelAndViewName("warOnline.ModelWarHUD", nil, "common.ViewWarHud")
+    self.m_ActorWarHud = Actor.createWithModelAndViewName("warOnline.ModelWarHud", nil, "common.ViewWarHud")
 end
 
 local function initActorTurnManager(self, turnData)

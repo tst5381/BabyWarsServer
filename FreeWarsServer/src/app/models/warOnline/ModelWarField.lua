@@ -19,8 +19,7 @@ local ModelWarField = requireFW("src.global.functions.class")("ModelWarField")
 local SingletonGetters = requireFW("src.app.utilities.SingletonGetters")
 local Actor            = requireFW("src.global.actors.Actor")
 
-local IS_SERVER               = requireFW("src.app.utilities.GameConstantFunctions").isServer()
-local TEMPLATE_WAR_FIELD_PATH = "res.data.templateWarField."
+local IS_SERVER = requireFW("src.app.utilities.GameConstantFunctions").isServer()
 
 --------------------------------------------------------------------------------
 -- The private callback functions on script events.
@@ -48,7 +47,7 @@ end
 -- The composition elements.
 --------------------------------------------------------------------------------
 local function initActorFogMap(self, fogMapData)
-    self.m_ActorFogMap = Actor.createWithModelAndViewInstance(Actor.createModel("warOnline.ModelFogMap", fogMapData, self.m_WarFieldFileName))
+    self.m_ActorFogMap = Actor.createWithModelAndViewInstance(Actor.createModel("common.ModelFogMap", fogMapData, self.m_WarFieldFileName))
 end
 
 local function initActorTileMap(self, tileMapData)
@@ -70,7 +69,7 @@ local function initActorActionPlanner(self)
 end
 
 local function initActorMapCursor(self, param)
-    self.m_ActorMapCursor = Actor.createWithModelAndViewName("warOnline.ModelMapCursor", param, "common.ViewMapCursor")
+    self.m_ActorMapCursor = Actor.createWithModelAndViewName("common.ModelMapCursor", param, "common.ViewMapCursor")
 end
 
 local function initActorGridEffect(self)
@@ -175,12 +174,8 @@ end
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
-function ModelWarField:getWarFieldDisplayName()
-    return requireFW(TEMPLATE_WAR_FIELD_PATH .. self.m_WarFieldFileName).warFieldName
-end
-
-function ModelWarField:getWarFieldAuthorName()
-    return requireFW(TEMPLATE_WAR_FIELD_PATH .. self.m_WarFieldFileName).authorName
+function ModelWarField:getWarFieldFileName()
+    return self.m_WarFieldFileName
 end
 
 function ModelWarField:getModelActionPlanner()
