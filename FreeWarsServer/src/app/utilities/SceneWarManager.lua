@@ -554,43 +554,6 @@ function SceneWarManager.getEncodedReplayData(warID)
     end
 end
 
-function SceneWarManager.updateModelSceneWarWithAction(action)
-    local warID         = action.warID
-    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(warID)
-    modelSceneWar:executeAction(action)
-    PlayerProfileManager.updateProfilesWithModelWarOnline(modelSceneWar)
-
-    if (not modelSceneWar:isEnded()) then
-        if (modelSceneWar:getModelTurnManager():isTurnPhaseRequestToBegin()) then
-            local warConfiguration = SceneWarManager.getOngoingSceneWarConfiguration(warID)
-            warConfiguration.enterTurnTime     = ngx.time()
-            warConfiguration.playerIndexInTurn = modelSceneWar:getModelTurnManager():getPlayerIndex()
-            modelSceneWar:setEnterTurnTime(warConfiguration.enterTurnTime)
-        end
-
-        serializeWarData(modelSceneWar:toSerializableTable())
-    else
-        s_OngoingWarList[warID] = nil
-        serializeOngoingWarList(s_OngoingWarList)
-
-        local warData = modelSceneWar:toSerializableReplayData()
-        serializeWarData(warData)
-
-        local recentList = s_ReplayList.recentList
-        recentList[#recentList + 1] = warID
-        if (#recentList > REPLAY_RECENT_LIST_CAPACITY) then
-            table.remove(recentList, 1)
-        end
-        s_ReplayList.fullList[warID] = {
-            warID               = warID,
-            replayConfiguration = generateReplayConfiguration(warData),
-        }
-        serializeReplayList(s_ReplayList)
-    end
-
-    return SceneWarManager
-end
-
 function SceneWarManager.updateWithModelWarOnline(modelWarOnline)
     local warID = modelWarOnline:getWarId()
     if (not modelWarOnline:isEnded()) then
