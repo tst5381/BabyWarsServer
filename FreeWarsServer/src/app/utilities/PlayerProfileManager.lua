@@ -331,20 +331,6 @@ function PlayerProfileManager.isAccountAndPasswordValid(account, password)
     end
 end
 
-function PlayerProfileManager.getSkillConfiguration(account, configurationID)
-    return PlayerProfileManager.getPlayerProfile(account).skillConfigurations[configurationID]
-end
-
-function PlayerProfileManager.setSkillConfiguration(account, configurationID, skillConfiguration)
-    local profile = PlayerProfileManager.getPlayerProfile(account)
-    assert(profile, "PlayerProfileManager.setSkillConfiguration() the profile doesn't exist.")
-
-    profile.skillConfigurations[configurationID] = skillConfiguration
-    serializeProfile(profile)
-
-    return PlayerProfileManager
-end
-
 function PlayerProfileManager.updateProfileWithNetworkHeartbeat(account)
     local profile = PlayerProfileManager.getPlayerProfile(account)
     profile.heartbeatCounter    = profile.heartbeatCounter    + 1
@@ -391,7 +377,7 @@ function PlayerProfileManager.updateProfilesOnBeginningWar(warConfiguration)
     return PlayerProfileManager
 end
 
-function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
+function PlayerProfileManager.updateProfilesWithModelWarOnline(modelSceneWar)
     local warID              = modelSceneWar:getWarId()
     local modelPlayerManager = modelSceneWar:getModelPlayerManager()
     local gameTypeIndex      = modelPlayerManager:getPlayersCount() * 2 - 3 + (modelSceneWar:isFogOfWarByDefault() and 1 or 0)
@@ -405,7 +391,7 @@ function PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
             if (modelPlayer:isAlive()) then
                 local profile = PlayerProfileManager.getPlayerProfile(modelPlayer:getAccount())
                 assert(profile.warLists.ongoing[warID],
-                    "PlayerProfileManager.updateProfilesWithModelSceneWar() the war ends in draw, while some alive players are not participating in it.")
+                    "PlayerProfileManager.updateProfilesWithModelWarOnline() the war ends in draw, while some alive players are not participating in it.")
 
                 profile.warLists.ongoing[warID]         = nil
                 profile.gameRecords[gameTypeIndex].draw = profile.gameRecords[gameTypeIndex].draw + 1
