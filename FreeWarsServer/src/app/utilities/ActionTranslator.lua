@@ -1450,7 +1450,7 @@ local function translateProduceModelUnitOnTile(action)
         return createActionReloadSceneWar(modelSceneWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
-    local focusModelUnit   = Actor.createModel("warOnline.ModelUnit", {
+    local focusModelUnit   = Actor.createModel("warOnline.ModelUnitForOnline", {
         tiledID       = tiledID,
         unitID        = 0,
         GridIndexable = gridIndex,

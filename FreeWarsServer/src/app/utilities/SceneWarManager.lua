@@ -248,7 +248,7 @@ local function loadOngoingWarList()
         for warID, item in pairs(list) do
             local warData       = loadWarData(warID)
             assert(not warData.isEnded, "SceneWarManager-loadOngoingWarList() the war is ended.")
-            local modelSceneWar = Actor.createModel("warOnline.ModelSceneWar", warData)
+            local modelSceneWar = Actor.createModel("warOnline.ModelWarOnline", warData)
             modelSceneWar:onStartRunning()
 
             item.actorSceneWar    = Actor.createWithModelAndViewInstance(modelSceneWar)
@@ -510,7 +510,7 @@ function SceneWarManager.joinWar(param)
             joiningWarData.warField.warFieldFileName = warConfiguration.warFieldFileName
         end
 
-        local modelSceneWar = Actor.createModel("warOnline.ModelSceneWar", joiningWarData)
+        local modelSceneWar = Actor.createModel("warOnline.ModelWarOnline", joiningWarData)
         modelSceneWar:onStartRunning()
         serializeWarData(modelSceneWar:toSerializableTable())
 
