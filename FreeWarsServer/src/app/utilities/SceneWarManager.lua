@@ -559,9 +559,8 @@ function SceneWarManager.updateWithModelWarOnline(modelWarOnline)
     if (not modelWarOnline:isEnded()) then
         if (modelWarOnline:getModelTurnManager():isTurnPhaseRequestToBegin()) then
             local warConfiguration = SceneWarManager.getOngoingSceneWarConfiguration(warID)
-            warConfiguration.enterTurnTime     = ngx.time()
+            warConfiguration.enterTurnTime     = modelWarOnline:getEnterTurnTime()
             warConfiguration.playerIndexInTurn = modelWarOnline:getModelTurnManager():getPlayerIndex()
-            modelWarOnline:setEnterTurnTime(warConfiguration.enterTurnTime)
         end
 
         serializeWarData(modelWarOnline:toSerializableTable())
