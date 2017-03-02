@@ -1,10 +1,11 @@
 
 local ServerSchedulers = {}
 
-local ActionCodeFunctions  = requireFW("src.app.utilities.ActionCodeFunctions")
-local ActionTranslator     = requireFW("src.app.utilities.ActionTranslator")
-local PlayerProfileManager = requireFW("src.app.utilities.PlayerProfileManager")
-local SceneWarManager      = requireFW("src.app.utilities.SceneWarManager")
+local ActionCodeFunctions        = requireFW("src.app.utilities.ActionCodeFunctions")
+local ActionExecutorForWarOnline = requireFW("src.app.utilities.actionExecutors.ActionExecutorForWarOnline")
+local ActionTranslator           = requireFW("src.app.utilities.ActionTranslator")
+local PlayerProfileManager       = requireFW("src.app.utilities.PlayerProfileManager")
+local SceneWarManager            = requireFW("src.app.utilities.SceneWarManager")
 
 local ngx      = ngx
 local newTimer = ngx.timer.at
@@ -29,13 +30,13 @@ local function startSchedulerForBoot()
 
                     if (modelTurnManager:isTurnPhaseRequestToBegin()) then
                         local _1, _2, actionBeginTurn = ActionTranslator.translate({
-                            actionCode       = ACTION_CODE_BEGIN_TURN,
-                            actionID         = modelSceneWar:getActionId() + 1,
-                            warID            = warID,
-                            playerAccount    = playerAccount,
-                            playerPassword   = playerPassword,
+                            actionCode     = ACTION_CODE_BEGIN_TURN,
+                            actionID       = modelSceneWar:getActionId() + 1,
+                            warID          = warID,
+                            playerAccount  = playerAccount,
+                            playerPassword = playerPassword,
                         })
-                        SceneWarManager.updateModelSceneWarWithAction(actionBeginTurn)
+                        ActionExecutorForWarOnline.execute(actionBeginTurn, modelSceneWar)
 
                         if ((modelSceneWar:isEnded()) or (currentTime - modelSceneWar:getEnterTurnTime() <= intervalUntilBoot)) then
                             return
@@ -43,13 +44,13 @@ local function startSchedulerForBoot()
                     end
 
                     local _1, _2, actionSurrender = ActionTranslator.translate({
-                        actionCode       = ACTION_CODE_SURRENDER,
-                        actionID         = modelSceneWar:getActionId() + 1,
-                        warID            = warID,
-                        playerAccount    = playerAccount,
-                        playerPassword   = playerPassword,
+                        actionCode     = ACTION_CODE_SURRENDER,
+                        actionID       = modelSceneWar:getActionId() + 1,
+                        warID          = warID,
+                        playerAccount  = playerAccount,
+                        playerPassword = playerPassword,
                     })
-                    SceneWarManager.updateModelSceneWarWithAction(actionSurrender)
+                    ActionExecutorForWarOnline.execute(actionSurrender, modelSceneWar)
                 end
             end)
 

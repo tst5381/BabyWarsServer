@@ -19,9 +19,9 @@ function ServerInitializer.init()
 
         requireFW("src.app.utilities.GameConstantFunctions") .init(true)
         requireFW("src.app.utilities.SerializationFunctions").init()
+        requireFW("src.app.utilities.WarFieldManager")       .init()
         requireFW("src.app.utilities.SceneWarManager")       .init()
         requireFW("src.app.utilities.PlayerProfileManager")  .init()
-        requireFW("src.app.utilities.WarFieldManager")       .init()
         requireFW("src.Session")
 
         ngx.log(ngx.CRIT, "FreeWars-ServerInitializer.init() completed.")

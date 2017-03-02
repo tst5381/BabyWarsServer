@@ -1,14 +1,14 @@
 
 local Session = requireFW("src.global.functions.class")("Session")
 
-local WebSocketServer        = require("resty.websocket.server")
-local Redis                  = require("resty.redis")
-local ActionCodeFunctions    = requireFW("src.app.utilities.ActionCodeFunctions")
-local ActionExecutor         = requireFW("src.app.utilities.ActionExecutor")
-local ActionTranslator       = requireFW("src.app.utilities.ActionTranslator")
-local PlayerProfileManager   = requireFW("src.app.utilities.PlayerProfileManager")
-local SceneWarManager        = requireFW("src.app.utilities.SceneWarManager")
-local SerializationFunctions = requireFW("src.app.utilities.SerializationFunctions")
+local WebSocketServer         = require("resty.websocket.server")
+local Redis                   = require("resty.redis")
+local ActionCodeFunctions     = requireFW("src.app.utilities.ActionCodeFunctions")
+local ActionExecutorForServer = requireFW("src.app.utilities.actionExecutors.ActionExecutorForServer")
+local ActionTranslator        = requireFW("src.app.utilities.ActionTranslator")
+local PlayerProfileManager    = requireFW("src.app.utilities.PlayerProfileManager")
+local SceneWarManager         = requireFW("src.app.utilities.SceneWarManager")
+local SerializationFunctions  = requireFW("src.app.utilities.SerializationFunctions")
 
 local decode = SerializationFunctions.decode
 local encode = SerializationFunctions.encode
@@ -138,22 +138,6 @@ local function getAccountAndPasswordWithAction(action, actionCode)
     end
 end
 
-local function executeActionForServer(action)
-    local actionCode = action.actionCode
-    assert(actionCode, "Session-executeActionForServer() invalid actionCode: " .. (actionCode or ""))
-
-    if ((actionCode == ACTION_CODE_CHAT)      or
-        (actionCode == ACTION_CODE_EXIT_WAR)  or
-        (actionCode == ACTION_CODE_HEARTBEAT) or
-        (actionCode == ACTION_CODE_JOIN_WAR)  or
-        (actionCode == ACTION_CODE_NEW_WAR)   or
-        (actionCode == ACTION_CODE_REGISTER)) then
-        ActionExecutor.execute(action)
-    else
-        SceneWarManager.updateModelSceneWarWithAction(action)
-    end
-end
-
 local function publishTranslatedActions(actions)
     -- It seems that if we use self.m_RedisForSubscribe to publish the actions, it may fail mysteriously.
     -- So it's safer to use a temporary redis for publishing.
@@ -174,7 +158,7 @@ end
 
 local function doAction(self, rawAction, actionForRequester, actionsForPublish, actionForServer)
     if (actionForServer) then
-        executeActionForServer(actionForServer)
+        ActionExecutorForServer.execute(actionForServer)
     end
     if (actionsForPublish) then
         publishTranslatedActions(actionsForPublish)

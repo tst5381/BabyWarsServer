@@ -12,7 +12,7 @@ local Actor                  = requireFW("src.global.actors.Actor")
 local ngx, io, math, os, string, table = ngx, io, math, os, string, table
 local pairs, ipairs                    = pairs, ipairs
 
-local SCENE_WAR_PATH           = "FreeWarsServer\\userdata\\sceneWar\\"
+local SCENE_WAR_PATH           = "FreeWarsServer\\userdata\\wars\\"
 local JOINABLE_WAR_LIST_PATH   = SCENE_WAR_PATH .. "JoinableWarList.spdata"
 local ONGOING_WAR_LIST_PATH    = SCENE_WAR_PATH .. "OngoingWarList.spdata"
 local REPLAY_LIST_PATH         = SCENE_WAR_PATH .. "ReplayList.spdata"
@@ -96,25 +96,25 @@ local function generateSceneWarData(warID, param)
     local playerIndex      = param.playerIndex
     local warFieldFileName = param.warFieldFileName
     return {
-        actionID                   = 0,
-        createdTime                = ngx.time(),
-        energyGainModifier         = param.energyGainModifier,
-        executedActions            = {},
-        incomeModifier             = param.incomeModifier,
-        intervalUntilBoot          = param.intervalUntilBoot,
-        isActiveSkillEnabled       = param.isActiveSkillEnabled,
-        isFogOfWarByDefault        = param.isFogOfWarByDefault,
-        isPassiveSkillEnabled      = param.isPassiveSkillEnabled,
-        isRandomWarField           = WarFieldManager.isRandomWarField(warFieldFileName),
-        isRankMatch                = param.isRankMatch,
-        isTotalReplay              = false,
-        isWarEnded                 = false,
-        maxDiffScore               = param.maxDiffScore,
-        remainingIntervalUntilBoot = param.intervalUntilBoot,
-        startingEnergy             = param.startingEnergy,
-        startingFund               = param.startingFund,
-        warID                      = warID,
-        warPassword                = param.warPassword,
+        actionID                  = 0,
+        createdTime               = ngx.time(),
+        energyGainModifier        = param.energyGainModifier,
+        executedActions           = {},
+        incomeModifier            = param.incomeModifier,
+        intervalUntilBoot         = param.intervalUntilBoot,
+        isActiveSkillEnabled      = param.isActiveSkillEnabled,
+        isFogOfWarByDefault       = param.isFogOfWarByDefault,
+        isPassiveSkillEnabled     = param.isPassiveSkillEnabled,
+        isRandomWarField          = WarFieldManager.isRandomWarField(warFieldFileName),
+        isRankMatch               = param.isRankMatch,
+        isSkillDeclarationEnabled = param.isSkillDeclarationEnabled,
+        isTotalReplay             = false,
+        isWarEnded                = false,
+        maxDiffScore              = param.maxDiffScore,
+        startingEnergy            = param.startingEnergy,
+        startingFund              = param.startingFund,
+        warID                     = warID,
+        warPassword               = param.warPassword,
 
         players  = {[playerIndex] = generateSinglePlayerData(param.playerAccount, playerIndex, param.startingEnergy, param.startingFund)},
         turn     = TableFunctions.clone(DEFAULT_TURN_DATA),
@@ -150,25 +150,26 @@ local function generateWarConfiguration(warData)
     end
 
     return {
-        createdTime           = warData.createdTime,
-        defaultWeatherCode    = warData.weather.defaultWeatherCode,
-        energyGainModifier    = warData.energyGainModifier,
-        enterTurnTime         = warData.enterTurnTime,
-        incomeModifier        = warData.incomeModifier,
-        intervalUntilBoot     = warData.intervalUntilBoot,
-        isActiveSkillEnabled  = warData.isActiveSkillEnabled,
-        isFogOfWarByDefault   = warData.isFogOfWarByDefault,
-        isPassiveSkillEnabled = warData.isPassiveSkillEnabled,
-        isRandomWarField      = warData.isRandomWarField,
-        isRankMatch           = warData.isRankMatch,
-        maxDiffScore          = warData.maxDiffScore,
-        playerIndexInTurn     = (warData.enterTurnTime) and (warData.turn.playerIndex) or (nil),
-        players               = players,
-        startingEnergy        = warData.startingEnergy,
-        startingFund          = warData.startingFund,
-        warFieldFileName      = warData.warField.warFieldFileName,
-        warID                 = warData.warID,
-        warPassword           = warData.warPassword,
+        createdTime               = warData.createdTime,
+        defaultWeatherCode        = warData.weather.defaultWeatherCode,
+        energyGainModifier        = warData.energyGainModifier,
+        enterTurnTime             = warData.enterTurnTime,
+        incomeModifier            = warData.incomeModifier,
+        intervalUntilBoot         = warData.intervalUntilBoot,
+        isActiveSkillEnabled      = warData.isActiveSkillEnabled,
+        isFogOfWarByDefault       = warData.isFogOfWarByDefault,
+        isPassiveSkillEnabled     = warData.isPassiveSkillEnabled,
+        isRandomWarField          = warData.isRandomWarField,
+        isRankMatch               = warData.isRankMatch,
+        isSkillDeclarationEnabled = warData.isSkillDeclarationEnabled,
+        maxDiffScore              = warData.maxDiffScore,
+        playerIndexInTurn         = (warData.enterTurnTime) and (warData.turn.playerIndex) or (nil),
+        players                   = players,
+        startingEnergy            = warData.startingEnergy,
+        startingFund              = warData.startingFund,
+        warFieldFileName          = warData.warField.warFieldFileName,
+        warID                     = warData.warID,
+        warPassword               = warData.warPassword,
     }
 end
 
@@ -186,6 +187,10 @@ local function loadWarData(warID)
     assert(file, "SceneWarManager-loadWarData() invalid warID: " .. (warID or ""))
 
     local warData = SerializationFunctions.decode("SceneWar", file:read("*a"))
+    if (warData.isSkillDeclarationEnabled == nil) then
+        warData.isSkillDeclarationEnabled = true
+    end
+
     file:close()
     return warData
 end
@@ -248,7 +253,7 @@ local function loadOngoingWarList()
         for warID, item in pairs(list) do
             local warData       = loadWarData(warID)
             assert(not warData.isEnded, "SceneWarManager-loadOngoingWarList() the war is ended.")
-            local modelSceneWar = Actor.createModel("sceneWar.modelSceneWar", warData)
+            local modelSceneWar = Actor.createModel("warOnline.ModelWarOnline", warData)
             modelSceneWar:onStartRunning()
 
             item.actorSceneWar    = Actor.createWithModelAndViewInstance(modelSceneWar)
@@ -361,12 +366,6 @@ end
 
 function SceneWarManager.getNextWarId()
     return s_NextWarID
-end
-
-function SceneWarManager.serializeOngoingModelSceneWar(warID)
-    serializeWarData(SceneWarManager.getOngoingModelSceneWar(warID):toSerializableTable())
-
-    return SceneWarManager
 end
 
 function SceneWarManager.getOngoingModelSceneWar(warID)
@@ -510,7 +509,7 @@ function SceneWarManager.joinWar(param)
             joiningWarData.warField.warFieldFileName = warConfiguration.warFieldFileName
         end
 
-        local modelSceneWar = Actor.createModel("sceneWar.modelSceneWar", joiningWarData)
+        local modelSceneWar = Actor.createModel("warOnline.ModelWarOnline", joiningWarData)
         modelSceneWar:onStartRunning()
         serializeWarData(modelSceneWar:toSerializableTable())
 
@@ -554,26 +553,21 @@ function SceneWarManager.getEncodedReplayData(warID)
     end
 end
 
-function SceneWarManager.updateModelSceneWarWithAction(action)
-    local warID         = action.warID
-    local modelSceneWar = SceneWarManager.getOngoingModelSceneWar(warID)
-    modelSceneWar:executeAction(action)
-    PlayerProfileManager.updateProfilesWithModelSceneWar(modelSceneWar)
-
-    if (not modelSceneWar:isEnded()) then
-        if (modelSceneWar:getModelTurnManager():isTurnPhaseRequestToBegin()) then
+function SceneWarManager.updateWithModelWarOnline(modelWarOnline)
+    local warID = modelWarOnline:getWarId()
+    if (not modelWarOnline:isEnded()) then
+        if (modelWarOnline:getModelTurnManager():isTurnPhaseRequestToBegin()) then
             local warConfiguration = SceneWarManager.getOngoingSceneWarConfiguration(warID)
-            warConfiguration.enterTurnTime     = ngx.time()
-            warConfiguration.playerIndexInTurn = modelSceneWar:getModelTurnManager():getPlayerIndex()
-            modelSceneWar:setEnterTurnTime(warConfiguration.enterTurnTime)
+            warConfiguration.enterTurnTime     = modelWarOnline:getEnterTurnTime()
+            warConfiguration.playerIndexInTurn = modelWarOnline:getModelTurnManager():getPlayerIndex()
         end
 
-        serializeWarData(modelSceneWar:toSerializableTable())
+        serializeWarData(modelWarOnline:toSerializableTable())
     else
         s_OngoingWarList[warID] = nil
         serializeOngoingWarList(s_OngoingWarList)
 
-        local warData = modelSceneWar:toSerializableReplayData()
+        local warData = modelWarOnline:toSerializableReplayData()
         serializeWarData(warData)
 
         local recentList = s_ReplayList.recentList
