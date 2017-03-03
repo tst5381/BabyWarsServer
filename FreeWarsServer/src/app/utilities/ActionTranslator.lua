@@ -29,7 +29,6 @@ local LocalizationFunctions   = requireFW("src.app.utilities.LocalizationFunctio
 local PlayerProfileManager    = requireFW("src.app.utilities.PlayerProfileManager")
 local SceneWarManager         = requireFW("src.app.utilities.SceneWarManager")
 local SerializationFunctions  = requireFW("src.app.utilities.SerializationFunctions")
-local SkillDataAccessors      = requireFW("src.app.utilities.SkillDataAccessors")
 local SkillModifierFunctions  = requireFW("src.app.utilities.SkillModifierFunctions")
 local SingletonGetters        = requireFW("src.app.utilities.SingletonGetters")
 local TableFunctions          = requireFW("src.app.utilities.TableFunctions")
@@ -917,7 +916,7 @@ local function translateActivateSkill(action)
     if ((not modelTurnManager:isTurnPhaseMain())                                                                                                           or
         ((isActiveSkill) and ((not modelWar:isActiveSkillEnabled()) or ((modelWar:isSkillDeclarationEnabled()) and (not modelPlayer:canActivateSkill())))) or
         ((not isActiveSkill) and (not modelWar:isPassiveSkillEnabled()))                                                                                   or
-        (modelPlayer:getEnergy() < SkillDataAccessors.getSkillPoints(skillID, skillLevel, isActiveSkill)))                                                 then
+        (modelPlayer:getEnergy() < modelWar:getModelSkillDataManager():getSkillPoints(skillID, skillLevel, isActiveSkill)))                                then
         return createActionReloadSceneWar(modelWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
@@ -1112,10 +1111,10 @@ local function translateDeclareSkill(action)
 
     local modelTurnManager = getModelTurnManager(modelWar)
     local modelPlayer      = getModelPlayerManager(modelWar):getModelPlayer(modelTurnManager:getPlayerIndex())
-    if ((not modelTurnManager:isTurnPhaseMain())                                  or
-        (not modelWar:isActiveSkillEnabled())                                or
-        (modelPlayer:isSkillDeclared())                                           or
-        (modelPlayer:getEnergy() < SkillDataAccessors.getSkillDeclarationCost())) then
+    if ((not modelTurnManager:isTurnPhaseMain())                                                   or
+        (not modelWar:isActiveSkillEnabled())                                                      or
+        (modelPlayer:isSkillDeclared())                                                            or
+        (modelPlayer:getEnergy() < modelWar:getModelSkillDataManager():getSkillDeclarationCost())) then
         return createActionReloadSceneWar(modelWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
