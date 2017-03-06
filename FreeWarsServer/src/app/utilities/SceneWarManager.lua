@@ -97,6 +97,7 @@ local function generateSceneWarData(warID, param)
     local warFieldFileName = param.warFieldFileName
     return {
         actionID                  = 0,
+        attackModifier            = param.attackModifier,
         createdTime               = ngx.time(),
         energyGainModifier        = param.energyGainModifier,
         executedActions           = {},
@@ -151,6 +152,7 @@ local function generateWarConfiguration(warData)
     end
 
     return {
+        attackModifier            = warData.attackModifier,
         createdTime               = warData.createdTime,
         defaultWeatherCode        = warData.weather.defaultWeatherCode,
         energyGainModifier        = warData.energyGainModifier,
@@ -192,6 +194,7 @@ local function loadWarData(warID)
     if (warData.isSkillDeclarationEnabled == nil) then
         warData.isSkillDeclarationEnabled = true
     end
+    warData.attackModifier    = warData.attackModifier    or 0
     warData.incomeModifier    = warData.incomeModifier    or 100
     warData.moveRangeModifier = warData.moveRangeModifier or 0
 
