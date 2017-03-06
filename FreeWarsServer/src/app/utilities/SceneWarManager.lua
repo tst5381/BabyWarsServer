@@ -111,6 +111,7 @@ local function generateSceneWarData(warID, param)
         isTotalReplay             = false,
         isWarEnded                = false,
         maxDiffScore              = param.maxDiffScore,
+        moveRangeModifier         = param.moveRangeModifier,
         startingEnergy            = param.startingEnergy,
         startingFund              = param.startingFund,
         warID                     = warID,
@@ -163,6 +164,7 @@ local function generateWarConfiguration(warData)
         isRankMatch               = warData.isRankMatch,
         isSkillDeclarationEnabled = warData.isSkillDeclarationEnabled,
         maxDiffScore              = warData.maxDiffScore,
+        moveRangeModifier         = warData.moveRangeModifier,
         playerIndexInTurn         = (warData.enterTurnTime) and (warData.turn.playerIndex) or (nil),
         players                   = players,
         startingEnergy            = warData.startingEnergy,
@@ -190,6 +192,8 @@ local function loadWarData(warID)
     if (warData.isSkillDeclarationEnabled == nil) then
         warData.isSkillDeclarationEnabled = true
     end
+    warData.incomeModifier    = warData.incomeModifier    or 100
+    warData.moveRangeModifier = warData.moveRangeModifier or 0
 
     file:close()
     return warData
