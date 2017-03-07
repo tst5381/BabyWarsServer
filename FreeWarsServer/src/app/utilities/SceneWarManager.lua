@@ -500,8 +500,9 @@ function SceneWarManager.joinWar(param)
 
     warConfiguration.players[playerIndex] = {
         account     = playerAccount,
-        playerIndex = playerIndex,
         nickname    = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
+        playerIndex = playerIndex,
+        teamIndex   = param.teamIndex,
     }
     local joiningWarData = s_JoinableWarList[warID].warData
     joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, playerIndex, param.teamIndex, joiningWarData.startingEnergy, joiningWarData.startingFund)
