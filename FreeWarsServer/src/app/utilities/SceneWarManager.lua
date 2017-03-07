@@ -115,6 +115,7 @@ local function generateSceneWarData(warID, param)
         moveRangeModifier         = param.moveRangeModifier,
         startingEnergy            = param.startingEnergy,
         startingFund              = param.startingFund,
+        visionModifier            = param.visionModifier,
         warID                     = warID,
         warPassword               = param.warPassword,
 
@@ -171,6 +172,7 @@ local function generateWarConfiguration(warData)
         players                   = players,
         startingEnergy            = warData.startingEnergy,
         startingFund              = warData.startingFund,
+        visionModifier            = warData.visionModifier,
         warFieldFileName          = warData.warField.warFieldFileName,
         warID                     = warData.warID,
         warPassword               = warData.warPassword,
@@ -197,6 +199,7 @@ local function loadWarData(warID)
     warData.attackModifier    = warData.attackModifier    or 0
     warData.incomeModifier    = warData.incomeModifier    or 100
     warData.moveRangeModifier = warData.moveRangeModifier or 0
+    warData.visionModifier    = warData.visionModifier    or 0
 
     file:close()
     return warData
