@@ -78,17 +78,18 @@ end
 --------------------------------------------------------------------------------
 -- The functions for generating the new game data.
 --------------------------------------------------------------------------------
-local function generateSinglePlayerData(account, playerIndex, startingEnergy, startingFund)
+local function generateSinglePlayerData(account, playerIndex, teamIndex, startingEnergy, startingFund)
     return {
         account           = account,
-        energy            = startingEnergy,
         canActivateSkill  = false,
+        energy            = startingEnergy,
         fund              = startingFund,
-        isAlive           = true,
         isActivatingSkill = false,
+        isAlive           = true,
         isSkillDeclared   = false,
         nickname          = PlayerProfileManager.getPlayerProfile(account).nickname,
         playerIndex       = playerIndex,
+        teamIndex         = teamIndex,
     }
 end
 
@@ -119,7 +120,7 @@ local function generateSceneWarData(warID, param)
         warID                     = warID,
         warPassword               = param.warPassword,
 
-        players  = {[playerIndex] = generateSinglePlayerData(param.playerAccount, playerIndex, param.startingEnergy, param.startingFund)},
+        players  = {[playerIndex] = generateSinglePlayerData(param.playerAccount, playerIndex, param.teamIndex, param.startingEnergy, param.startingFund)},
         turn     = TableFunctions.clone(DEFAULT_TURN_DATA),
         warField = {warFieldFileName = warFieldFileName},
         weather  = {defaultWeatherCode = param.defaultWeatherCode},
@@ -130,8 +131,9 @@ local function generateReplayConfiguration(warData)
     local players = {}
     for playerIndex, player in pairs(warData.players) do
         players[playerIndex] = {
-            account     = player.account,
-            nickname    = player.nickname,
+            teamIndex = player.teamIndex,
+            account   = player.account,
+            nickname  = player.nickname,
         }
     end
 
@@ -147,6 +149,7 @@ local function generateWarConfiguration(warData)
     for playerIndex, player in pairs(warData.players) do
         players[playerIndex] = {
             playerIndex = playerIndex,
+            teamIndex   = player.teamIndex,
             account     = player.account,
             nickname    = player.nickname,
         }
@@ -200,6 +203,9 @@ local function loadWarData(warID)
     warData.incomeModifier    = warData.incomeModifier    or 100
     warData.moveRangeModifier = warData.moveRangeModifier or 0
     warData.visionModifier    = warData.visionModifier    or 0
+    for playerIndex, playerData in pairs(warData.players) do
+        playerData.teamIndex = playerData.teamIndex or playerIndex
+    end
 
     file:close()
     return warData
@@ -498,7 +504,7 @@ function SceneWarManager.joinWar(param)
         nickname    = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
     }
     local joiningWarData = s_JoinableWarList[warID].warData
-    joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, playerIndex, joiningWarData.startingEnergy, joiningWarData.startingFund)
+    joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, playerIndex, param.teamIndex, joiningWarData.startingEnergy, joiningWarData.startingFund)
 
     PlayerProfileManager.updateProfileOnJoiningWar(playerAccount, warID)
 
