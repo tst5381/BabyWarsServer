@@ -97,6 +97,7 @@ local function generateSceneWarData(warID, param)
     local warFieldFileName = param.warFieldFileName
     return {
         actionID                  = 0,
+        attackModifier            = param.attackModifier,
         createdTime               = ngx.time(),
         energyGainModifier        = param.energyGainModifier,
         executedActions           = {},
@@ -111,8 +112,10 @@ local function generateSceneWarData(warID, param)
         isTotalReplay             = false,
         isWarEnded                = false,
         maxDiffScore              = param.maxDiffScore,
+        moveRangeModifier         = param.moveRangeModifier,
         startingEnergy            = param.startingEnergy,
         startingFund              = param.startingFund,
+        visionModifier            = param.visionModifier,
         warID                     = warID,
         warPassword               = param.warPassword,
 
@@ -150,6 +153,7 @@ local function generateWarConfiguration(warData)
     end
 
     return {
+        attackModifier            = warData.attackModifier,
         createdTime               = warData.createdTime,
         defaultWeatherCode        = warData.weather.defaultWeatherCode,
         energyGainModifier        = warData.energyGainModifier,
@@ -163,10 +167,12 @@ local function generateWarConfiguration(warData)
         isRankMatch               = warData.isRankMatch,
         isSkillDeclarationEnabled = warData.isSkillDeclarationEnabled,
         maxDiffScore              = warData.maxDiffScore,
+        moveRangeModifier         = warData.moveRangeModifier,
         playerIndexInTurn         = (warData.enterTurnTime) and (warData.turn.playerIndex) or (nil),
         players                   = players,
         startingEnergy            = warData.startingEnergy,
         startingFund              = warData.startingFund,
+        visionModifier            = warData.visionModifier,
         warFieldFileName          = warData.warField.warFieldFileName,
         warID                     = warData.warID,
         warPassword               = warData.warPassword,
@@ -190,6 +196,10 @@ local function loadWarData(warID)
     if (warData.isSkillDeclarationEnabled == nil) then
         warData.isSkillDeclarationEnabled = true
     end
+    warData.attackModifier    = warData.attackModifier    or 0
+    warData.incomeModifier    = warData.incomeModifier    or 100
+    warData.moveRangeModifier = warData.moveRangeModifier or 0
+    warData.visionModifier    = warData.visionModifier    or 0
 
     file:close()
     return warData
