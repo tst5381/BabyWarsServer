@@ -377,13 +377,13 @@ function PlayerProfileManager.updateProfilesOnBeginningWar(warConfiguration)
     return PlayerProfileManager
 end
 
-function PlayerProfileManager.updateProfilesWithModelWarOnline(modelSceneWar)
-    local warID              = modelSceneWar:getWarId()
-    local modelPlayerManager = modelSceneWar:getModelPlayerManager()
-    local gameTypeIndex      = modelPlayerManager:getPlayersCount() * 2 - 3 + (modelSceneWar:isFogOfWarByDefault() and 1 or 0)
+function PlayerProfileManager.updateProfilesWithModelWarOnline(modelWar)
+    local warID              = modelWar:getWarId()
+    local modelPlayerManager = modelWar:getModelPlayerManager()
+    local gameTypeIndex      = modelPlayerManager:getPlayersCount() * 2 - 3 + (modelWar:isFogOfWarByDefault() and 1 or 0)
 
-    if (modelSceneWar:getRemainingVotesForDraw() == 0) then
-        if (modelSceneWar:isRankMatch()) then
+    if (modelWar:getRemainingVotesForDraw() == 0) then
+        if (modelWar:isRankMatch()) then
             updateRankingsOnDraw(modelPlayerManager, gameTypeIndex)
         end
 
@@ -401,17 +401,11 @@ function PlayerProfileManager.updateProfilesWithModelWarOnline(modelSceneWar)
         end)
 
     else
-        local alivePlayersCount  = 0
-        local alivePlayerAccount = nil
         modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)
-            local account = modelPlayer:getAccount()
-            if (modelPlayer:isAlive()) then
-                alivePlayersCount  = alivePlayersCount + 1
-                alivePlayerAccount = account
-            else
-                local profile = PlayerProfileManager.getPlayerProfile(account)
+            if (not modelPlayer:isAlive()) then
+                local profile = PlayerProfileManager.getPlayerProfile(modelPlayer:getAccount())
                 if (profile.warLists.ongoing[warID]) then
-                    if (modelSceneWar:isRankMatch()) then
+                    if (modelWar:isRankMatch()) then
                         updateRankingsOnPlayerLose(modelPlayerManager, playerIndex, gameTypeIndex)
                     end
 
@@ -423,12 +417,16 @@ function PlayerProfileManager.updateProfilesWithModelWarOnline(modelSceneWar)
             end
         end)
 
-        if (alivePlayersCount == 1) then
-            local profile = PlayerProfileManager.getPlayerProfile(alivePlayerAccount)
-            profile.warLists.ongoing[warID]        = nil
-            profile.gameRecords[gameTypeIndex].win = profile.gameRecords[gameTypeIndex].win + 1
-            updateRecentWarList(profile, warID)
-            serializeProfile(profile)
+        if (modelWar:isEnded()) then
+            modelPlayerManager:forEachModelPlayer(function(modelPlayer, playerIndex)
+                if (modelPlayer:isAlive()) then
+                    local profile = PlayerProfileManager.getPlayerProfile(modelPlayer:getAccount())
+                    profile.warLists.ongoing[warID]        = nil
+                    profile.gameRecords[gameTypeIndex].win = profile.gameRecords[gameTypeIndex].win + 1
+                    updateRecentWarList(profile, warID)
+                    serializeProfile(profile)
+                end
+            end)
         end
     end
 
