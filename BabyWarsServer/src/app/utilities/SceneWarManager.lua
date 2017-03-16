@@ -104,7 +104,9 @@ local function generateSceneWarData(warID, param)
     local warFieldFileName = param.warFieldFileName
     return {
         actionID                   = 0,
+        attackModifier             = param.attackModifier,
         createdTime                = ngx.time(),
+        energyGainModifier         = param.energyGainModifier,
         executedActions            = {},
         incomeModifier             = param.incomeModifier,
         intervalUntilBoot          = param.intervalUntilBoot,
@@ -115,8 +117,10 @@ local function generateSceneWarData(warID, param)
         isWarEnded                 = false,
         maxBaseSkillPoints         = param.maxBaseSkillPoints,
         maxDiffScore               = param.maxDiffScore,
+        moveRangeModifier          = param.moveRangeModifier,
         remainingIntervalUntilBoot = param.intervalUntilBoot,
         startingFund               = param.startingFund,
+        visionModifier             = param.visionModifier,
         warID                      = warID,
         warPassword                = param.warPassword,
 
@@ -154,8 +158,10 @@ local function generateWarConfiguration(warData)
     end
 
     return {
+        attackModifier      = warData.attackModifier,
         createdTime         = warData.createdTime,
         defaultWeatherCode  = warData.weather.defaultWeatherCode,
+        energyGainModifier  = warData.energyGainModifier,
         enterTurnTime       = warData.enterTurnTime,
         incomeModifier      = warData.incomeModifier,
         intervalUntilBoot   = warData.intervalUntilBoot,
@@ -164,9 +170,11 @@ local function generateWarConfiguration(warData)
         isRankMatch         = warData.isRankMatch,
         maxBaseSkillPoints  = warData.maxBaseSkillPoints,
         maxDiffScore        = warData.maxDiffScore,
+        moveRangeModifier   = warData.moveRangeModifier,
         playerIndexInTurn   = (warData.enterTurnTime) and (warData.turn.playerIndex) or (nil),
         players             = players,
         startingFund        = warData.startingFund,
+        visionModifier      = warData.visionModifier,
         warFieldFileName    = warData.warField.warFieldFileName,
         warID               = warData.warID,
         warPassword         = warData.warPassword,
@@ -187,8 +195,15 @@ local function loadWarData(warID)
     assert(file, "SceneWarManager-loadWarData() invalid warID: " .. (warID or ""))
 
     local warData = SerializationFunctions.decode("SceneWar", file:read("*a"))
-    warData.startingFund = warData.startingFund or 0
     file:close()
+
+    warData.attackModifier     = warData.attackModifier     or 0
+    warData.energyGainModifier = warData.energyGainModifier or 100
+    warData.incomeModifier     = warData.incomeModifier     or 100
+    warData.moveRangeModifier  = warData.moveRangeModifier  or 0
+    warData.startingFund       = warData.startingFund       or 0
+    warData.visionModifier     = warData.visionModifier     or 0
+
     return warData
 end
 
