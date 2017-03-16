@@ -116,6 +116,7 @@ local function generateSceneWarData(warID, param)
         isWarEnded                 = false,
         maxBaseSkillPoints         = param.maxBaseSkillPoints,
         maxDiffScore               = param.maxDiffScore,
+        moveRangeModifier          = param.moveRangeModifier,
         remainingIntervalUntilBoot = param.intervalUntilBoot,
         startingFund               = param.startingFund,
         warID                      = warID,
@@ -166,6 +167,7 @@ local function generateWarConfiguration(warData)
         isRankMatch         = warData.isRankMatch,
         maxBaseSkillPoints  = warData.maxBaseSkillPoints,
         maxDiffScore        = warData.maxDiffScore,
+        moveRangeModifier   = warData.moveRangeModifier,
         playerIndexInTurn   = (warData.enterTurnTime) and (warData.turn.playerIndex) or (nil),
         players             = players,
         startingFund        = warData.startingFund,
@@ -193,6 +195,7 @@ local function loadWarData(warID)
 
     warData.energyGainModifier = warData.energyGainModifier or 100
     warData.incomeModifier     = warData.incomeModifier     or 100
+    warData.moveRangeModifier  = warData.moveRangeModifier  or 0
     warData.startingFund       = warData.startingFund       or 0
 
     return warData
