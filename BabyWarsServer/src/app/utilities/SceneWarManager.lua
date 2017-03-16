@@ -105,6 +105,7 @@ local function generateSceneWarData(warID, param)
     return {
         actionID                   = 0,
         createdTime                = ngx.time(),
+        energyGainModifier         = param.energyGainModifier,
         executedActions            = {},
         incomeModifier             = param.incomeModifier,
         intervalUntilBoot          = param.intervalUntilBoot,
@@ -156,6 +157,7 @@ local function generateWarConfiguration(warData)
     return {
         createdTime         = warData.createdTime,
         defaultWeatherCode  = warData.weather.defaultWeatherCode,
+        energyGainModifier  = warData.energyGainModifier,
         enterTurnTime       = warData.enterTurnTime,
         incomeModifier      = warData.incomeModifier,
         intervalUntilBoot   = warData.intervalUntilBoot,
@@ -187,8 +189,12 @@ local function loadWarData(warID)
     assert(file, "SceneWarManager-loadWarData() invalid warID: " .. (warID or ""))
 
     local warData = SerializationFunctions.decode("SceneWar", file:read("*a"))
-    warData.startingFund = warData.startingFund or 0
     file:close()
+
+    warData.energyGainModifier = warData.energyGainModifier or 100
+    warData.incomeModifier     = warData.incomeModifier     or 100
+    warData.startingFund       = warData.startingFund       or 0
+
     return warData
 end
 
