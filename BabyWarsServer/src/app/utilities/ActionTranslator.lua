@@ -943,6 +943,7 @@ local function translatePath(path, launchUnitID, modelSceneWar)
         return nil, "ActionTranslator-translatePath() the turn phase is not 'main'."
     end
 
+    local teamIndexInTurn      = getModelPlayerManager(modelWar):getModelPlayer(playerIndexInTurn):getTeamIndex()
     local modelTileMap         = getModelTileMap(modelSceneWar)
     local translatedPathNodes  = {GridIndexFunctions.clone(beginningGridIndex)}
     local translatedPath       = {pathNodes = translatedPathNodes}
@@ -960,7 +961,7 @@ local function translatePath(path, launchUnitID, modelSceneWar)
         end
 
         local existingModelUnit = modelUnitMap:getModelUnit(gridIndex)
-        if ((existingModelUnit) and (existingModelUnit:getPlayerIndex() ~= playerIndexInTurn)) then
+        if ((existingModelUnit) and (existingModelUnit:getTeamIndex() ~= teamIndexInTurn)) then
             if (isUnitVisible(modelSceneWar, gridIndex, existingModelUnit:getUnitType(), isModelUnitDiving(existingModelUnit), existingModelUnit:getPlayerIndex(), playerIndexInTurn)) then
                 return nil, "ActionTranslator-translatePath() the path is invalid because it is blocked by a visible enemy unit."
             else

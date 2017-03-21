@@ -47,8 +47,8 @@ local function generateSingleUnitDataForPublish(modelUnitMap, modelUnit)
     return data
 end
 
-local function generateUnitsDataForPublish(modelSceneWar, modelUnit)
-    local modelUnitMap = getModelUnitMap(modelSceneWar)
+local function generateUnitsDataForPublish(modelWar, modelUnit)
+    local modelUnitMap = getModelUnitMap(modelWar)
     local data         = {[modelUnit:getUnitId()] = generateSingleUnitDataForPublish(modelUnitMap, modelUnit)}
     for _, loadedModelUnit in pairs(modelUnitMap:getLoadedModelUnitsWithLoader(modelUnit, true) or {}) do
         data[loadedModelUnit:getUnitId()] = generateSingleUnitDataForPublish(modelUnitMap, loadedModelUnit)
@@ -57,16 +57,16 @@ local function generateUnitsDataForPublish(modelSceneWar, modelUnit)
     return data
 end
 
-local function generateOnMapData(modelSceneWar, rawOnMapData, targetPlayerIndex)
+local function generateOnMapData(modelWar, rawOnMapData, targetPlayerIndex)
     if (not rawOnMapData) then
         return nil
     else
-        local modelUnitMap = getModelUnitMap(modelSceneWar)
+        local modelUnitMap = getModelUnitMap(modelWar)
         local onMapData    = TableFunctions.clone(rawOnMapData)
         for unitID, data in pairs(onMapData) do
             local gridIndex = data.gridIndex
             local modelUnit = modelUnitMap:getModelUnit(gridIndex)
-            if (not isUnitVisible(modelSceneWar, gridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+            if (not isUnitVisible(modelWar, gridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
                 onMapData[unitID] = nil
             end
         end
@@ -75,16 +75,16 @@ local function generateOnMapData(modelSceneWar, rawOnMapData, targetPlayerIndex)
     end
 end
 
-local function generateLoadedData(modelSceneWar, rawLoadedData, targetPlayerIndex)
+local function generateLoadedData(modelWar, rawLoadedData, targetPlayerIndex)
     if (not rawLoadedData) then
         return nil
     else
-        local modelUnitMap = getModelUnitMap(modelSceneWar)
+        local modelUnitMap = getModelUnitMap(modelWar)
         local loadedData   = TableFunctions.clone(rawLoadedData)
         for unitID, data in pairs(loadedData) do
             local gridIndex = modelUnitMap:getLoadedModelUnitWithUnitId(unitID):getGridIndex()
             local modelUnit = modelUnitMap:getModelUnit(gridIndex)
-            if (not isUnitVisible(modelSceneWar, gridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+            if (not isUnitVisible(modelWar, gridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
                 loadedData[unitID] = nil
             end
         end
@@ -93,29 +93,37 @@ local function generateLoadedData(modelSceneWar, rawLoadedData, targetPlayerInde
     end
 end
 
-local function generateRepairDataForActionBeginTurn(action, targetPlayerIndex, modelSceneWar)
+local function generateRepairDataForActionBeginTurn(action, targetPlayerIndex, modelWar)
     local rawRepairData = action.repairData
     if (not rawRepairData) then
         return nil
     else
         return {
-            onMapData     = generateOnMapData( modelSceneWar, rawRepairData.onMapData,  targetPlayerIndex),
-            loadedData    = generateLoadedData(modelSceneWar, rawRepairData.loadedData, targetPlayerIndex),
+            onMapData     = generateOnMapData( modelWar, rawRepairData.onMapData,  targetPlayerIndex),
+            loadedData    = generateLoadedData(modelWar, rawRepairData.loadedData, targetPlayerIndex),
             remainingFund = rawRepairData.remainingFund,
         }
     end
 end
 
-local function generateSupplyDataForActionBeginTurn(action, targetPlayerIndex, modelSceneWar)
+local function generateSupplyDataForActionBeginTurn(action, targetPlayerIndex, modelWar)
     local rawSupplyData = action.supplyData
     if (not rawSupplyData) then
         return nil
     else
         local supplyData = {
-            onMapData  = generateOnMapData( modelSceneWar, rawSupplyData.onMapData,  targetPlayerIndex),
-            loadedData = generateLoadedData(modelSceneWar, rawSupplyData.loadedData, targetPlayerIndex),
+            onMapData  = generateOnMapData( modelWar, rawSupplyData.onMapData,  targetPlayerIndex),
+            loadedData = generateLoadedData(modelWar, rawSupplyData.loadedData, targetPlayerIndex),
         }
         return (next(supplyData)) and (supplyData) or (nil)
+    end
+end
+
+local function cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
+    if (getModelPlayerManager(modelWar):isSameTeamIndex(playerIndexActing, targetPlayerIndex)) then
+        return TableFunctions.clone(action)
+    else
+        return TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
     end
 end
 
@@ -123,178 +131,178 @@ end
 -- The private functions that create actions for publish.
 --------------------------------------------------------------------------------
 local creators = {}
-creators.createForActionActivateSkillGroup = function(action, targetPlayerIndex, modelSceneWar)
-    return TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
+creators.createForActionActivateSkillGroup = function(action, playerIndexActing, targetPlayerIndex, modelWar)
+    return cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
 end
 
-creators.createForActionAttack = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionAttack = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local beginningGridIndex = action.path.pathNodes[1]
     local targetGridIndex    = action.targetGridIndex
-    local modelUnitMap       = getModelUnitMap(modelSceneWar)
+    local modelUnitMap       = getModelUnitMap(modelWar)
     local modelUnit          = modelUnitMap:getModelUnit(beginningGridIndex)
     local targetModelUnit    = modelUnitMap:getModelUnit(targetGridIndex)
 
     local actingUnitsData
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, modelUnit))
+    if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelWar, modelUnit))
     end
     if ((targetModelUnit)                                                                                                                                                            and
-        (not isUnitVisible(modelSceneWar, targetGridIndex, targetModelUnit:getUnitType(), isModelUnitDiving(targetModelUnit), targetModelUnit:getPlayerIndex(), targetPlayerIndex))) then
-        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, targetModelUnit))
+        (not isUnitVisible(modelWar, targetGridIndex, targetModelUnit:getUnitType(), isModelUnitDiving(targetModelUnit), targetModelUnit:getPlayerIndex(), targetPlayerIndex))) then
+        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelWar, targetModelUnit))
     end
 
-    local actionForPublish = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
+    local actionForPublish = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
     actionForPublish.actingUnitsData = actingUnitsData
 
     return actionForPublish
 end
 
-creators.createForActionBeginTurn = function(action, targetPlayerIndex, modelSceneWar)
-    local actionForPublish      = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    actionForPublish.repairData = generateRepairDataForActionBeginTurn(action, targetPlayerIndex, modelSceneWar)
-    actionForPublish.supplyData = generateSupplyDataForActionBeginTurn(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionBeginTurn = function(action, playerIndexActing, targetPlayerIndex, modelWar)
+    local actionForPublish      = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
+    actionForPublish.repairData = generateRepairDataForActionBeginTurn(action, targetPlayerIndex, modelWar)
+    actionForPublish.supplyData = generateSupplyDataForActionBeginTurn(action, targetPlayerIndex, modelWar)
 
     return actionForPublish
 end
 
-creators.createForActionBuildModelTile = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionBuildModelTile = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local pathNodes          = action.path.pathNodes
     local beginningGridIndex = pathNodes[1]
     local endingGridIndex    = pathNodes[#pathNodes]
-    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
+    local modelUnit          = getModelUnitMap(modelWar):getModelUnit(beginningGridIndex)
 
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isTileVisible(modelSceneWar, endingGridIndex, targetPlayerIndex)) then
-        local modelTileMap = getModelTileMap(modelSceneWar)
+    local actionForPublish   = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
+    if (not isTileVisible(modelWar, endingGridIndex, targetPlayerIndex)) then
+        local modelTileMap = getModelTileMap(modelWar)
         actionForPublish.actingTilesData = generateTilesDataForPublish(modelTileMap:getModelTile(endingGridIndex), modelTileMap:getMapSize())
     end
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
+    if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelWar, modelUnit)
     end
 
     return actionForPublish
 end
 
-creators.createForActionCaptureModelTile = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionCaptureModelTile = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local pathNodes          = action.path.pathNodes
     local beginningGridIndex = pathNodes[1]
     local endingGridIndex    = pathNodes[#pathNodes]
-    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
+    local modelUnit          = getModelUnitMap(modelWar):getModelUnit(beginningGridIndex)
 
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isTileVisible(modelSceneWar, endingGridIndex, targetPlayerIndex)) then
-        local modelTileMap = getModelTileMap(modelSceneWar)
+    local actionForPublish   = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
+    if (not isTileVisible(modelWar, endingGridIndex, targetPlayerIndex)) then
+        local modelTileMap = getModelTileMap(modelWar)
         actionForPublish.actingTilesData = generateTilesDataForPublish(modelTileMap:getModelTile(endingGridIndex), modelTileMap:getMapSize())
     end
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
+    if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelWar, modelUnit)
     end
 
     return actionForPublish
 end
 
-creators.createForActionChat = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionChat = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local channelID = action.channelID
     if ((not channelID)                                                                                                                                or
-        (SingletonGetters.getModelChatManager(modelSceneWar):getChannelIdWithPlayerIndices(action.senderPlayerIndex, targetPlayerIndex) == channelID)) then
+        (SingletonGetters.getModelChatManager(modelWar):getChannelIdWithPlayerIndices(action.senderPlayerIndex, targetPlayerIndex) == channelID)) then
         return action
     else
         return nil
     end
 end
 
-creators.createForActionDestroyOwnedModelUnit = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionDestroyOwnedModelUnit = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local gridIndex = action.gridIndex
-    local modelUnit = getModelUnitMap(modelSceneWar):getModelUnit(gridIndex)
+    local modelUnit = getModelUnitMap(modelWar):getModelUnit(gridIndex)
 
-    local actionForPublish = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, gridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+    local actionForPublish = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
+    if (not isUnitVisible(modelWar, gridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.gridIndex = nil
     end
 
     return actionForPublish
 end
 
-creators.createForActionDive = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionDive = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local beginningGridIndex = action.path.pathNodes[1]
-    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
+    local modelUnit          = getModelUnitMap(modelWar):getModelUnit(beginningGridIndex)
 
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
+    local actionForPublish   = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
+    if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelWar, modelUnit)
     end
 
     return actionForPublish
 end
 
-creators.createForActionDropModelUnit = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionDropModelUnit = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local beginningGridIndex = action.path.pathNodes[1]
-    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
+    local modelUnit          = getModelUnitMap(modelWar):getModelUnit(beginningGridIndex)
 
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
+    local actionForPublish   = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
+    if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelWar, modelUnit)
     end
 
     return actionForPublish
 end
 
-creators.createForActionEndTurn = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionEndTurn = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     return action
 end
 
-creators.createForActionJoinModelUnit = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionJoinModelUnit = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local pathNodes          = action.path.pathNodes
     local beginningGridIndex = pathNodes[1]
     local endingGridIndex    = pathNodes[#pathNodes]
-    local modelUnitMap       = getModelUnitMap(modelSceneWar)
+    local modelUnitMap       = getModelUnitMap(modelWar)
     local modelUnit          = modelUnitMap:getModelUnit(beginningGridIndex)
     local joiningModelUnit   = modelUnitMap:getModelUnit(endingGridIndex)
     local unitPlayerIndex    = modelUnit:getPlayerIndex()
 
     local actingUnitsData
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), unitPlayerIndex, targetPlayerIndex)) then
-        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, modelUnit))
+    if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), unitPlayerIndex, targetPlayerIndex)) then
+        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelWar, modelUnit))
     end
-    if (not isUnitVisible(modelSceneWar, endingGridIndex, joiningModelUnit:getUnitType(), isModelUnitDiving(joiningModelUnit), unitPlayerIndex, targetPlayerIndex)) then
-        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, joiningModelUnit))
+    if (not isUnitVisible(modelWar, endingGridIndex, joiningModelUnit:getUnitType(), isModelUnitDiving(joiningModelUnit), unitPlayerIndex, targetPlayerIndex)) then
+        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelWar, joiningModelUnit))
     end
 
-    local actionForPublish = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
+    local actionForPublish = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
     actionForPublish.actingUnitsData = actingUnitsData
 
     return actionForPublish
 end
 
-creators.createForActionLaunchFlare = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionLaunchFlare = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local beginningGridIndex = action.path.pathNodes[1]
-    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
+    local modelUnit          = getModelUnitMap(modelWar):getModelUnit(beginningGridIndex)
 
-    local actionForPublish           = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
+    local actionForPublish           = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
     actionForPublish.actionCode      = ACTION_CODES.ActionWait
     actionForPublish.targetGridIndex = nil
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
+    if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelWar, modelUnit)
     end
 
     return actionForPublish
 end
 
-creators.createForActionLaunchSilo = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionLaunchSilo = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local beginningGridIndex = action.path.pathNodes[1]
-    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
+    local modelUnit          = getModelUnitMap(modelWar):getModelUnit(beginningGridIndex)
 
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
+    local actionForPublish   = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
+    if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelWar, modelUnit)
     end
 
     return actionForPublish
 end
 
-creators.createForActionLoadModelUnit = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionLoadModelUnit = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local pathNodes          = action.path.pathNodes
-    local modelUnitMap       = getModelUnitMap(modelSceneWar)
+    local modelUnitMap       = getModelUnitMap(modelWar)
     local endingGridIndex    = pathNodes[#pathNodes]
     local loaderModelUnit    = modelUnitMap:getModelUnit(endingGridIndex)
     local playerIndex        = loaderModelUnit:getPlayerIndex()
@@ -302,24 +310,24 @@ creators.createForActionLoadModelUnit = function(action, targetPlayerIndex, mode
     local modelUnit          = modelUnitMap:getModelUnit(beginningGridIndex)
 
     local actingUnitsData
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), playerIndex, targetPlayerIndex)) then
-        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, modelUnit))
+    if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), playerIndex, targetPlayerIndex)) then
+        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelWar, modelUnit))
     end
-    if (not isUnitVisible(modelSceneWar, endingGridIndex, loaderModelUnit:getUnitType(), isModelUnitDiving(loaderModelUnit), playerIndex, targetPlayerIndex)) then
-        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelSceneWar, loaderModelUnit))
+    if (not isUnitVisible(modelWar, endingGridIndex, loaderModelUnit:getUnitType(), isModelUnitDiving(loaderModelUnit), playerIndex, targetPlayerIndex)) then
+        actingUnitsData = TableFunctions.union(actingUnitsData, generateUnitsDataForPublish(modelWar, loaderModelUnit))
     end
 
-    local actionForPublish = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
+    local actionForPublish = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
     actionForPublish.actingUnitsData = actingUnitsData
 
     return actionForPublish
 end
 
-creators.createForActionProduceModelUnitOnTile = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionProduceModelUnitOnTile = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local tiledID  = action.tiledID
     local unitType = getUnitTypeWithTiledId(tiledID)
-    if (isUnitVisible(modelSceneWar, action.gridIndex, unitType, unitType == "Submarine", getPlayerIndexWithTiledId(tiledID), targetPlayerIndex)) then
-        return TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
+    if (isUnitVisible(modelWar, action.gridIndex, unitType, unitType == "Submarine", getPlayerIndexWithTiledId(tiledID), targetPlayerIndex)) then
+        return cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
     else
         return {
             actionCode = ACTION_CODES.ActionProduceModelUnitOnTile,
@@ -330,57 +338,57 @@ creators.createForActionProduceModelUnitOnTile = function(action, targetPlayerIn
     end
 end
 
-creators.createForActionProduceModelUnitOnUnit = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionProduceModelUnitOnUnit = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local beginningGridIndex = action.path.pathNodes[1]
-    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
+    local modelUnit          = getModelUnitMap(modelWar):getModelUnit(beginningGridIndex)
 
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
+    local actionForPublish   = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
+    if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelWar, modelUnit)
     end
 
     return actionForPublish
 end
 
-creators.createForActionSupplyModelUnit = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionSupplyModelUnit = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local beginningGridIndex = action.path.pathNodes[1]
-    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
+    local modelUnit          = getModelUnitMap(modelWar):getModelUnit(beginningGridIndex)
 
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
+    local actionForPublish   = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
+    if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelWar, modelUnit)
     end
 
     return actionForPublish
 end
 
-creators.createForActionSurface = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionSurface = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local beginningGridIndex = action.path.pathNodes[1]
-    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
+    local modelUnit          = getModelUnitMap(modelWar):getModelUnit(beginningGridIndex)
 
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
+    local actionForPublish   = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
+    if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelWar, modelUnit)
     end
 
     return actionForPublish
 end
 
-creators.createForActionSurrender = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionSurrender = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     return action
 end
 
-creators.createForActionVoteForDraw = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionVoteForDraw = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     return action
 end
 
-creators.createForActionWait = function(action, targetPlayerIndex, modelSceneWar)
+creators.createForActionWait = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local beginningGridIndex = action.path.pathNodes[1]
-    local modelUnit          = getModelUnitMap(modelSceneWar):getModelUnit(beginningGridIndex)
+    local modelUnit          = getModelUnitMap(modelWar):getModelUnit(beginningGridIndex)
 
-    local actionForPublish   = TableFunctions.clone(action, IGNORED_KEYS_FOR_PUBLISHING)
-    if (not isUnitVisible(modelSceneWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
-        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelSceneWar, modelUnit)
+    local actionForPublish   = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
+    if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
+        actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelWar, modelUnit)
     end
 
     return actionForPublish
@@ -389,16 +397,15 @@ end
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
-function ActionPublisher.createActionsForPublish(action, modelSceneWar)
+function ActionPublisher.createActionsForPublish(action, modelWar)
     local actionCode        = action.actionCode
-    local playerIndexActing = (actionCode == ACTION_CODE_CHAT) and (action.senderPlayerIndex) or (getModelTurnManager(modelSceneWar):getPlayerIndex())
+    local playerIndexActing = (actionCode == ACTION_CODE_CHAT) and (action.senderPlayerIndex) or (getModelTurnManager(modelWar):getPlayerIndex())
     local generator         = creators["createFor" .. ActionCodeFunctions.getActionName(actionCode)]
-
-    local actionsForPublish  = {}
-    getModelPlayerManager(modelSceneWar):forEachModelPlayer(function(modelPlayer, playerIndex)
+    local actionsForPublish = {}
+    getModelPlayerManager(modelWar):forEachModelPlayer(function(modelPlayer, playerIndex)
         if ((playerIndex ~= playerIndexActing) and
             (modelPlayer:isAlive()))           then
-            actionsForPublish[modelPlayer:getAccount()] = generator(action, playerIndex, modelSceneWar)
+            actionsForPublish[modelPlayer:getAccount()] = generator(action, playerIndexActing, playerIndex, modelWar)
         end
     end)
 
