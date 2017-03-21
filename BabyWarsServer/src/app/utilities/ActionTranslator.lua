@@ -943,7 +943,7 @@ local function translatePath(path, launchUnitID, modelSceneWar)
         return nil, "ActionTranslator-translatePath() the turn phase is not 'main'."
     end
 
-    local teamIndexInTurn      = getModelPlayerManager(modelWar):getModelPlayer(playerIndexInTurn):getTeamIndex()
+    local teamIndexInTurn      = getModelPlayerManager(modelSceneWar):getModelPlayer(playerIndexInTurn):getTeamIndex()
     local modelTileMap         = getModelTileMap(modelSceneWar)
     local translatedPathNodes  = {GridIndexFunctions.clone(beginningGridIndex)}
     local translatedPath       = {pathNodes = translatedPathNodes}

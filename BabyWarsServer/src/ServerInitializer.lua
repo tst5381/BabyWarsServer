@@ -18,10 +18,10 @@ function ServerInitializer.init()
         end
 
         requireBW("src.app.utilities.GameConstantFunctions") .init(true)
+        requireBW("src.app.utilities.WarFieldManager")       .init()
         requireBW("src.app.utilities.SerializationFunctions").init()
         requireBW("src.app.utilities.SceneWarManager")       .init()
         requireBW("src.app.utilities.PlayerProfileManager")  .init()
-        requireBW("src.app.utilities.WarFieldManager")       .init()
         requireBW("src.Session")
 
         ngx.log(ngx.CRIT, "BabyWars-ServerInitializer.init() completed.")
