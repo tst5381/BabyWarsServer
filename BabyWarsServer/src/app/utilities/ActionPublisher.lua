@@ -30,13 +30,18 @@ local function isModelUnitDiving(modelUnit)
     return (modelUnit.isDiving) and (modelUnit:isDiving())
 end
 
-local function generateTilesDataForPublish(modelTile, mapSize)
-    local data = modelTile:toSerializableTable()
-    if (not data) then
+local function generateTilesDataForPublish(modelTile, mapSize, ignoredTilesData)
+    local gridIndex     = modelTile:getGridIndex()
+    local positionIndex = (gridIndex.x - 1) * mapSize.height + gridIndex.y
+    if ((ignoredTilesData) and (ignoredTilesData[positionIndex])) then
         return nil
     else
-        local gridIndex = modelTile:getGridIndex()
-        return {[(gridIndex.x - 1) * mapSize.height + gridIndex.y] = data}
+        local data = modelTile:toSerializableTable()
+        if (not data) then
+            return nil
+        else
+            return {[positionIndex] = data}
+        end
     end
 end
 
@@ -174,7 +179,7 @@ creators.createForActionBuildModelTile = function(action, playerIndexActing, tar
     local actionForPublish   = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
     if (not isTileVisible(modelWar, endingGridIndex, targetPlayerIndex)) then
         local modelTileMap = getModelTileMap(modelWar)
-        actionForPublish.actingTilesData = generateTilesDataForPublish(modelTileMap:getModelTile(endingGridIndex), modelTileMap:getMapSize())
+        actionForPublish.actingTilesData = generateTilesDataForPublish(modelTileMap:getModelTile(endingGridIndex), modelTileMap:getMapSize(), actionForPublish.revealedTiles)
     end
     if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelWar, modelUnit)
@@ -192,7 +197,7 @@ creators.createForActionCaptureModelTile = function(action, playerIndexActing, t
     local actionForPublish   = cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
     if (not isTileVisible(modelWar, endingGridIndex, targetPlayerIndex)) then
         local modelTileMap = getModelTileMap(modelWar)
-        actionForPublish.actingTilesData = generateTilesDataForPublish(modelTileMap:getModelTile(endingGridIndex), modelTileMap:getMapSize())
+        actionForPublish.actingTilesData = generateTilesDataForPublish(modelTileMap:getModelTile(endingGridIndex), modelTileMap:getMapSize(), actionForPublish.revealedTiles)
     end
     if (not isUnitVisible(modelWar, beginningGridIndex, modelUnit:getUnitType(), isModelUnitDiving(modelUnit), modelUnit:getPlayerIndex(), targetPlayerIndex)) then
         actionForPublish.actingUnitsData = generateUnitsDataForPublish(modelWar, modelUnit)
