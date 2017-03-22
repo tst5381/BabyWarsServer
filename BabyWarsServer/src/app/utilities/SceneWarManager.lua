@@ -79,7 +79,7 @@ end
 --------------------------------------------------------------------------------
 -- The functions for generating the new game data.
 --------------------------------------------------------------------------------
-local function generateSinglePlayerData(account, skillConfigurationID, playerIndex, startingFund)
+local function generateSinglePlayerData(account, skillConfigurationID, playerIndex, teamIndex, startingFund)
     local skillConfiguration
     if     (not skillConfigurationID) then skillConfiguration = {basePoints = 0}
     elseif (skillConfigurationID > 0) then skillConfiguration = TableFunctions.deepClone(PlayerProfileManager.getSkillConfiguration(account, skillConfigurationID))
@@ -88,14 +88,15 @@ local function generateSinglePlayerData(account, skillConfigurationID, playerInd
     assert(skillConfiguration, "SceneWarManager-generateSinglePlayerData() failed to generate the skill configuration data.")
 
     return {
-        playerIndex         = playerIndex,
         account             = account,
-        nickname            = PlayerProfileManager.getPlayerProfile(account).nickname,
+        damageCost          = 0,
         fund                = startingFund,
         isAlive             = true,
-        damageCost          = 0,
+        nickname            = PlayerProfileManager.getPlayerProfile(account).nickname,
+        playerIndex         = playerIndex,
         skillActivatedCount = 0,
         skillConfiguration  = skillConfiguration,
+        teamIndex           = teamIndex,
     }
 end
 
@@ -124,7 +125,7 @@ local function generateSceneWarData(warID, param)
         warID                      = warID,
         warPassword                = param.warPassword,
 
-        players  = {[playerIndex] = generateSinglePlayerData(param.playerAccount, param.skillConfigurationID, playerIndex, param.startingFund)},
+        players  = {[playerIndex] = generateSinglePlayerData(param.playerAccount, param.skillConfigurationID, playerIndex, param.teamIndex, param.startingFund)},
         turn     = TableFunctions.clone(DEFAULT_TURN_DATA),
         warField = {warFieldFileName = warFieldFileName},
         weather  = {defaultWeatherCode = param.defaultWeatherCode},
@@ -135,8 +136,9 @@ local function generateReplayConfiguration(warData)
     local players = {}
     for playerIndex, player in pairs(warData.players) do
         players[playerIndex] = {
-            account     = player.account,
-            nickname    = player.nickname,
+            account   = player.account,
+            nickname  = player.nickname,
+            teamIndex = player.teamIndex,
         }
     end
 
@@ -154,6 +156,7 @@ local function generateWarConfiguration(warData)
             playerIndex = playerIndex,
             account     = player.account,
             nickname    = player.nickname,
+            teamIndex   = player.teamIndex,
         }
     end
 
@@ -203,6 +206,9 @@ local function loadWarData(warID)
     warData.moveRangeModifier  = warData.moveRangeModifier  or 0
     warData.startingFund       = warData.startingFund       or 0
     warData.visionModifier     = warData.visionModifier     or 0
+    for playerIndex, playerData in pairs(warData.players) do
+        playerData.teamIndex = playerData.teamIndex or playerIndex
+    end
 
     return warData
 end
@@ -502,11 +508,12 @@ function SceneWarManager.joinWar(param)
 
     warConfiguration.players[playerIndex] = {
         account     = playerAccount,
-        playerIndex = playerIndex,
         nickname    = PlayerProfileManager.getPlayerProfile(playerAccount).nickname,
+        playerIndex = playerIndex,
+        teamIndex   = param.teamIndex,
     }
     local joiningWarData = s_JoinableWarList[warID].warData
-    joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex, joiningWarData.startingFund)
+    joiningWarData.players[playerIndex] = generateSinglePlayerData(playerAccount, param.skillConfigurationID, playerIndex, param.teamIndex, joiningWarData.startingFund)
 
     PlayerProfileManager.updateProfileOnJoiningWar(playerAccount, warID)
 
