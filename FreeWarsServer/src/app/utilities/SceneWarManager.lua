@@ -35,11 +35,6 @@ local s_ReplayList
 --------------------------------------------------------------------------------
 -- The util functions.
 --------------------------------------------------------------------------------
-local function pickRandomWarField(warFieldFileName)
-    local list = requireFW("res.data.templateWarField." .. warFieldFileName).list
-    return list[math.random(#list)]
-end
-
 local function getWarFileName(warID)
     return SCENE_WAR_PATH .. warID .. ".spdata"
 end
@@ -522,7 +517,7 @@ function SceneWarManager.joinWar(param)
         joiningWarData  .enterTurnTime     = warConfiguration.enterTurnTime
 
         if (joiningWarData.isRandomWarField) then
-            warConfiguration.warFieldFileName        = pickRandomWarField(joiningWarData.warField.warFieldFileName)
+            warConfiguration.warFieldFileName        = WarFieldManager.getRandomWarFieldFilename(joiningWarData.warField.warFieldFileName)
             joiningWarData.warField.warFieldFileName = warConfiguration.warFieldFileName
         end
 
