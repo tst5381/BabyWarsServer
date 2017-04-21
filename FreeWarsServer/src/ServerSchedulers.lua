@@ -5,7 +5,7 @@ local ActionCodeFunctions        = requireFW("src.app.utilities.ActionCodeFuncti
 local ActionExecutorForWarOnline = requireFW("src.app.utilities.actionExecutors.ActionExecutorForWarOnline")
 local ActionTranslator           = requireFW("src.app.utilities.ActionTranslator")
 local PlayerProfileManager       = requireFW("src.app.utilities.PlayerProfileManager")
-local SceneWarManager            = requireFW("src.app.utilities.SceneWarManager")
+local OnlineWarManager           = requireFW("src.app.utilities.OnlineWarManager")
 
 local ngx      = ngx
 local newTimer = ngx.timer.at
@@ -20,7 +20,7 @@ local function startSchedulerForBoot()
     check = function(premature)
         if (not premature) then
             local currentTime = ngx.time()
-            SceneWarManager.forEachOngoingModelSceneWar(function(modelSceneWar)
+            OnlineWarManager.forEachOngoingModelSceneWar(function(modelSceneWar)
                 local intervalUntilBoot = modelSceneWar:getIntervalUntilBoot()
                 if (currentTime - modelSceneWar:getEnterTurnTime() > intervalUntilBoot) then
                     local warID            = modelSceneWar:getWarId()

@@ -26,8 +26,8 @@ local DamageCalculator        = requireFW("src.app.utilities.DamageCalculator")
 local GameConstantFunctions   = requireFW("src.app.utilities.GameConstantFunctions")
 local GridIndexFunctions      = requireFW("src.app.utilities.GridIndexFunctions")
 local LocalizationFunctions   = requireFW("src.app.utilities.LocalizationFunctions")
+local OnlineWarManager        = requireFW("src.app.utilities.OnlineWarManager")
 local PlayerProfileManager    = requireFW("src.app.utilities.PlayerProfileManager")
-local SceneWarManager         = requireFW("src.app.utilities.SceneWarManager")
 local SerializationFunctions  = requireFW("src.app.utilities.SerializationFunctions")
 local SkillModifierFunctions  = requireFW("src.app.utilities.SkillModifierFunctions")
 local SingletonGetters        = requireFW("src.app.utilities.SingletonGetters")
@@ -513,7 +513,7 @@ local function getModelSceneWarWithAction(action)
         return nil, LOGOUT_INVALID_ACCOUNT_PASSWORD
     end
 
-    local modelWar = SceneWarManager.getOngoingModelSceneWar(action.warID)
+    local modelWar = OnlineWarManager.getOngoingModelSceneWar(action.warID)
     if (not modelWar) then
         return nil, RUN_SCENE_MAIN_ENDED_WAR
     elseif (not isPlayerAliveInWar(modelWar, playerAccount)) then
@@ -546,7 +546,7 @@ local function translateChat(action)
         return nil, LOGOUT_INVALID_ACCOUNT_PASSWORD
     end
 
-    local modelWar = SceneWarManager.getOngoingModelSceneWar(action.warID)
+    local modelWar = OnlineWarManager.getOngoingModelSceneWar(action.warID)
     if (not modelWar) then
         return nil, RUN_SCENE_MAIN_ENDED_WAR
     elseif (not isPlayerAliveInWar(modelWar, playerAccount)) then
@@ -566,7 +566,7 @@ local function translateChat(action)
 end
 
 local function translateDownloadReplayData(action)
-    local encodedReplayData = SceneWarManager.getEncodedReplayData(action.warID)
+    local encodedReplayData = OnlineWarManager.getEncodedReplayData(action.warID)
     if (not encodedReplayData) then
         return MESSAGE_NO_REPLAY_DATA
     else
@@ -581,7 +581,7 @@ local function translateExitWar(action)
     local playerAccount = action.playerAccount
     if (not PlayerProfileManager.isAccountAndPasswordValid(playerAccount, action.playerPassword)) then
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
-    elseif (not SceneWarManager.isPlayerWaitingForWarId(playerAccount, action.warID)) then
+    elseif (not OnlineWarManager.isPlayerWaitingForWarId(playerAccount, action.warID)) then
         return MESSAGE_NOT_EXITABLE_WAR
     end
 
@@ -598,7 +598,7 @@ local function translateGetJoinableWarConfigurations(action)
 
     return {
         actionCode        = ACTION_CODES.ActionGetJoinableWarConfigurations,
-        warConfigurations = SceneWarManager.getJoinableWarConfigurations(action.playerAccount, action.warID),
+        warConfigurations = OnlineWarManager.getJoinableWarConfigurations(action.playerAccount, action.warID),
     }
 end
 
@@ -610,7 +610,7 @@ local function translateGetOngoingWarConfigurations(action)
 
     return {
         actionCode        = ACTION_CODES.ActionGetOngoingWarConfigurations,
-        warConfigurations = SceneWarManager.getOngoingWarConfigurationsForPlayer(playerAccount),
+        warConfigurations = OnlineWarManager.getOngoingWarConfigurationsForPlayer(playerAccount),
     }
 end
 
@@ -653,7 +653,7 @@ local function translateGetWaitingWarConfigurations(action)
 
     return {
         actionCode        = ACTION_CODES.ActionGetWaitingWarConfigurations,
-        warConfigurations = SceneWarManager.getWaitingWarConfigurationsForPlayer(playerAccount),
+        warConfigurations = OnlineWarManager.getWaitingWarConfigurationsForPlayer(playerAccount),
     }
 end
 
@@ -666,13 +666,13 @@ local function translateJoinWar(action)
     end
 
     local warID              = action.warID
-    local warConfiguration   = SceneWarManager.getJoinableSceneWarConfiguration(warID)
+    local warConfiguration   = OnlineWarManager.getJoinableSceneWarConfiguration(warID)
     local playerIndexJoining = action.playerIndex
     if (not warConfiguration) then
         return MESSAGE_NOT_JOINABLE_WAR
     elseif ((warConfiguration.warPassword ~= action.warPassword) and (warConfiguration.createdTime) and ((ngx.time() - warConfiguration.createdTime) < WAR_PASSWORD_VALID_TIME)) then
         return MESSAGE_INVALID_WAR_PASSWORD
-    elseif (SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)) then
+    elseif (OnlineWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)) then
         return MESSAGE_MULTI_JOIN_WAR
     elseif (warConfiguration.players[playerIndexJoining]) then
         return MESSAGE_OCCUPIED_PLAYER_INDEX
@@ -696,7 +696,7 @@ local function translateJoinWar(action)
     return {
         actionCode   = ACTION_CODES.ActionJoinWar,
         warID        = warID,
-        isWarStarted = SceneWarManager.isWarReadyForStartAfterJoin(warConfiguration),
+        isWarStarted = OnlineWarManager.isWarReadyForStartAfterJoin(warConfiguration),
     }, nil, action
 end
 
@@ -750,7 +750,7 @@ local function translateNewWar(action)
 
     return {
         actionCode = ACTION_CODES.ActionNewWar,
-        warID      = SceneWarManager.getNextWarId(),
+        warID      = OnlineWarManager.getNextWarId(),
     }, nil, action
 end
 
@@ -776,7 +776,7 @@ local function translateReloadSceneWar(action)
         return nil, LOGOUT_INVALID_ACCOUNT_PASSWORD
     end
 
-    local modelWar = SceneWarManager.getOngoingModelSceneWar(action.warID)
+    local modelWar = OnlineWarManager.getOngoingModelSceneWar(action.warID)
     if (not modelWar) then
         return nil, RUN_SCENE_MAIN_ENDED_WAR
     elseif (not isPlayerAliveInWar(modelWar, playerAccount)) then
@@ -792,7 +792,7 @@ local function translateRunSceneWar(action)
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
     end
 
-    local modelWar = SceneWarManager.getOngoingModelSceneWar(action.warID)
+    local modelWar = OnlineWarManager.getOngoingModelSceneWar(action.warID)
     if (not modelWar) then
         return MESSAGE_ENDED_WAR
     elseif (not isPlayerAliveInWar(modelWar, playerAccount)) then
@@ -812,7 +812,7 @@ local function translateSyncSceneWar(action)
         return LOGOUT_INVALID_ACCOUNT_PASSWORD
     end
 
-    local modelWar = SceneWarManager.getOngoingModelSceneWar(action.warID)
+    local modelWar = OnlineWarManager.getOngoingModelSceneWar(action.warID)
     if (not modelWar) then
         return RUN_SCENE_MAIN_ENDED_WAR
     elseif (not isPlayerAliveInWar(modelWar, playerAccount)) then
@@ -831,7 +831,7 @@ end
 local function translateGetReplayConfigurations(action)
     return {
         actionCode           = ACTION_CODES.ActionGetReplayConfigurations,
-        replayConfigurations = SceneWarManager.getReplayConfigurations(action.warID),
+        replayConfigurations = OnlineWarManager.getReplayConfigurations(action.warID),
     }
 end
 

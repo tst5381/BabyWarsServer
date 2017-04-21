@@ -7,7 +7,7 @@ local ActionCodeFunctions     = requireFW("src.app.utilities.ActionCodeFunctions
 local ActionExecutorForServer = requireFW("src.app.utilities.actionExecutors.ActionExecutorForServer")
 local ActionTranslator        = requireFW("src.app.utilities.ActionTranslator")
 local PlayerProfileManager    = requireFW("src.app.utilities.PlayerProfileManager")
-local SceneWarManager         = requireFW("src.app.utilities.SceneWarManager")
+local OnlineWarManager        = requireFW("src.app.utilities.OnlineWarManager")
 local SerializationFunctions  = requireFW("src.app.utilities.SerializationFunctions")
 
 local decode = SerializationFunctions.decode
