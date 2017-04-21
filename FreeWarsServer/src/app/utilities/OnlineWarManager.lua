@@ -1,5 +1,5 @@
 
-local SceneWarManager = {}
+local OnlineWarManager = {}
 
 local GameConstantFunctions  = requireFW("src.app.utilities.GameConstantFunctions")
 local LocalizationFunctions  = requireFW("src.app.utilities.LocalizationFunctions")
@@ -58,7 +58,7 @@ local function removePlayerFromPlayersData(playersData, playerAccount)
         end
     end
 
-    error("SceneWarManager-removePlayerFromPlayersData() failed to find the player data with account: " .. (playerAccount or ""))
+    error("OnlineWarManager-removePlayerFromPlayersData() failed to find the player data with account: " .. (playerAccount or ""))
 end
 
 local function getJoinedPlayersCount(warConfiguration)
@@ -133,9 +133,10 @@ local function generateReplayConfiguration(warData)
     end
 
     return {
-        warID               = warData.warID,
-        warFieldFileName    = warData.warField.warFieldFileName,
-        players             = players,
+        actionsCount     = #warData.executedActions,
+        warID            = warData.warID,
+        warFieldFileName = warData.warField.warFieldFileName,
+        players          = players,
     }
 end
 
@@ -188,7 +189,7 @@ end
 
 local function loadWarData(warID)
     local file = io.open(getWarFileName(warID), "rb")
-    assert(file, "SceneWarManager-loadWarData() invalid warID: " .. (warID or ""))
+    assert(file, "OnlineWarManager-loadWarData() invalid warID: " .. (warID or ""))
 
     local warData = SerializationFunctions.decode("SceneWar", file:read("*a"))
     if (warData.isSkillDeclarationEnabled == nil) then
@@ -263,7 +264,7 @@ local function loadOngoingWarList()
 
         for warID, item in pairs(list) do
             local warData       = loadWarData(warID)
-            assert(not warData.isEnded, "SceneWarManager-loadOngoingWarList() the war is ended.")
+            assert(not warData.isEnded, "OnlineWarManager-loadOngoingWarList() the war is ended.")
             local modelSceneWar = Actor.createModel("warOnline.ModelWarOnline", warData)
             modelSceneWar:onStartRunning()
 
@@ -340,7 +341,7 @@ end
 --------------------------------------------------------------------------------
 -- The public functions.
 --------------------------------------------------------------------------------
-function SceneWarManager.init()
+function OnlineWarManager.init()
     if (s_IsInitialized) then
         return
     end
@@ -352,10 +353,10 @@ function SceneWarManager.init()
     initReplayList()
     initNextWarId()
 
-    return SceneWarManager
+    return OnlineWarManager
 end
 
-function SceneWarManager.createNewWar(param)
+function OnlineWarManager.createNewWar(param)
     local warID   = s_NextWarID
     local warData = generateSceneWarData(warID, param)
     serializeWarData(warData)
@@ -375,11 +376,11 @@ function SceneWarManager.createNewWar(param)
     return warID
 end
 
-function SceneWarManager.getNextWarId()
+function OnlineWarManager.getNextWarId()
     return s_NextWarID
 end
 
-function SceneWarManager.getOngoingModelSceneWar(warID)
+function OnlineWarManager.getOngoingModelSceneWar(warID)
     local item = s_OngoingWarList[warID]
     if (not item) then
         return nil
@@ -388,20 +389,20 @@ function SceneWarManager.getOngoingModelSceneWar(warID)
     end
 end
 
-function SceneWarManager.getOngoingSceneWarConfiguration(warID)
+function OnlineWarManager.getOngoingSceneWarConfiguration(warID)
     return s_OngoingWarList[warID].warConfiguration
 end
 
-function SceneWarManager.getOngoingWarConfigurationsForPlayer(playerAccount)
+function OnlineWarManager.getOngoingWarConfigurationsForPlayer(playerAccount)
     local list = {}
     for warID, _ in pairs(PlayerProfileManager.getPlayerProfile(playerAccount).warLists.ongoing) do
-        list[warID] = SceneWarManager.getOngoingSceneWarConfiguration(warID)
+        list[warID] = OnlineWarManager.getOngoingSceneWarConfiguration(warID)
     end
 
     return list
 end
 
-function SceneWarManager.getWaitingWarConfigurationsForPlayer(playerAccount)
+function OnlineWarManager.getWaitingWarConfigurationsForPlayer(playerAccount)
     local list = {}
     for warID, _ in pairs(PlayerProfileManager.getPlayerProfile(playerAccount).warLists.waiting) do
         list[warID] = s_JoinableWarList[warID].warConfiguration
@@ -410,11 +411,11 @@ function SceneWarManager.getWaitingWarConfigurationsForPlayer(playerAccount)
     return list
 end
 
-function SceneWarManager.isPlayerWaitingForWarId(playerAccount, warID)
+function OnlineWarManager.isPlayerWaitingForWarId(playerAccount, warID)
     return PlayerProfileManager.getPlayerProfile(playerAccount).warLists.waiting[warID] ~= nil
 end
 
-function SceneWarManager.exitWar(playerAccount, warID)
+function OnlineWarManager.exitWar(playerAccount, warID)
     local warItem = s_JoinableWarList[warID]
     removePlayerFromPlayersData(warItem.warData.players, playerAccount)
     serializeWarData(warItem.warData)
@@ -431,28 +432,28 @@ function SceneWarManager.exitWar(playerAccount, warID)
     return self
 end
 
-function SceneWarManager.forEachOngoingModelSceneWar(callback)
+function OnlineWarManager.forEachOngoingModelSceneWar(callback)
     for warID, _ in pairs(s_OngoingWarList) do
-        callback(SceneWarManager.getOngoingModelSceneWar(warID))
+        callback(OnlineWarManager.getOngoingModelSceneWar(warID))
     end
 
-    return SceneWarManager
+    return OnlineWarManager
 end
 
-function SceneWarManager.getJoinableSceneWarConfiguration(warID)
+function OnlineWarManager.getJoinableSceneWarConfiguration(warID)
     if (not s_JoinableWarList[warID]) then
-        return nil, "SceneWarManager.getJoinableSceneWarConfiguration() the war that the param specifies doesn't exist or is not joinable."
+        return nil, "OnlineWarManager.getJoinableSceneWarConfiguration() the war that the param specifies doesn't exist or is not joinable."
     end
 
     return s_JoinableWarList[warID].warConfiguration
 end
 
-function SceneWarManager.getJoinableWarConfigurations(playerAccount, specifiedWarID)
+function OnlineWarManager.getJoinableWarConfigurations(playerAccount, specifiedWarID)
     if (not specifiedWarID) then
         local list = {}
         for warID, item in pairs(s_JoinableWarList) do
             local warConfiguration = item.warConfiguration
-            if (not SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)) then
+            if (not OnlineWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)) then
                 list[warID] = item.warConfiguration
             end
         end
@@ -460,7 +461,7 @@ function SceneWarManager.getJoinableWarConfigurations(playerAccount, specifiedWa
 
     elseif (s_JoinableWarList[specifiedWarID]) then
         local warConfiguration = s_JoinableWarList[specifiedWarID].warConfiguration
-        if (not SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)) then
+        if (not OnlineWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)) then
             return {warID = warConfiguration}
         end
     end
@@ -468,7 +469,7 @@ function SceneWarManager.getJoinableWarConfigurations(playerAccount, specifiedWa
     return nil
 end
 
-function SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)
+function OnlineWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)
     for _, player in pairs(warConfiguration.players) do
         if (player.account == playerAccount) then
             return true
@@ -478,7 +479,7 @@ function SceneWarManager.hasPlayerJoinedWar(playerAccount, warConfiguration)
     return false
 end
 
-function SceneWarManager.isWarReadyForStartAfterJoin(warConfiguration)
+function OnlineWarManager.isWarReadyForStartAfterJoin(warConfiguration)
     local joinedPlayersCount = 0
     for playerIndex, player in pairs(warConfiguration.players) do
         joinedPlayersCount = joinedPlayersCount + 1
@@ -487,11 +488,11 @@ function SceneWarManager.isWarReadyForStartAfterJoin(warConfiguration)
     return joinedPlayersCount == WarFieldManager.getPlayersCount(warConfiguration.warFieldFileName) - 1
 end
 
-function SceneWarManager.joinWar(param)
+function OnlineWarManager.joinWar(param)
     local warID            = param.warID
     local playerIndex      = param.playerIndex
     local playerAccount    = param.playerAccount
-    local warConfiguration = SceneWarManager.getJoinableSceneWarConfiguration(warID)
+    local warConfiguration = OnlineWarManager.getJoinableSceneWarConfiguration(warID)
 
     warConfiguration.players[playerIndex] = {
         account     = playerAccount,
@@ -533,10 +534,10 @@ function SceneWarManager.joinWar(param)
         serializeOngoingWarList(s_OngoingWarList)
     end
 
-    return SceneWarManager
+    return OnlineWarManager
 end
 
-function SceneWarManager.getReplayConfigurations(warID)
+function OnlineWarManager.getReplayConfigurations(warID)
     if (warID) then
         local item = s_ReplayList.fullList[warID]
         if (not item) then
@@ -557,7 +558,7 @@ function SceneWarManager.getReplayConfigurations(warID)
     end
 end
 
-function SceneWarManager.getEncodedReplayData(warID)
+function OnlineWarManager.getEncodedReplayData(warID)
     if (not s_ReplayList.fullList[warID]) then
         return nil
     else
@@ -565,11 +566,11 @@ function SceneWarManager.getEncodedReplayData(warID)
     end
 end
 
-function SceneWarManager.updateWithModelWarOnline(modelWarOnline)
+function OnlineWarManager.updateWithModelWarOnline(modelWarOnline)
     local warID = modelWarOnline:getWarId()
     if (not modelWarOnline:isEnded()) then
         if (modelWarOnline:getModelTurnManager():isTurnPhaseRequestToBegin()) then
-            local warConfiguration = SceneWarManager.getOngoingSceneWarConfiguration(warID)
+            local warConfiguration = OnlineWarManager.getOngoingSceneWarConfiguration(warID)
             warConfiguration.enterTurnTime     = modelWarOnline:getEnterTurnTime()
             warConfiguration.playerIndexInTurn = modelWarOnline:getModelTurnManager():getPlayerIndex()
         end
@@ -594,7 +595,7 @@ function SceneWarManager.updateWithModelWarOnline(modelWarOnline)
         serializeReplayList(s_ReplayList)
     end
 
-    return SceneWarManager
+    return OnlineWarManager
 end
 
-return SceneWarManager
+return OnlineWarManager

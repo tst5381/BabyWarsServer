@@ -4,7 +4,7 @@ local ActionExecutorForServer = {}
 local ActionCodeFunctions        = requireFW("src.app.utilities.ActionCodeFunctions")
 local ActionExecutorForWarOnline = requireFW("src.app.utilities.actionExecutors.ActionExecutorForWarOnline")
 local PlayerProfileManager       = requireFW("src.app.utilities.PlayerProfileManager")
-local SceneWarManager            = requireFW("src.app.utilities.SceneWarManager")
+local OnlineWarManager           = requireFW("src.app.utilities.OnlineWarManager")
 
 local ACTION_CODES = ActionCodeFunctions.getFullList()
 
@@ -15,11 +15,11 @@ local next, pairs, ipairs, unpack = next, pairs, ipairs, unpack
 -- The executors for non-war actions.
 --------------------------------------------------------------------------------
 local function executeExitWar(action)
-    SceneWarManager.exitWar(action.playerAccount, action.warID)
+    OnlineWarManager.exitWar(action.playerAccount, action.warID)
 end
 
 local function executeJoinWar(action)
-    SceneWarManager.joinWar(action)
+    OnlineWarManager.joinWar(action)
 end
 
 local function executeNetworkHeartbeat(action)
@@ -27,7 +27,7 @@ local function executeNetworkHeartbeat(action)
 end
 
 local function executeNewWar(action)
-    SceneWarManager.createNewWar(action)
+    OnlineWarManager.createNewWar(action)
 end
 
 local function executeRegister(action)
@@ -46,7 +46,7 @@ function ActionExecutorForServer.execute(action)
     elseif (actionCode == ACTION_CODES.ActionNetworkHeartbeat) then executeNetworkHeartbeat(action)
     elseif (actionCode == ACTION_CODES.ActionNewWar)           then executeNewWar(          action)
     elseif (actionCode == ACTION_CODES.ActionRegister)         then executeRegister(        action)
-    else                                                            ActionExecutorForWarOnline.execute(action, SceneWarManager.getOngoingModelSceneWar(action.warID))
+    else                                                            ActionExecutorForWarOnline.execute(action, OnlineWarManager.getOngoingModelSceneWar(action.warID))
     end
 
     return ActionExecutorForServer
