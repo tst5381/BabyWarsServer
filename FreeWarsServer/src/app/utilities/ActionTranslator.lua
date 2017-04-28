@@ -507,6 +507,31 @@ local function isPlayerAliveInWar(modelWar, playerAccount)
     return (modelPlayer) and (modelPlayer:isAlive())
 end
 
+local function canResearchSkill(modelWar, modelSkillConfiguration, skillID, skillLevel)
+    if (not modelWar:isPassiveSkillEnabled()) then
+        return false
+    end
+
+    local skillData   = modelWar:getModelSkillDataManager():getSkillData(skillID)
+    local maxModifier = skillData.maxModifierPassive
+    if (not maxModifier) then
+        return true
+    end
+
+    local currentModifier = skillData.levels[skillLevel].modifierPassive
+    for _, skill in pairs(modelSkillConfiguration:getModelSkillGroupPassive():getAllSkills()) do
+        if (skill.id == skillID) then
+            currentModifier = currentModifier + skill.modifier
+        end
+    end
+    for _, skill in pairs(modelSkillConfiguration:getModelSkillGroupResearching():getAllSkills()) do
+        if (skill.id == skillID) then
+            currentModifier = currentModifier + skill.modifier
+        end
+    end
+    return currentModifier <= maxModifier
+end
+
 local function getModelSceneWarWithAction(action)
     local playerAccount = action.playerAccount
     if (not PlayerProfileManager.isAccountAndPasswordValid(action.playerAccount, action.playerPassword)) then
@@ -916,7 +941,7 @@ local function translateActivateSkill(action)
     local modelPlayer      = getModelPlayerManager(modelWar):getModelPlayer(modelTurnManager:getPlayerIndex())
     if ((not modelTurnManager:isTurnPhaseMain())                                                                                                           or
         ((isActiveSkill) and ((not modelWar:isActiveSkillEnabled()) or ((modelWar:isSkillDeclarationEnabled()) and (not modelPlayer:canActivateSkill())))) or
-        ((not isActiveSkill) and (not modelWar:isPassiveSkillEnabled()))                                                                                   or
+        ((not isActiveSkill) and (not canResearchSkill(modelWar, modelPlayer:getModelSkillConfiguration(), skillID, skillLevel)))                          or
         (modelPlayer:getEnergy() < modelWar:getModelSkillDataManager():getSkillPoints(skillID, skillLevel, isActiveSkill)))                                then
         return createActionReloadSceneWar(modelWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
