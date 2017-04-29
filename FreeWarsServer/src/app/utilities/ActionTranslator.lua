@@ -1536,6 +1536,32 @@ local function translateProduceModelUnitOnUnit(action)
     return actionProduceModelUnitOnUnit, createActionsForPublish(actionProduceModelUnitOnUnit, modelWar), createActionForServer(actionProduceModelUnitOnUnit)
 end
 
+local function translateResearchPassiveSkill(action)
+    local modelWar, actionOnError = getModelSceneWarWithAction(action)
+    if (not modelWar) then
+        return actionOnError
+    end
+
+    local skillID          = action.skillID
+    local skillLevel       = action.skillLevel
+    local modelTurnManager = getModelTurnManager(modelWar)
+    local modelPlayer      = getModelPlayerManager(modelWar):getModelPlayer(modelTurnManager:getPlayerIndex())
+    if ((not modelTurnManager:isTurnPhaseMain())                                                                    or
+        (not canResearchSkill(modelWar, modelPlayer:getModelSkillConfiguration(), skillID, skillLevel))             or
+        (modelPlayer:getEnergy() < modelWar:getModelSkillDataManager():getSkillPoints(skillID, skillLevel, false))) then
+        return createActionReloadSceneWar(modelWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
+    end
+
+    local actionActivateSkill = {
+        actionCode    = ACTION_CODES.ActionResearchPassiveSkill,
+        actionID      = action.actionID,
+        warID         = action.warID,
+        skillID       = skillID,
+        skillLevel    = skillLevel,
+    }
+    return actionActivateSkill, createActionsForPublish(actionActivateSkill, modelWar), createActionForServer(actionActivateSkill)
+end
+
 local function translateSupplyModelUnit(action)
     local modelWar, actionOnError = getModelSceneWarWithAction(action)
     if (not modelWar) then
@@ -1712,9 +1738,10 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionLoadModelUnit)                then return translateLoadModelUnit(               action)
     elseif (actionCode == ACTION_CODES.ActionProduceModelUnitOnTile)       then return translateProduceModelUnitOnTile(      action)
     elseif (actionCode == ACTION_CODES.ActionProduceModelUnitOnUnit)       then return translateProduceModelUnitOnUnit(      action)
+    elseif (actionCode == ACTION_CODES.ActionResearchPassiveSkill)         then return translateResearchPassiveSkill(        action)
+    elseif (actionCode == ACTION_CODES.ActionSupplyModelUnit)              then return translateSupplyModelUnit(             action)
     elseif (actionCode == ACTION_CODES.ActionSurface)                      then return translateSurface(                     action)
     elseif (actionCode == ACTION_CODES.ActionSurrender)                    then return translateSurrender(                   action)
-    elseif (actionCode == ACTION_CODES.ActionSupplyModelUnit)              then return translateSupplyModelUnit(             action)
     elseif (actionCode == ACTION_CODES.ActionVoteForDraw)                  then return translateVoteForDraw(                 action)
     elseif (actionCode == ACTION_CODES.ActionWait)                         then return translateWait(                        action)
     else                                                                        error("ActionTranslator.translate() invalid actionCode: " .. (actionCode or ""))

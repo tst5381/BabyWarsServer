@@ -359,6 +359,10 @@ creators.createForActionProduceModelUnitOnUnit = function(action, playerIndexAct
     return actionForPublish
 end
 
+creators.createForActionResearchPassiveSkill = function(action, playerIndexActing, targetPlayerIndex, modelWar)
+    return cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
+end
+
 creators.createForActionSupplyModelUnit = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local beginningGridIndex = action.path.pathNodes[1]
     local modelUnit          = getModelUnitMap(modelWar):getModelUnit(beginningGridIndex)
