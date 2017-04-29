@@ -940,7 +940,6 @@ local function translateActivateSkill(action)
     local modelTurnManager = getModelTurnManager(modelWar)
     local modelPlayer      = getModelPlayerManager(modelWar):getModelPlayer(modelTurnManager:getPlayerIndex())
     if ((not modelTurnManager:isTurnPhaseMain())                                                                                                           or
-        ((isActiveSkill) and ((not modelWar:isActiveSkillEnabled()) or ((modelWar:isSkillDeclarationEnabled()) and (not modelPlayer:canActivateSkill())))) or
         ((not isActiveSkill) and (not canResearchSkill(modelWar, modelPlayer:getModelSkillConfiguration(), skillID, skillLevel)))                          or
         (modelPlayer:getEnergy() < modelWar:getModelSkillDataManager():getSkillPoints(skillID, skillLevel, isActiveSkill)))                                then
         return createActionReloadSceneWar(modelWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
@@ -1127,24 +1126,6 @@ local function translateCaptureModelTile(action)
         }
         return actionCapture, createActionsForPublish(actionCapture, modelWar), createActionForServer(actionCapture)
     end
-end
-
-local function translateDeclareSkill(action)
-    local modelWar, actionOnError = getModelSceneWarWithAction(action)
-    if (not modelWar) then
-        return actionOnError
-    end
-
-    local modelTurnManager = getModelTurnManager(modelWar)
-    local modelPlayer      = getModelPlayerManager(modelWar):getModelPlayer(modelTurnManager:getPlayerIndex())
-    if ((not modelTurnManager:isTurnPhaseMain())                                                   or
-        (not modelWar:isActiveSkillEnabled())                                                      or
-        (modelPlayer:isSkillDeclared())                                                            or
-        (modelPlayer:getEnergy() < modelWar:getModelSkillDataManager():getSkillDeclarationCost())) then
-        return createActionReloadSceneWar(modelWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
-    end
-
-    return action, createActionsForPublish(action, modelWar), createActionForServer(action)
 end
 
 local function translateDestroyOwnedModelUnit(action)
@@ -1727,7 +1708,6 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionBeginTurn)                    then return translateBeginTurn(                   action)
     elseif (actionCode == ACTION_CODES.ActionBuildModelTile)               then return translateBuildModelTile(              action)
     elseif (actionCode == ACTION_CODES.ActionCaptureModelTile)             then return translateCaptureModelTile(            action)
-    elseif (actionCode == ACTION_CODES.ActionDeclareSkill)                 then return translateDeclareSkill(                action)
     elseif (actionCode == ACTION_CODES.ActionDestroyOwnedModelUnit)        then return translateDestroyOwnedModelUnit(       action)
     elseif (actionCode == ACTION_CODES.ActionDive)                         then return translateDive(                        action)
     elseif (actionCode == ACTION_CODES.ActionDropModelUnit)                then return translateDropModelUnit(               action)

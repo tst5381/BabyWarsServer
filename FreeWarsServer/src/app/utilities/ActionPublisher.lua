@@ -216,10 +216,6 @@ creators.createForActionChat = function(action, playerIndexActing, targetPlayerI
     end
 end
 
-creators.createForActionDeclareSkill = function(action, playerIndexActing, targetPlayerIndex, modelWar)
-    return cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
-end
-
 creators.createForActionDestroyOwnedModelUnit = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local gridIndex = action.gridIndex
     local modelUnit = getModelUnitMap(modelWar):getModelUnit(gridIndex)

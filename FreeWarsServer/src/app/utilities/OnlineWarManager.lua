@@ -81,7 +81,6 @@ local function generateSinglePlayerData(account, playerIndex, teamIndex, startin
         fund              = startingFund,
         isActivatingSkill = false,
         isAlive           = true,
-        isSkillDeclared   = false,
         nickname          = PlayerProfileManager.getPlayerProfile(account).nickname,
         playerIndex       = playerIndex,
         teamIndex         = teamIndex,
@@ -104,7 +103,6 @@ local function generateSceneWarData(warID, param)
         isPassiveSkillEnabled     = param.isPassiveSkillEnabled,
         isRandomWarField          = WarFieldManager.isRandomWarField(warFieldFileName),
         isRankMatch               = param.isRankMatch,
-        isSkillDeclarationEnabled = param.isSkillDeclarationEnabled,
         isTotalReplay             = false,
         isWarEnded                = false,
         maxDiffScore              = param.maxDiffScore,
@@ -164,7 +162,6 @@ local function generateWarConfiguration(warData)
         isPassiveSkillEnabled     = warData.isPassiveSkillEnabled,
         isRandomWarField          = warData.isRandomWarField,
         isRankMatch               = warData.isRankMatch,
-        isSkillDeclarationEnabled = warData.isSkillDeclarationEnabled,
         maxDiffScore              = warData.maxDiffScore,
         moveRangeModifier         = warData.moveRangeModifier,
         playerIndexInTurn         = (warData.enterTurnTime) and (warData.turn.playerIndex) or (nil),
@@ -192,9 +189,6 @@ local function loadWarData(warID)
     assert(file, "OnlineWarManager-loadWarData() invalid warID: " .. (warID or ""))
 
     local warData = SerializationFunctions.decode("SceneWar", file:read("*a"))
-    if (warData.isSkillDeclarationEnabled == nil) then
-        warData.isSkillDeclarationEnabled = true
-    end
     warData.attackModifier    = warData.attackModifier    or 0
     warData.incomeModifier    = warData.incomeModifier    or 100
     warData.moveRangeModifier = warData.moveRangeModifier or 0
