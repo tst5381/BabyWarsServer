@@ -76,7 +76,6 @@ end
 local function generateSinglePlayerData(account, playerIndex, teamIndex, startingEnergy, startingFund)
     return {
         account           = account,
-        canActivateSkill  = false,
         energy            = startingEnergy,
         fund              = startingFund,
         isActivatingSkill = false,

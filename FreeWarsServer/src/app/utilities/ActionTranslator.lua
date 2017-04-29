@@ -19,7 +19,7 @@
 local ActionTranslator = {}
 
 local Producible              = requireFW("src.app.components.Producible")
-local Actor                   = requireFW("src.global.actors.Actor")
+local ModelSkillGroupActive   = requireFW("src.app.models.common.ModelSkillGroupActive")
 local ActionCodeFunctions     = requireFW("src.app.utilities.ActionCodeFunctions")
 local ActionPublisher         = requireFW("src.app.utilities.ActionPublisher")
 local DamageCalculator        = requireFW("src.app.utilities.DamageCalculator")
@@ -33,6 +33,7 @@ local SkillModifierFunctions  = requireFW("src.app.utilities.SkillModifierFuncti
 local SingletonGetters        = requireFW("src.app.utilities.SingletonGetters")
 local TableFunctions          = requireFW("src.app.utilities.TableFunctions")
 local VisibilityFunctions     = requireFW("src.app.utilities.VisibilityFunctions")
+local Actor                   = requireFW("src.global.actors.Actor")
 local ComponentManager        = requireFW("src.global.components.ComponentManager")
 
 local createActionsForPublish      = ActionPublisher.createActionsForPublish
@@ -934,27 +935,20 @@ local function translateActivateSkill(action)
         return actionOnError
     end
 
-    local skillID          = action.skillID
-    local skillLevel       = action.skillLevel
-    local isActiveSkill    = action.isActiveSkill
-    local modelTurnManager = getModelTurnManager(modelWar)
-    local modelPlayer      = getModelPlayerManager(modelWar):getModelPlayer(modelTurnManager:getPlayerIndex())
-    if ((not modelTurnManager:isTurnPhaseMain())                                                                                                           or
-        ((not isActiveSkill) and (not canResearchSkill(modelWar, modelPlayer:getModelSkillConfiguration(), skillID, skillLevel)))                          or
-        (modelPlayer:getEnergy() < modelWar:getModelSkillDataManager():getSkillPoints(skillID, skillLevel, isActiveSkill)))                                then
+    local modelTurnManager      = getModelTurnManager(modelWar)
+    local modelPlayer           = getModelPlayerManager(modelWar):getModelPlayer(modelTurnManager:getPlayerIndex())
+    local modelSkillGroupActive = modelPlayer:getModelSkillConfiguration():getModelSkillGroupActive()
+    if ((not modelTurnManager:isTurnPhaseMain())                                or
+        (modelPlayer:isActivatingSkill())                                       or
+        (modelSkillGroupActive:isEmpty())                                       or
+        (modelPlayer:getEnergy() < modelSkillGroupActive:getTotalEnergyCost())) then
         return createActionReloadSceneWar(modelWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
-    local revealedTiles, revealedUnits = VisibilityFunctions.getRevealedTilesAndUnitsDataForSkillActivation(modelWar, skillID)
     local actionActivateSkill = {
         actionCode    = ACTION_CODES.ActionActivateSkill,
         actionID      = action.actionID,
         warID         = action.warID,
-        skillID       = skillID,
-        skillLevel    = skillLevel,
-        isActiveSkill = isActiveSkill,
-        revealedTiles = revealedTiles,
-        revealedUnits = revealedUnits,
     }
     return actionActivateSkill, createActionsForPublish(actionActivateSkill, modelWar), createActionForServer(actionActivateSkill)
 end
@@ -1631,6 +1625,33 @@ local function translateSurrender(action)
     return actionSurrender, createActionsForPublish(actionSurrender, modelWar), createActionForServer(actionSurrender)
 end
 
+local function translateUpdateReserveSkills(action)
+    local modelWar, actionOnError = getModelSceneWarWithAction(action)
+    if (not modelWar) then
+        return actionOnError
+    end
+
+    local skillID                = action.skillID
+    local skillLevel             = action.skillLevel
+    local isActiveSkill          = action.isActiveSkill
+    local modelTurnManager       = getModelTurnManager(modelWar)
+    local modelPlayer            = getModelPlayerManager(modelWar):getModelPlayer(modelTurnManager:getPlayerIndex())
+    local modelSkillGroupReserve = ModelSkillGroupActive:create(action.reserveSkills)
+    if ((not modelTurnManager:isTurnPhaseMain()) or
+        (modelSkillGroupReserve:isEmpty())       or
+        (modelSkillGroupReserve:hasSameSkill())) then
+        return createActionReloadSceneWar(modelWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
+    end
+
+    local actionUpdateReserveSkills = {
+        actionCode    = ACTION_CODES.ActionUpdateReserveSkills,
+        actionID      = action.actionID,
+        warID         = action.warID,
+        reserveSkills = action.reserveSkills,
+    }
+    return actionUpdateReserveSkills, createActionsForPublish(actionUpdateReserveSkills, modelWar), createActionForServer(actionUpdateReserveSkills)
+end
+
 local function translateVoteForDraw(action)
     local modelWar, actionOnError = getModelSceneWarWithAction(action)
     if (not modelWar) then
@@ -1722,6 +1743,7 @@ function ActionTranslator.translate(action)
     elseif (actionCode == ACTION_CODES.ActionSupplyModelUnit)              then return translateSupplyModelUnit(             action)
     elseif (actionCode == ACTION_CODES.ActionSurface)                      then return translateSurface(                     action)
     elseif (actionCode == ACTION_CODES.ActionSurrender)                    then return translateSurrender(                   action)
+    elseif (actionCode == ACTION_CODES.ActionUpdateReserveSkills)          then return translateUpdateReserveSkills(         action)
     elseif (actionCode == ACTION_CODES.ActionVoteForDraw)                  then return translateVoteForDraw(                 action)
     elseif (actionCode == ACTION_CODES.ActionWait)                         then return translateWait(                        action)
     else                                                                        error("ActionTranslator.translate() invalid actionCode: " .. (actionCode or ""))

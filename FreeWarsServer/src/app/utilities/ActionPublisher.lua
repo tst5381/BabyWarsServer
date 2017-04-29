@@ -387,6 +387,10 @@ creators.createForActionSurrender = function(action, playerIndexActing, targetPl
     return action
 end
 
+creators.createForActionUpdateReserveSkills = function(action, playerIndexActing, targetPlayerIndex, modelWar)
+    return action
+end
+
 creators.createForActionVoteForDraw = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     return action
 end
