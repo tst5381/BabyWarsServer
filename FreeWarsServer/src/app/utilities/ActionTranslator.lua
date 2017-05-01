@@ -1637,9 +1637,7 @@ local function translateUpdateReserveSkills(action)
     local modelTurnManager       = getModelTurnManager(modelWar)
     local modelPlayer            = getModelPlayerManager(modelWar):getModelPlayer(modelTurnManager:getPlayerIndex())
     local modelSkillGroupReserve = ModelSkillGroupActive:create(action.reserveSkills)
-    if ((not modelTurnManager:isTurnPhaseMain()) or
-        (modelSkillGroupReserve:isEmpty())       or
-        (modelSkillGroupReserve:hasSameSkill())) then
+    if ((not modelTurnManager:isTurnPhaseMain()) or (modelSkillGroupReserve:hasSameSkill())) then
         return createActionReloadSceneWar(modelWar, action.playerAccount, 81, MESSAGE_PARAM_OUT_OF_SYNC)
     end
 
