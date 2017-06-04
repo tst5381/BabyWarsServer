@@ -216,10 +216,6 @@ creators.createForActionChat = function(action, playerIndexActing, targetPlayerI
     end
 end
 
-creators.createForActionDeclareSkill = function(action, playerIndexActing, targetPlayerIndex, modelWar)
-    return cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
-end
-
 creators.createForActionDestroyOwnedModelUnit = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local gridIndex = action.gridIndex
     local modelUnit = getModelUnitMap(modelWar):getModelUnit(gridIndex)
@@ -359,6 +355,10 @@ creators.createForActionProduceModelUnitOnUnit = function(action, playerIndexAct
     return actionForPublish
 end
 
+creators.createForActionResearchPassiveSkill = function(action, playerIndexActing, targetPlayerIndex, modelWar)
+    return cloneActionForPublish(modelWar, action, playerIndexActing, targetPlayerIndex)
+end
+
 creators.createForActionSupplyModelUnit = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     local beginningGridIndex = action.path.pathNodes[1]
     local modelUnit          = getModelUnitMap(modelWar):getModelUnit(beginningGridIndex)
@@ -384,6 +384,10 @@ creators.createForActionSurface = function(action, playerIndexActing, targetPlay
 end
 
 creators.createForActionSurrender = function(action, playerIndexActing, targetPlayerIndex, modelWar)
+    return action
+end
+
+creators.createForActionUpdateReserveSkills = function(action, playerIndexActing, targetPlayerIndex, modelWar)
     return action
 end
 
